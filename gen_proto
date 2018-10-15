@@ -1,0 +1,8 @@
+#!	/bin/bash
+
+protoc -I=src/proto/resources --java_out=src/proto/java src/proto/resources/marmot_type.proto
+protoc -I=src/proto/resources --java_out=src/proto/java src/proto/resources/marmot.proto
+protoc -I=src/proto/resources --java_out=src/proto/java src/proto/resources/marmot.optor.proto
+protoc -I=src/proto/resources --java_out=src/proto/java	\
+	--plugin=protoc-gen-grpc-java --grpc-java_out==src/proto/java	\
+	src/proto/resources/marmot.service.proto

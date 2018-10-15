@@ -1,0 +1,107 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+ 
+group = 'etri'
+version = '5.10.15'
+
+sourceCompatibility = JavaVersion.VERSION_1_8;
+[compileJava,compileTestJava]*.options*.encoding = 'UTF-8'
+
+
+buildscript {
+	repositories {
+		mavenLocal()
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+	}
+}
+
+repositories {
+    mavenLocal()
+	maven {
+		url "http://www.datanucleus.org/downloads/maven2/"
+	}
+	maven {
+		url "http://download.osgeo.org/webdav/geotools/"
+	}
+    mavenCentral()
+	maven {
+		url "http://repo.boundlessgeo.com/main/"
+	}
+}
+
+
+ext.geotools_version = '17.2'
+
+dependencies {
+	compile project(':utils')
+	compile project(':marmot.common')
+//	compile "etri:utils:1.0"
+
+	compile	"org.geotools:gt-swt:${geotools_version}"
+	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
+	
+	
+	
+	
+	testCompile "junit:junit:4.12"
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
+shadowJar {
+	classifier 'all'
+	
+	mergeServiceFiles()
+	
+	exclude 'META-INF/*.SF'
+	exclude 'META-INF/*.DSA'
+	exclude 'META-INF/*.RSA'
+	
+	relocate 'com.google', 'shadow.com.google'
+	relocate 'io.netty', 'shadow.io.netty'
+}
+
+task sourceJar(type: Jar) {
+	classifier 'sources'
+	from sourceSets.main.allSource
+}
+
+javadoc {
+	source sourceSets.main.allJava
+	
+	title = 'Marmot API Document'
+	
+	options.charSet = 'UTF-8'
+	options.encoding = 'UTF-8'
+	options.links = ['https://docs.oracle.com/javase/8/docs/api/']
+}
+task javadocJar(type: Jar) {
+	classifier 'javadoc'
+	from javadoc.destinationDir
+}
+
+artifacts {
+	archives sourceJar
+	archives javadocJar
+	archives shadowJar
+}
+
+//task copyJarToBin(type: Copy) {
+//	dependsOn 'assemble'
+//	from "${buildDir}/libs/${archivesBaseName}-${version}-all.jar"
+//	into 'bin'
+//}
+
+apply plugin: 'eclipse'
+eclipse {
+	classpath {
+		file {
+			withXml {
+				def node = it.asNode()
+				node.appendNode('classpathentry', [kind: 'output', path: 'classes'])
+			}
+		}
+	}
+}

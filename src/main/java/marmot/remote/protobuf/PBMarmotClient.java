@@ -1,0 +1,307 @@
+package marmot.remote.protobuf;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.vavr.control.Option;
+import marmot.DataSet;
+import marmot.DataSetExistsException;
+import marmot.DataSetOption;
+import marmot.DataSetType;
+import marmot.ExecutePlanOption;
+import marmot.GeometryColumnInfo;
+import marmot.MarmotRuntime;
+import marmot.Plan;
+import marmot.PlanBuilder;
+import marmot.Record;
+import marmot.RecordSchema;
+import marmot.RecordSet;
+import marmot.proto.service.RecordSetRefProto;
+import marmot.proto.service.RecordSetRefResponse;
+import marmot.proto.service.RecordSetServiceGrpc;
+import marmot.proto.service.RecordSetServiceGrpc.RecordSetServiceBlockingStub;
+import marmot.proto.service.RecordSetServiceGrpc.RecordSetServiceStub;
+import marmot.protobuf.PBUtils;
+import utils.Throwables;
+import utils.async.Execution;
+import utils.async.Executors;
+
+/**
+ * 
+ * @author Kang-Woo Lee (ETRI)
+ */
+public class PBMarmotClient implements MarmotRuntime {
+	private final Server m_server;
+	
+	private final ManagedChannel m_channel;
+	private final PBFileServiceProxy m_fileService;
+	private final PBDataSetServiceProxy m_dsService;
+	private final PBPlanExecutionServiceProxy m_pexecService;
+	private final RecordSetServiceStub m_rsetStub;
+	private final RecordSetServiceBlockingStub m_rsetBlockingStub;
+	
+	public static PBMarmotClient connect(String host, int port) throws IOException {
+		ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
+													.usePlaintext(true)
+													.build();
+		
+		return new PBMarmotClient(channel);
+	}
+	
+	private PBMarmotClient(ManagedChannel channel) throws IOException {
+		m_channel = channel;
+		
+		m_fileService = new PBFileServiceProxy(this, channel);
+		m_dsService = new PBDataSetServiceProxy(this, channel);
+
+		m_pexecService = new PBPlanExecutionServiceProxy(this, channel);
+		m_rsetStub = RecordSetServiceGrpc.newStub(channel);
+		m_rsetBlockingStub = RecordSetServiceGrpc.newBlockingStub(channel);
+
+		m_server = ServerBuilder.forPort(0).build();
+		m_server.start();
+	}
+	
+	public Server getGrpcServer() {
+		return m_server;
+	}
+	
+	public void disconnect() {
+		m_channel.shutdown();
+		m_server.shutdown();
+	}
+	
+	ManagedChannel getChannel() {
+		return m_channel;
+	}
+	
+	public PBPlanExecutionServiceProxy getPlanExecutionService() {
+		return m_pexecService;
+	}
+	
+	public RecordSetServiceBlockingStub getRecordSetService() {
+		return m_rsetBlockingStub;
+	}
+
+	@Override
+	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, Option<Long> blockSize)
+		throws IOException {
+		m_fileService.copyToHdfsFile(path, blocks, blockSize);
+	}
+
+	/////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////
+	//	DataSet relateds
+	/////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////
+
+	@Override
+	public DataSet createDataSet(String dsId, RecordSchema schema, DataSetOption... opts)
+		throws DataSetExistsException {
+		return m_dsService.createDataSet(dsId, schema, opts);
+	}
+	
+	@Override
+	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOption[] execOpts,
+									DataSetOption... opts)
+		throws DataSetExistsException {
+		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
+	}
+
+	@Override
+	public DataSet createDataSet(String dsId, Plan plan, RecordSet input, DataSetOption... opts)
+			throws DataSetExistsException {
+		return m_dsService.createDataSet(dsId, plan, input, opts);
+	}
+	
+	@Override
+	public DataSet getDataSet(String dsId) {
+		Objects.requireNonNull(dsId, "dataset id is null");
+		
+		return m_dsService.getDataSet(dsId);
+	}
+
+	@Override
+	public DataSet getDataSetOrNull(String dsId) {
+		Objects.requireNonNull(dsId, "dataset id is null");
+		
+		return m_dsService.getDataSetOrNull(dsId);
+	}
+
+	@Override
+	public List<DataSet> getDataSetAll() {
+		return m_dsService.getDataSetAll();
+	}
+
+	@Override
+	public List<DataSet> getDataSetAllInDir(String folder, boolean recursive) {
+		Objects.requireNonNull(folder, "dataset folder is null");
+		
+		return m_dsService.getDataSetAllInDir(folder, recursive);
+	}
+
+	@Override
+	public void createKafkaTopic(String topic, boolean force) {
+		m_dsService.createKafkaTopic(topic, force);
+	}
+
+	@Override
+	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type) {
+		return m_dsService.bindExternalDataSet(dsId, srcPath, type, Option.none());
+	}
+
+	@Override
+	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
+										GeometryColumnInfo geomColInfo) {
+		return m_dsService.bindExternalDataSet(dsId, srcPath, type, Option.some(geomColInfo));
+	}
+
+	@Override
+	public boolean deleteDataSet(String id) {
+		return m_dsService.deleteDataSet(id);
+	}
+
+	@Override
+	public void renameDataSet(String id, String newId) {
+		m_dsService.renameDataSet(id, newId);
+	}
+
+	@Override
+	public List<String> getDirAll() {
+		return m_dsService.getDirAll();
+	}
+
+	@Override
+	public List<String> getSubDirAll(String folder, boolean recursive) {
+		return m_dsService.getSubDirAll(folder, recursive);
+	}
+
+	@Override
+	public String getParentDir(String folder) {
+		return m_dsService.getParentDir(folder);
+	}
+
+	@Override
+	public void renameDir(String path, String newPath) {
+		m_dsService.renameDir(path, newPath);
+	}
+
+	@Override
+	public void deleteDir(String folder) {
+		m_dsService.deleteDir(folder);
+	}
+
+	/////////////////////////////////////////////////////////////////////
+	// Plan Execution Relateds
+	/////////////////////////////////////////////////////////////////////
+
+	@Override
+	public boolean getMapOutputCompression() {
+		return m_pexecService.getMapOutputCompression();
+	}
+
+	@Override
+	public boolean setMapOutputCompression(boolean flag) {
+		return m_pexecService.setMapOutputCompression(flag);
+	}
+
+	@Override
+	public PlanBuilder planBuilder(String planName) {
+		return new PlanBuilder(planName);
+	}
+
+	@Override
+	public RecordSchema getOutputRecordSchema(Plan plan) {
+		return m_pexecService.getOutputRecordSchema(plan, Option.none());
+	}
+
+	@Override
+	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
+		return m_pexecService.getOutputRecordSchema(plan, Option.some(inputSchema));
+	}
+	
+	@Override
+	public void execute(Plan plan, ExecutePlanOption... opts) {
+		m_pexecService.execute(plan, opts);
+	}
+
+	@Override
+	public RecordSet executeLocally(Plan plan) {
+		return m_pexecService.executeLocally(plan, Option.none());
+	}
+
+	@Override
+	public RecordSet executeLocally(Plan plan, RecordSet input) {
+		return m_pexecService.executeLocally(plan, Option.some(input));
+	}
+
+	@Override
+	public Option<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
+		return m_pexecService.executeToRecord(plan, opts);
+	}
+
+	@Override
+	public RecordSet executeToRecordSet(Plan plan, ExecutePlanOption... opts) {
+		return m_pexecService.executeToRecordSet(plan);
+	}
+
+	@Override
+	public RecordSet executeToStream(String id, Plan plan) {
+		return m_pexecService.executeToStream(id, plan);
+	}
+
+	@Override
+	public RecordSchema getProcessOutputRecordSchema(String processId,
+												Map<String, String> params) {
+		return m_pexecService.getProcessRecordSchema(processId, params);
+	}
+
+	@Override
+	public void executeProcess(String processId, Map<String, String> params) {
+		m_pexecService.executeProcess(processId, params);
+	}
+
+	@Override
+	public void executeModule(String id) {
+		m_pexecService.executeModule(id);
+	}
+
+	private static final int RSET_BULK_SIZE = 16;
+	public RecordSet deserialize(RecordSetRefProto ref) {
+		String rsetId = ref.getId();
+		RecordSchema schema = RecordSchema.fromProto(ref.getRecordSchema());
+		
+		// 서버에서 레코드를 pull해서 로컬 pipe에 옮기는 작업을 시작시킴.
+		ServerRecordSetPuller puller = new ServerRecordSetPuller(rsetId, schema, m_rsetStub,
+																RSET_BULK_SIZE);
+		Executors.start(puller);
+		
+		return puller.getConsumerRecordSet();
+	}
+	
+	public RecordSet deserialize(RecordSetRefResponse resp) {
+		switch ( resp.getEitherCase() ) {
+			case RSET_REF:
+				return deserialize(resp.getRsetRef());
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	String allocateRecordSet(RecordSchema schema) {
+		return PBUtils.handle(m_rsetBlockingStub.allocateRecordSet(schema.toProto()));
+	}
+	
+	Execution<Long> startRecordSetUpload(String rsetId, RecordSet rset) {
+		return UploadRecordSet.start(this, rsetId, rset);
+	}
+}

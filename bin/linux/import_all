@@ -1,0 +1,18 @@
+#!  /bin/bash
+
+
+mc_import_shapefile $MARMOT_DATA/행자부/법정구역_5179/시도 -dataset 구역/시도 -srid EPSG:5186 -charset euc-kr
+
+
+mc_import_shapefile -f -shp $MARMOT_DATA/EPSG_5186/서울지하철역사/역사.shp -layer /transit/subway_stations/heap -charset euc-kr
+
+
+############################################################################################
+##### 사업단 데모
+############################################################################################
+mc_import_shapefile -f -shp $MARMOT_DATA/연구단자료/서울_종합병원/hospitals.shp -layer utility/hospitals
+mc_import_shapefile -f -shp $MARMOT_DATA/연구단자료/화재사망자수_2015/firedeath.shp -layer report/fire_death
+cluster_layer -layer report/fire_death
+mc_import_shapefile -f -shp $MARMOT_DATA/연구단자료/시연용_서울특별시읍면동/demo_seoul.shp -layer demo/demo_seoul
+cluster_layer -layer demo/demo_seoul
+
