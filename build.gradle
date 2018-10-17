@@ -43,9 +43,6 @@ dependencies {
 	compile	"org.geotools:gt-swt:${geotools_version}"
 	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
 	
-	
-	
-	
 	testCompile "junit:junit:4.12"
 }
 
@@ -59,8 +56,8 @@ shadowJar {
 	exclude 'META-INF/*.DSA'
 	exclude 'META-INF/*.RSA'
 	
-	relocate 'com.google', 'shadow.com.google'
-	relocate 'io.netty', 'shadow.io.netty'
+//	relocate 'com.google', 'shadow.com.google'
+//	relocate 'io.netty', 'shadow.io.netty'
 }
 
 task sourceJar(type: Jar) {
@@ -87,12 +84,6 @@ artifacts {
 	archives javadocJar
 	archives shadowJar
 }
-
-//task copyJarToBin(type: Copy) {
-//	dependsOn 'assemble'
-//	from "${buildDir}/libs/${archivesBaseName}-${version}-all.jar"
-//	into 'bin'
-//}
 
 apply plugin: 'eclipse'
 eclipse {
