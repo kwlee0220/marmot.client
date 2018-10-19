@@ -169,8 +169,8 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void renameDataSet(String id, String newId) {
-		m_dsService.renameDataSet(id, newId);
+	public void moveDataSet(String id, String newId) {
+		m_dsService.moveDataSet(id, newId);
 	}
 
 	@Override

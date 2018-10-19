@@ -208,7 +208,7 @@ public class PBDataSetServiceProxy {
 		return PBUtils.handle(m_dsBlockingStub.getDataSetLength(PBUtils.toStringProto(id)));
 	}
 	
-	public void renameDataSet(String srcId, String tarId) {
+	public void moveDataSet(String srcId, String tarId) {
 		VoidResponse resp = m_dsBlockingStub.moveDataSet(MoveDataSetRequest.newBuilder()
 																	.setSrcId(srcId)
 																	.setDestId(tarId)

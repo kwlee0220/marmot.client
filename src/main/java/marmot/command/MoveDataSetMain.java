@@ -9,12 +9,12 @@ import utils.CommandLineParser;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class RenameDataSetMain {
+public class MoveDataSetMain {
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
 //		LogManager.getRootLogger().setLevel(Level.OFF);
 		
-		CommandLineParser parser = new CommandLineParser("mc_rename ");
+		CommandLineParser parser = new CommandLineParser("mc_move ");
 		parser.addArgumentName("src");
 		parser.addArgumentName("tar");
 		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
@@ -37,7 +37,7 @@ public class RenameDataSetMain {
 			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 	
 			DataSet srcDs = marmot.getDataSet(src);
-			marmot.renameDataSet(srcDs.getId(), tar);
+			marmot.moveDataSet(srcDs.getId(), tar);
 		}
 		catch ( Exception e ) {
 			System.err.println("" + e);
