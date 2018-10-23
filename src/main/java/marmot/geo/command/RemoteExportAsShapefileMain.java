@@ -13,7 +13,6 @@ import utils.CommandLineParser;
 public class RemoteExportAsShapefileMain {
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
-//		LogManager.getRootLogger().setLevel(Level.OFF);
 		
 		CommandLineParser parser = new CommandLineParser("mc_export_shapefile ");
 		parser.addArgumentName("dataset");

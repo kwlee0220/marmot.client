@@ -86,5 +86,6 @@ public class MarmotClientCommands {
 									.map(file -> file.toString())
 									.getOrElse("log4j.properties");
 		PropertyConfigurator.configure(configFileName);
+//		LogManager.getRootLogger().setLevel(Level.OFF);
 	}
 }
