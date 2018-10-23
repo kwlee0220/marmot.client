@@ -338,7 +338,7 @@ public class CopyDataSetMain {
 	
 	private PlanBuilder addGroupBy(PlanBuilder builder) {
 		Option<String> grpByStr = m_cl.getOptionString("group_by");
-		Option<String> aggrsStr = m_cl.getOptionString("aggregate");
+		AggregateFunction[] aggrs = parseAggregate();
 
 		if ( grpByStr.isDefined() ) {
 			List<String> parts = CSV.parse(grpByStr.get(), ':', '\\');
@@ -348,13 +348,15 @@ public class CopyDataSetMain {
 				grpBuilder = grpBuilder.tagWith(parts.get(1));
 			}
 			
-			AggregateFunction[] aggrs = parseAggregate();
 			if ( aggrs == null ) {
 				System.err.printf("no aggregation for GroupBy'%n");
 				m_cl.exitWithUsage(-1);
 			}
 
 			return grpBuilder.aggregate(aggrs);
+		}
+		else if ( aggrs != null ) {
+			return builder.aggregate(aggrs);
 		}
 		else {
 			return builder;
@@ -394,28 +396,76 @@ public class CopyDataSetMain {
 					aggr = COUNT();
 					break;
 				case "SUM":
-					aggr = SUM(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = SUM(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("SUM: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "AVG":
-					aggr = AVG(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = AVG(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("AVG: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "MAX":
-					aggr = MAX(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = MAX(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("MAX: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "MIN":
-					aggr = MIN(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = MIN(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("MIN: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "STDDEV":
-					aggr = STDDEV(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = STDDEV(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("STDDEV: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "CONVEX_HULL":
-					aggr = CONVEX_HULL(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = CONVEX_HULL(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("CONVEX_HULL: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "ENVELOPE":
-					aggr = ENVELOPE(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = ENVELOPE(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("ENVELOPE: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				case "GEOM_UNION":
-					aggr = UNION(aggrSpec.get(1));
+					if ( aggrSpec.size() == 2 ) {
+						aggr = UNION(aggrSpec.get(1));
+					}
+					else {
+						System.err.printf("GEOM_UNION: target column is not specified%n");
+						m_cl.exitWithUsage(-1);
+					}
 					break;
 				default:
 					System.err.printf("invalid aggregation function: %s'%n", aggrSpec.get(0));
