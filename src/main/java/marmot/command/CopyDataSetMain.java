@@ -8,7 +8,7 @@ import static marmot.optor.AggregateFunction.MAX;
 import static marmot.optor.AggregateFunction.MIN;
 import static marmot.optor.AggregateFunction.STDDEV;
 import static marmot.optor.AggregateFunction.SUM;
-import static marmot.optor.AggregateFunction.UNION;
+import static marmot.optor.AggregateFunction.GEOM_UNION;
 
 import java.io.File;
 import java.io.IOException;
@@ -460,7 +460,7 @@ public class CopyDataSetMain {
 					break;
 				case "GEOM_UNION":
 					if ( aggrSpec.size() == 2 ) {
-						aggr = UNION(aggrSpec.get(1));
+						aggr = GEOM_UNION(aggrSpec.get(1));
 					}
 					else {
 						System.err.printf("GEOM_UNION: target column is not specified%n");
