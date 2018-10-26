@@ -8,6 +8,7 @@ import java.util.List;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import io.vavr.control.Option;
 import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
@@ -83,7 +84,7 @@ public class RemoteRunPlanMain {
 	private static void createDataSet(MarmotRuntime marmot, Plan plan, CommandLine cl) {
 		String geomCol = cl.getOptionString("geom_col").getOrNull();
 		String srid = cl.getOptionString("srid").getOrNull();
-		String outDsId = cl.getString("output");
+		String outDsId = cl.getOptionString("output").getOrNull();
 
 		boolean append = cl.hasOption("a");		
 		if ( !append ) {
@@ -108,12 +109,36 @@ public class RemoteRunPlanMain {
 			if ( cl.hasOption("compress") ) {
 				optList.add(DataSetOption.COMPRESS);
 			}
+			
+			String fromPlanDsId = getStoreTargetDataSetId(plan).getOrNull();
+			if ( outDsId == null && fromPlanDsId == null ) {
+				throw new IllegalArgumentException("result dataset id is messing");
+			}
+			else if ( outDsId == null ) {
+				outDsId = fromPlanDsId;
+			}
+			else if ( outDsId != null && fromPlanDsId != null && !outDsId.equals(fromPlanDsId) ) {
+				String details = String.format("target dataset id does not match: "
+											+ "plan=%s, command_line=%s", fromPlanDsId, outDsId);
+				throw new IllegalArgumentException(details);
+			}
 
 			marmot.createDataSet(outDsId, plan, Iterables.toArray(optList, DataSetOption.class));
 		}
 		else {
 			plan = adjustPlanForStore(outDsId, plan);
 			marmot.execute(plan);
+		}
+	}
+	
+	private static Option<String> getStoreTargetDataSetId(Plan plan) {
+		OperatorProto last = plan.getLastOperator()
+				.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
+		switch ( last.getOperatorCase() ) {
+			case STORE_INTO_DATASET:
+				return Option.some(last.getStoreIntoDataset().getId());
+			default:
+				return Option.none();
 		}
 	}
 	
