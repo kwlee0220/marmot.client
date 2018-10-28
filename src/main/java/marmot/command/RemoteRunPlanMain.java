@@ -159,7 +159,7 @@ public class RemoteRunPlanMain {
 				OperatorProto op = OperatorProto.newBuilder().setStoreIntoDataset(store).build();
 				return Plan.fromProto(plan.toProto()
 											.toBuilder()
-											.addOperator(op)
+											.addOperators(op)
 											.build());
 		}
 	}
