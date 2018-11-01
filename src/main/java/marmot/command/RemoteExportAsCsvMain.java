@@ -26,6 +26,7 @@ public class RemoteExportAsCsvMain {
 		parser.addArgOption("point_col", "col_names", "X,Y fields for point", false);
 		parser.addArgOption("csv_srid", "code", "EPSG code for target CSV file", false);
 		parser.addOption("header_first", "print field names first", false);
+		parser.addOption("tiger", "export as tiger format", false);
 		parser.addOption("h", "print usage", false);
 		
 		try {
