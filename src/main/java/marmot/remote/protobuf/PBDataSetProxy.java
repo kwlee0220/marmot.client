@@ -95,13 +95,18 @@ public class PBDataSetProxy implements DataSet {
 
 	@Override
 	public SpatialIndexInfo getDefaultSpatialIndexInfoOrNull() {
-		return null;
+		return m_service.getDefaultSpatialIndexInfoOrNull(getId());
 	}
 
 	@Override
 	public SpatialIndexInfo getDefaultSpatialIndexInfo()
 		throws GeometryColumnNotExistsException, IndexNotFoundException {
-		return null;
+		SpatialIndexInfo idxInfo = getDefaultSpatialIndexInfoOrNull();
+		if ( idxInfo == null ) {
+			throw new IndexNotFoundException(getId());
+		}
+		
+		return idxInfo;
 	}
 
 	@Override

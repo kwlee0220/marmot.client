@@ -169,6 +169,11 @@ public class PBDataSetServiceProxy {
 						.toList();
 	}
 	
+	public SpatialIndexInfo getDefaultSpatialIndexInfoOrNull(String dsId) {
+		StringProto req = PBUtils.toStringProto(dsId);
+		return handle(m_dsBlockingStub.getDefaultSpatialIndexInfo(req));
+	}
+	
 	public RecordSet readDataSet(String dsId) throws DataSetNotFoundException {
 		RecordSetRefResponse resp = m_dsBlockingStub.readDataSet(PBUtils.toStringProto(dsId));
 		return m_marmot.deserialize(resp);
@@ -229,15 +234,7 @@ public class PBDataSetServiceProxy {
 		opts.blockFillRatio().forEach(builder::setBlockFillRatio);
 		ClusterDataSetRequest req = builder.build();
 		
-		SpatialIndexInfoResponse resp = m_dsBlockingStub.clusterDataSet(req);
-		switch ( resp.getEitherCase() ) {
-			case INFO:
-				return SpatialIndexInfo.fromProto(resp.getInfo());
-			case ERROR:
-				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
-			default:
-				throw new AssertionError();
-		}
+		return handle(m_dsBlockingStub.clusterDataSet(req));
 	}
 
 	public List<SpatialClusterInfo> querySpatialClusterInfo(String dsId, Envelope bounds) {
@@ -344,6 +341,19 @@ public class PBDataSetServiceProxy {
 		switch ( resp.getEitherCase() ) {
 			case DATASET_INFO:
 				return new PBDataSetProxy(this, DataSetInfo.fromProto(resp.getDatasetInfo()));
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	private SpatialIndexInfo handle(SpatialIndexInfoResponse resp) {
+		switch ( resp.getEitherCase() ) {
+			case INDEX_INFO:
+				return SpatialIndexInfo.fromProto(resp.getIndexInfo());
+			case NONE:
+				return null;
 			case ERROR:
 				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
 			default:
