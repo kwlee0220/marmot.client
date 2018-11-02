@@ -94,8 +94,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		if ( m_excelParams.excelSrid().isDefined() ) {
 			String srcSrid = m_excelParams.excelSrid().get();
 			if ( !srcSrid.equals(info.srid()) ) {
-				builder = builder.transformCrs(info.name(), srcSrid,
-												info.srid(), info.name());
+				builder = builder.transformCrs(info.name(), srcSrid, info.srid());
 			}
 		}
 		
