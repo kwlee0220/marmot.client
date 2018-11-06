@@ -1,8 +1,11 @@
 package marmot.geoserver.plugin;
 
+import static marmot.DataSetOption.FORCE;
+import static marmot.DataSetOption.GEOMETRY;
+
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CancellationException;
+import java.util.UUID;
 
 import org.geotools.data.FeatureReader;
 import org.geotools.data.Query;
@@ -23,6 +26,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
+import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -38,7 +42,6 @@ import marmot.optor.AggregateFunction;
 import marmot.optor.geo.SpatialRelation;
 import marmot.rset.RecordSets;
 import utils.Throwables;
-import utils.async.ExecutableWork;
 import utils.stream.FStream;
 
 
@@ -215,6 +218,14 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	
 	public RecordSet query(Envelope range) {
 		try {
+			if ( m_ds.getDefaultSpatialIndexInfoOrNull() == null ) {
+				if ( s_logger.isInfoEnabled() ) {
+					s_logger.info("no spatial index, use full scan: id={}", m_ds.getId());
+				}
+				
+				return scan(range);
+			}
+			
 			Tuple2<List<SpatialClusterInfo>, Long> result = guessRelevants(range);
 			List<String> quadKeys = FStream.of(result._1)
 											.map(SpatialClusterInfo::getQuadKey)
@@ -226,7 +237,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 			int ncaches = quadKeys.size() - nonCacheds.size();
 			boolean sampling = m_sampleCount.isDefined() && nonCacheds.size() > 3;
 			if ( s_logger.isInfoEnabled() ) {
-				s_logger.info("status: ds_id={}, nclusters={}, ncaches={}, guess_count={} -> %s",
+				s_logger.info("status: ds_id={}, nclusters={}, ncaches={}, guess_count={} -> {}",
 								m_ds.getId(), quadKeys.size(), ncaches, totalGuess,
 								sampling ? "sample range" : "caching range");
 			}
@@ -236,9 +247,6 @@ public class GSPFeatureSource extends ContentFeatureSource {
 				rset = sample(quadKeys, range, sampleRatio);
 			}
 			else {
-				if ( s_logger.isInfoEnabled() ) {
-					s_logger.info("caching: ds_id={}, target={}", m_ds.getId(), nonCacheds);
-				}
 				FStream<Record> recStream = FStream.of(quadKeys)
 													.flatMap(qk -> query(qk, range, sampleRatio));
 				rset = RecordSets.from(recStream);
@@ -260,5 +268,38 @@ public class GSPFeatureSource extends ContentFeatureSource {
 						return range.intersects(mbr);
 					})
 					.sample(ratio);
+	}
+	
+	private RecordSet scan(Envelope range) {
+		// 샘플 수가 정의되지 않거나, 대상 데이터세트의 레코드 갯수가 샘플 수보다 작은 경우
+		// 데이터세트 전체를 반환한다. 성능을 위해 query() 연산 활용함.
+		if ( m_sampleCount.isEmpty() || m_ds.getRecordCount() <= m_sampleCount.get() ) {
+			return m_ds.query(range, Option.none());
+		}
+		
+		// 필요한 샘플 수를 위한 샘플 ratio를 계산하기 위해 질의 조건을 만족하는
+		// 데이터세트를 구한다.
+		GeometryColumnInfo gcInfo = m_ds.getGeometryColumnInfo();
+		final String tempId = "tmp/" + UUID.randomUUID().toString();
+		Plan plan = m_marmot.planBuilder("query")
+							.query(m_ds.getId(), SpatialRelation.INTERSECTS, range)
+							.build();
+		DataSet temp = m_marmot.createDataSet(tempId, plan, GEOMETRY(gcInfo), FORCE);
+		if ( s_logger.isInfoEnabled() ) {
+			s_logger.info("create temporary dataset: id={}", tempId);
+		}
+		
+		double ratio = (double)m_sampleCount.get() / temp.getRecordCount();
+		plan = m_marmot.planBuilder("sampling")
+						.load(tempId)
+						.sample(ratio)
+						.build();
+		RecordSet result = m_marmot.executeLocally(plan);
+		return RecordSets.attachCloser(result, () -> {
+			if ( s_logger.isInfoEnabled() ) {
+				s_logger.info("purge temporary dataset: id={}", tempId);
+			}
+			m_marmot.deleteDataSet(tempId);
+		});
 	}
 }

@@ -19,6 +19,7 @@ import marmot.MarmotRuntime;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.SpatialClusterInfo;
+import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.protobuf.PBUtils;
 import utils.fostore.FileObjectHandler;
 import utils.fostore.FileObjectStore;
@@ -69,6 +70,10 @@ public class CachingDataSet {
 		return m_ds.getRecordCount();
 	}
 	
+	public RecordSet query(Envelope bounds, Option<String> filter) {
+		return m_ds.queryRange(bounds, filter);
+	}
+	
 	public List<SpatialClusterInfo> querySpatialClusterInfo(Envelope range) {
 		return m_ds.querySpatialClusterInfo(range);
 	}
@@ -94,6 +99,10 @@ public class CachingDataSet {
 		}
 		
 		return m_store.get(quadKey);
+	}
+	
+	public SpatialIndexInfo getDefaultSpatialIndexInfoOrNull() {
+		return m_ds.getDefaultSpatialIndexInfoOrNull();
 	}
 
 	private class ClusterFileHandler implements FileObjectHandler<RecordSet> {
