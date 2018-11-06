@@ -46,8 +46,7 @@ public class GSPDataStore extends ContentDataStore {
 		return new GSPDataStore(marmot, sampleCount, cacheDir, prefixes);
 	}
 	
-	private GSPDataStore(PBMarmotClient marmot, long sampleCount, File cacheDir,
-						String... prefixes) {
+	private GSPDataStore(PBMarmotClient marmot, long sampleCount, File cacheDir, String... prefixes) {
 		m_marmot = marmot;
 		m_sampleCount = sampleCount;
 		m_prefixes = prefixes;
