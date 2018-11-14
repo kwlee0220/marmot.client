@@ -1,4 +1,4 @@
-package marmot.geoserver.plugin;
+package marmot.geo.geoserver;
 
 
 /**

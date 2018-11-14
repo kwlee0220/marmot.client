@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'com.github.johnrengelman.shadow'
  
 group = 'etri'
 version = '5.11.03'
@@ -37,7 +38,6 @@ ext.geotools_version = '17.2'
 dependencies {
 	compile project(':utils')
 	compile project(':marmot.common')
-//	compile "etri:utils:1.0"
 
 	compile	"org.geotools:gt-swt:${geotools_version}"
 	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
@@ -45,7 +45,6 @@ dependencies {
 	testCompile "junit:junit:4.12"
 }
 
-apply plugin: 'com.github.johnrengelman.shadow'
 shadowJar {
 	classifier 'all'
 	
@@ -54,10 +53,24 @@ shadowJar {
 	exclude 'META-INF/*.SF'
 	exclude 'META-INF/*.DSA'
 	exclude 'META-INF/*.RSA'
-	
-//	relocate 'com.google', 'shadow.com.google'
-//	relocate 'io.netty', 'shadow.io.netty'
 }
+
+
+// 다른 라이브러리들과 conflict가 발생하는 경우 이 shadow jar를 사용한다.
+// 이것을 사용하면 xxx-all.jar 대신 xxx-shadowed.jar 가 생성된다.
+//shadowJar {
+//	classifier 'shadowed'
+//	
+//	mergeServiceFiles()
+//	
+//	exclude 'META-INF/*.SF'
+//	exclude 'META-INF/*.DSA'
+//	exclude 'META-INF/*.RSA'
+//	
+//	relocate 'com.google.common', 'shadow.com.google.common'
+//	relocate 'io.netty', 'shadow.io.netty'
+//}
+
 
 task sourceJar(type: Jar) {
 	classifier 'sources'
@@ -82,6 +95,18 @@ artifacts {
 	archives sourceJar
 	archives javadocJar
 	archives shadowJar
+}
+
+apply plugin: 'maven-publish'
+publishing {
+	publications {
+		main(MavenPublication) {
+			artifact jar
+			artifact sourceJar
+			artifact javadocJar
+			artifact shadowJar
+		}
+	}
 }
 
 apply plugin: 'eclipse'

@@ -1,4 +1,4 @@
-package marmot.geoserver.plugin;
+package marmot.geo.geoserver;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +26,7 @@ public class GSPUtils {
 		throw new AssertionError("Should not be called: class=" + GSPUtils.class);
 	}
 	
-	static String toSimpleFeatureTypeName(String dsId) {
+	public static String toSimpleFeatureTypeName(String dsId) {
 		if ( dsId.charAt(0) == '/' ) {
 			dsId = dsId.substring(1);
 		}
@@ -34,7 +34,7 @@ public class GSPUtils {
 		return dsId.replace('/', '.');
 	}
 	
-	static String toDataSetId(String sfTypeName) {
+	public static String toDataSetId(String sfTypeName) {
 		return "/" + sfTypeName.replace('.', '/');
 	}
 	
