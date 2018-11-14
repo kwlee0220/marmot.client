@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'com.github.johnrengelman.shadow'
  
 group = 'etri'
-version = '5.11.03'
+version = '5.11.14'
 
 sourceCompatibility = JavaVersion.VERSION_1_8;
 [compileJava,compileTestJava]*.options*.encoding = 'UTF-8'
