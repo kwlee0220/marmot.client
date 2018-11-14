@@ -14,12 +14,11 @@ import marmot.proto.service.RecordSetServiceGrpc.RecordSetServiceStub;
 import marmot.proto.service.UploadRecordRequest;
 import marmot.proto.service.UploadRecordResponse;
 import marmot.protobuf.PBUtils;
-import marmot.remote.protobuf.UploadRecordSet.UploadRecordResponseHandler;
 import marmot.support.DefaultRecord;
 import net.jcip.annotations.GuardedBy;
 import utils.Guard;
 import utils.Throwables;
-import utils.async.ExecutableWork;
+import utils.async.AbstractExecution;
 import utils.async.Execution;
 import utils.async.Executors;
 
@@ -27,7 +26,7 @@ import utils.async.Executors;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-class UploadRecordSet implements ExecutableWork<Long> {
+class UploadRecordSet extends AbstractExecution<Long> {
 	private static final Logger s_logger = LoggerFactory.getLogger(UploadRecordSet.class);
 	
 	private static final int SYNC_INTERVAL = 16;
@@ -44,7 +43,10 @@ class UploadRecordSet implements ExecutableWork<Long> {
 	@GuardedBy("m_guard") private Throwable m_failure = null;
 	
 	public static Execution<Long> start(PBMarmotClient marmot, String rsetId, RecordSet rset) {
-		return Executors.start(new UploadRecordSet(marmot, rsetId, rset));
+		UploadRecordSet upload = new UploadRecordSet(marmot, rsetId, rset);
+		Executors.start(upload);
+		
+		return upload;
 	}
 	
 	public static long run(PBMarmotClient marmot, String rsetId, RecordSet rset) throws Throwable {

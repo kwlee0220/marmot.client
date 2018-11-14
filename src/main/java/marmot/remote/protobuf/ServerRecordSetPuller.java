@@ -17,13 +17,13 @@ import marmot.protobuf.SingleValueObserver;
 import marmot.rset.AbstractRecordSet;
 import marmot.rset.PipedRecordSet;
 import marmot.rset.RecordSets;
-import utils.async.ExecutableHandle;
+import utils.async.AbstractExecution;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class ServerRecordSetPuller extends ExecutableHandle<Void> {
+public class ServerRecordSetPuller extends AbstractExecution<Void> {
 	private final String m_rsetId;
 	private final PipedRecordSet m_queue;
 	private final RecordSetServiceStub m_stub;
