@@ -1,5 +1,6 @@
 package marmot.remote.protobuf;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Objects;
 
@@ -163,6 +164,11 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public RecordSet readSpatialCluster(String quadKey, Option<String> filterExpr) {
 		return m_service.readSpatialCluster(getId(), quadKey, filterExpr);
+	}
+
+	@Override
+	public InputStream readRawSpatialCluster(String quadKey) {
+		return m_service.readRawSpatialCluster(getId(), quadKey);
 	}
 
 	@Override

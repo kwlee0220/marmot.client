@@ -1,6 +1,7 @@
 package marmot.remote.protobuf;
 
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.proto.StringProto;
 import marmot.proto.service.AppendRecordSetRequest;
+import marmot.proto.service.BinaryChunkProto;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.ClusterDataSetRequest;
 import marmot.proto.service.CreateDataSetRequest;
@@ -272,6 +274,16 @@ public class PBDataSetServiceProxy {
 		
 		RecordSetRefResponse resp = m_dsBlockingStub.readSpatialCluster(req);
 		return m_marmot.deserialize(resp);
+	}
+	
+	public InputStream readRawSpatialCluster(String dsId, String quadKey) {
+		ReadSpatialClusterRequest.Builder builder = ReadSpatialClusterRequest.newBuilder()
+																.setDatasetId(dsId)
+																.setQuadKey(quadKey);
+		ReadSpatialClusterRequest req = builder.build();
+		Iterator<BinaryChunkProto> resp = m_dsBlockingStub.readRawSpatialCluster(req);
+		
+		return PBUtils.toInputStream(resp);
 	}
 	
 	public RecordSet sampleSpatialCluster(String dsId, String quadKey, Envelope bounds, double sampleRatio) {
