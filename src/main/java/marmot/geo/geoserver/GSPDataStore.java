@@ -17,6 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import marmot.DataSet;
 import marmot.MarmotRuntime;
@@ -34,6 +37,7 @@ public class GSPDataStore extends ContentDataStore {
 	private static final String WORKSPACE_URI = "http://marmot.etri.re.kr";
 	
 	private final PBMarmotClient m_marmot;
+	private final LoadingCache<String, GSPDataSetInfo> m_dsCache;
 	private final DataSetPartitionCache m_cache;
 	private int m_sampleCount = -1;
 	private String[] m_prefixes = new String[0];
@@ -47,10 +51,21 @@ public class GSPDataStore extends ContentDataStore {
 		
 		m_marmot = marmot;
 		m_cache = DataSetPartitionCache.builder()
-								.fileStoreDir(cacheDir)
-								.maxSize(cacheSize)
-								.timeout(evicMinutes, TimeUnit.MINUTES)
-								.build(marmot);
+										.fileStoreDir(cacheDir)
+										.maxSize(cacheSize)
+										.timeout(evicMinutes, TimeUnit.MINUTES)
+										.build(marmot);
+		
+		m_dsCache = CacheBuilder.newBuilder()
+								.expireAfterAccess(60, TimeUnit.MINUTES)
+								.build(new CacheLoader<String,GSPDataSetInfo>() {
+									@Override
+									public GSPDataSetInfo load(String dsId) throws Exception {
+										DataSet ds = m_marmot.getDataSet(dsId);
+										s_logger.info("load: dataset={}", dsId);
+										return new GSPDataSetInfo(ds);
+									}
+								});
 		
 		setNamespaceURI(WORKSPACE_URI);
 	}
@@ -82,13 +97,12 @@ public class GSPDataStore extends ContentDataStore {
 	protected ContentFeatureSource createFeatureSource(ContentEntry entry)
 		throws IOException {
 		String dsId = GSPUtils.toDataSetId(entry.getTypeName());
-		DataSet ds = m_marmot.getDataSet(dsId);
 		
-		GSPFeatureSource source = new GSPFeatureSource(entry, ds, m_cache);
+		GSPDataSetInfo dsInfo = m_dsCache.getUnchecked(dsId);
+		GSPFeatureSource source = new GSPFeatureSource(entry, dsInfo, m_cache);
 		if ( m_sampleCount > 0 ) {
 			source.setSampleCount(m_sampleCount);
 		}
-		s_logger.info("load: dataset={}", dsId);
 		
 		return source;
 	}

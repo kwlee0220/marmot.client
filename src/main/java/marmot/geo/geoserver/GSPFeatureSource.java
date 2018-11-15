@@ -28,6 +28,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 
+import io.vavr.Lazy;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
@@ -60,27 +61,28 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	private static final int MAX_CACHING_CLUSTERS = 5;
 
 	private final MarmotRuntime m_marmot;
+	private final GSPDataSetInfo m_dsInfo;
 	private final String m_dsId;
-	private final DataSet m_ds;
 	private final DataSetPartitionCache m_cache;
 	private final GeometryColumnInfo m_gcInfo;
-	private final ReferencedEnvelope m_mbr;
+	private final Lazy<ReferencedEnvelope> m_mbr;
 	private final CoordinateReferenceSystem m_crs;
 	private Option<Long> m_sampleCount = Option.none();
 	
-	GSPFeatureSource(ContentEntry entry, DataSet ds, DataSetPartitionCache cache) {
+	GSPFeatureSource(ContentEntry entry, GSPDataSetInfo info, DataSetPartitionCache cache) {
 		super(entry, Query.ALL);
 		
-		m_marmot = ds.getMarmotRuntime();
-		m_dsId = ds.getId();
-		m_ds = ds;		
-		m_gcInfo = ds.getGeometryColumnInfo();
+		m_marmot = info.getMarmotRuntime();
+		m_dsInfo = info;
+		m_dsId = m_dsInfo.getDataSet().getId();
+		m_gcInfo = m_dsInfo.getDataSet().getGeometryColumnInfo();
 		m_crs = CRSUtils.toCRS(m_gcInfo.srid());
-
-		Envelope bounds = ds.getBounds();
-		m_mbr = new ReferencedEnvelope(bounds, m_crs);
-		
 		m_cache = cache;
+
+		m_mbr = Lazy.of(() -> {
+			Envelope bounds = m_dsInfo.getBounds();
+			return new ReferencedEnvelope(bounds, m_crs);
+		});
 	}
 	
 	public GSPFeatureSource setSampleCount(long count) {
@@ -97,10 +99,10 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	
 	public RecordSet query(Envelope range) {
 		try {
-			if ( range.contains(m_ds.getBounds()) ) {
+			if ( range.contains(m_dsInfo.getBounds()) ) {
 				return scan();
 			}
-			else if ( m_ds.getDefaultSpatialIndexInfoOrNull() == null ) {
+			else if ( !m_dsInfo.hasSpatialIndex() ) {
 				s_logger.info("no spatial index, use full scan: id={}", m_dsId);
 				
 				return scanRange(range, -1);
@@ -118,8 +120,8 @@ public class GSPFeatureSource extends ContentFeatureSource {
 											.getOrElse(1d);
 			sampleRatio = sampleRatio > 1 ? 1 : sampleRatio;
 			
-			Envelope overlap = range.intersection(m_ds.getBounds());
-			double coverRatio = overlap.getArea() / m_ds.getBounds().getArea();		
+			Envelope overlap = range.intersection(m_dsInfo.getBounds());
+			double coverRatio = overlap.getArea() / m_dsInfo.getBounds().getArea();		
 			if ( coverRatio > 0.7 ) {
 				s_logger.info("too large for index, use full scan: id={}", m_dsId);
 				
@@ -156,7 +158,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 			if ( sampleRatio < 1 ) {
 				recStream = recStream.sample(sampleRatio);
 			}
-			return RecordSets.from(m_ds.getRecordSchema(), recStream);
+			return RecordSets.from(m_dsInfo.getRecordSchema(), recStream);
 		}
 		catch ( Throwable e ) {
 			throw Throwables.toRuntimeException(Throwables.unwrapThrowable(e));
@@ -167,13 +169,13 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	protected ReferencedEnvelope getBoundsInternal(Query query) throws IOException {
 		try {
 			if ( query == Query.ALL ) {
-				return m_mbr;
+				return m_mbr.get();
 			}
 			else {
 				Tuple2<BoundingBox, Option<Filter>> resolved
-										= GSPUtils.resolveQuery(m_mbr, query);
+										= GSPUtils.resolveQuery(m_mbr.get(), query);
 				if ( resolved._1 == null && resolved._2.isEmpty() ) {
-					return new ReferencedEnvelope(m_mbr);
+					return new ReferencedEnvelope(m_mbr.get());
 				}
 				
 				Plan plan = newPlanBuilder(resolved._1, resolved._2)
@@ -192,9 +194,9 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected int getCountInternal(Query query) throws IOException {
 		Tuple2<BoundingBox, Option<Filter>> resolved
-										= GSPUtils.resolveQuery(m_mbr, query);
+										= GSPUtils.resolveQuery(m_mbr.get(), query);
 		if ( resolved._1 == null && resolved._2.isEmpty() ) {
-			return (int)m_ds.getRecordCount();
+			return (int)m_dsInfo.getRecordCount();
 		}
 		
 		Plan plan = newPlanBuilder(resolved._1, resolved._2)
@@ -206,7 +208,8 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected FeatureReader<SimpleFeatureType, SimpleFeature> getReaderInternal(Query query) {
 		try {
-			Tuple2<BoundingBox, Option<Filter>> resolved = GSPUtils.resolveQuery(m_mbr, query);
+			Tuple2<BoundingBox, Option<Filter>> resolved
+											= GSPUtils.resolveQuery(m_mbr.get(), query);
 			BoundingBox bbox = resolved._1;
 			
 			Envelope range = GeoClientUtils.toEnvelope(bbox.getMinX(), bbox.getMinY(),
@@ -223,7 +226,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected SimpleFeatureType buildFeatureType() throws IOException {
 		return GeoToolsUtils.toSimpleFeatureType(getEntry().getTypeName(), m_gcInfo.srid(),
-												m_ds.getRecordSchema());
+												m_dsInfo.getRecordSchema());
 	}
 	
 	private PlanBuilder newPlanBuilder(BoundingBox bbox, Option<Filter> filter) {
@@ -241,7 +244,8 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	}
 	
 	private Tuple2<List<SpatialClusterInfo>, Long> guessRelevants(Envelope range) {
-		List<SpatialClusterInfo> infos = m_ds.querySpatialClusterInfo(range);
+		List<SpatialClusterInfo> infos = m_dsInfo.getDataSet()
+												.querySpatialClusterInfo(range);
 		
 		List<Tuple2<SpatialClusterInfo,Long>> relevants = FStream.of(infos)
 							.map(idx -> Tuple.of(idx, guessCount(range, idx)))
@@ -264,7 +268,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		// 데이터세트 전체를 반환한다. 성능을 위해 query() 연산 활용함.
 		if ( sampleRatio >= 1 ) {
 			s_logger.info("index_scan: no sampling");
-			return m_ds.queryRange(range, Option.none());
+			return m_dsInfo.getDataSet().queryRange(range, Option.none());
 		}
 		else {
 			String ratioStr = String.format("%.2f%%", sampleRatio*100);
@@ -280,11 +284,11 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	}
 	
 	private RecordSet scan() {
-		double ratio = m_sampleCount.map(cnt -> (double)cnt / m_ds.getRecordCount())
+		double ratio = m_sampleCount.map(cnt -> (double)cnt / m_dsInfo.getRecordCount())
 									.getOrElse(1d);
 		if ( ratio >= 1 ) {
 			s_logger.info("scan fully: dataset={}", m_dsId);
-			return m_ds.read();
+			return m_dsInfo.getDataSet().read();
 		}
 
 		String ratioStr = String.format("%.2f%%", ratio*100);
@@ -303,7 +307,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		if ( ratio >= 1 ) {
 			s_logger.info("scan range: dataset={}", m_dsId);
 			
-			return m_ds.queryRange(range, Option.none());
+			return m_dsInfo.getDataSet().queryRange(range, Option.none());
 		}
 		
 		Plan plan;
@@ -315,7 +319,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 			// 필요한 샘플 수를 위한 샘플 ratio를 계산하기 위해 질의 조건을 만족하는
 			// 데이터세트를 구한다.
 			Geometry key = GeoClientUtils.toPolygon(range);
-			GeometryColumnInfo gcInfo = m_ds.getGeometryColumnInfo();
+			GeometryColumnInfo gcInfo = m_dsInfo.getGeometryColumnInfo();
 			plan = m_marmot.planBuilder("scan range")
 							.query(m_dsId, INTERSECTS, key)
 							.build();
