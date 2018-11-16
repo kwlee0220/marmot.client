@@ -7,10 +7,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 import com.vividsolutions.jts.geom.Envelope;
 
 import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
@@ -26,8 +29,7 @@ import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.proto.StringProto;
-import marmot.proto.service.AppendRecordSetRequest;
-import marmot.proto.service.BinaryChunkProto;
+import marmot.proto.service.AppendRecordSetChunkProto;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.ClusterDataSetRequest;
 import marmot.proto.service.CreateDataSetRequest;
@@ -36,6 +38,7 @@ import marmot.proto.service.DataSetInfoResponse;
 import marmot.proto.service.DataSetOptionsProto;
 import marmot.proto.service.DataSetServiceGrpc;
 import marmot.proto.service.DataSetServiceGrpc.DataSetServiceBlockingStub;
+import marmot.proto.service.DataSetServiceGrpc.DataSetServiceStub;
 import marmot.proto.service.DataSetTypeProto;
 import marmot.proto.service.DirectoryTraverseRequest;
 import marmot.proto.service.ExecutePlanRequest;
@@ -44,15 +47,18 @@ import marmot.proto.service.MoveDataSetRequest;
 import marmot.proto.service.MoveDirRequest;
 import marmot.proto.service.QueryRangeRequest;
 import marmot.proto.service.QuerySpatialClusterInfoRequest;
-import marmot.proto.service.ReadSpatialClusterRequest;
-import marmot.proto.service.RecordSetRefResponse;
-import marmot.proto.service.SampleSpatialClusterRequest;
+import marmot.proto.service.ReadRawSpatialClusterRequest;
 import marmot.proto.service.SpatialClusterInfoProto;
 import marmot.proto.service.SpatialClusterInfoResponse;
 import marmot.proto.service.SpatialIndexInfoResponse;
+import marmot.proto.service.StreamChunkProto;
 import marmot.proto.service.StringResponse;
 import marmot.proto.service.VoidResponse;
+import marmot.protobuf.ChunkInputStream;
 import marmot.protobuf.PBUtils;
+import marmot.protobuf.StreamUploader;
+import marmot.rset.PBInputStreamRecordSet;
+import marmot.rset.PBRecordSetInputStream;
 import utils.Throwables;
 import utils.stream.FStream;
 
@@ -63,11 +69,11 @@ import utils.stream.FStream;
 public class PBDataSetServiceProxy {
 	private final PBMarmotClient m_marmot;
 	private final DataSetServiceBlockingStub m_dsBlockingStub;
-//	private final DataSetServiceStub m_dsStub;
+	private final DataSetServiceStub m_dsStub;
 
 	PBDataSetServiceProxy(PBMarmotClient marmot, ManagedChannel channel) {
 		m_marmot = marmot;
-//		m_dsStub = DataSetServiceGrpc.newStub(channel);
+		m_dsStub = DataSetServiceGrpc.newStub(channel);
 		m_dsBlockingStub = DataSetServiceGrpc.newBlockingStub(channel);
 	}
 
@@ -177,8 +183,8 @@ public class PBDataSetServiceProxy {
 	}
 	
 	public RecordSet readDataSet(String dsId) throws DataSetNotFoundException {
-		RecordSetRefResponse resp = m_dsBlockingStub.readDataSet(PBUtils.toStringProto(dsId));
-		return m_marmot.deserialize(resp);
+		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.readDataSet(PBUtils.toStringProto(dsId));
+		return PBInputStreamRecordSet.from(ChunkInputStream.from(chunks));
 	}
 	
 	public RecordSet queryRange(String dsId, Envelope range, Option<String> filterExpr)
@@ -189,22 +195,56 @@ public class PBDataSetServiceProxy {
 		filterExpr.forEach(builder::setFilterExpr);
 		QueryRangeRequest req = builder.build();
 		
-		RecordSetRefResponse resp = m_dsBlockingStub.queryRange(req);
-		return m_marmot.deserialize(resp);
+		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.queryRange(req);
+		return PBInputStreamRecordSet.from(ChunkInputStream.from(chunks));
+	}
+	
+	private static class RecordSetUploader extends StreamUploader<AppendRecordSetChunkProto> {
+		private final AppendRecordSetChunkProto m_header;
+		
+		RecordSetUploader(String dsId, Option<Plan> plan, InputStream is) {
+			super(is);
+			
+			AppendRecordSetChunkProto.HeaderProto.Builder builder
+										= AppendRecordSetChunkProto.HeaderProto.newBuilder()
+																			.setDataset(dsId);
+			plan.map(Plan::toProto).forEach(builder::setPlan);
+			AppendRecordSetChunkProto.HeaderProto header = builder.build();
+			m_header = AppendRecordSetChunkProto.newBuilder()
+												.setHeader(header)
+												.build();
+		}
+
+		@Override
+		protected Option<AppendRecordSetChunkProto> newHeader() {
+			return Option.some(m_header);
+		}
+
+		@Override
+		protected AppendRecordSetChunkProto wrapChunk(ByteString chunk) {
+			return AppendRecordSetChunkProto.newBuilder()
+											.setBlock(chunk)
+											.build();
+		}
+
+		@Override
+		protected AppendRecordSetChunkProto wrapSync(int sync) {
+			return AppendRecordSetChunkProto.newBuilder()
+											.setSync(sync)
+											.build();
+		}
 	}
 	
 	public long appendRecordSet(String dsId, RecordSet rset, Option<Plan> plan) {
 		try {
-			String rsetId = m_marmot.allocateRecordSet(rset.getRecordSchema());
-			UploadRecordSet.start(m_marmot, rsetId, rset);
+			PBRecordSetInputStream is = PBRecordSetInputStream.from(rset);
+			RecordSetUploader uploader = new RecordSetUploader(dsId, plan, is);
 			
-			AppendRecordSetRequest.Builder builder = AppendRecordSetRequest.newBuilder()
-																.setId(dsId)
-																.setRsetId(rsetId);
-			plan.map(Plan::toProto).forEach(builder::setPlan);
-			AppendRecordSetRequest req = builder.build();
+			StreamObserver<AppendRecordSetChunkProto> channel = m_dsStub.appendRecordSet(uploader);
+			uploader.channel(channel);
+			uploader.executeWork();
 			
-			return PBUtils.handle(m_dsBlockingStub.appendRecordSet(req));
+			return uploader.waitForFinalReponse();
 		}
 		catch ( Throwable e ) {
 			throw Throwables.toRuntimeException(e);
@@ -265,37 +305,14 @@ public class PBDataSetServiceProxy {
 		return infoList;
 	}
 	
-	public RecordSet readSpatialCluster(String dsId, String quadKey, Option<String> filterExpr) {
-		ReadSpatialClusterRequest.Builder builder = ReadSpatialClusterRequest.newBuilder()
-																.setDatasetId(dsId)
-																.setQuadKey(quadKey);
-		filterExpr.forEach(builder::setFilterEpxr);
-		ReadSpatialClusterRequest req = builder.build();
-		
-		RecordSetRefResponse resp = m_dsBlockingStub.readSpatialCluster(req);
-		return m_marmot.deserialize(resp);
-	}
-	
 	public InputStream readRawSpatialCluster(String dsId, String quadKey) {
-		ReadSpatialClusterRequest.Builder builder = ReadSpatialClusterRequest.newBuilder()
+		ReadRawSpatialClusterRequest.Builder builder = ReadRawSpatialClusterRequest.newBuilder()
 																.setDatasetId(dsId)
 																.setQuadKey(quadKey);
-		ReadSpatialClusterRequest req = builder.build();
-		Iterator<BinaryChunkProto> resp = m_dsBlockingStub.readRawSpatialCluster(req);
+		ReadRawSpatialClusterRequest req = builder.build();
+		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.readRawSpatialCluster(req);
 		
-		return PBUtils.toInputStream(resp);
-	}
-	
-	public RecordSet sampleSpatialCluster(String dsId, String quadKey, Envelope bounds, double sampleRatio) {
-		SampleSpatialClusterRequest req = SampleSpatialClusterRequest.newBuilder()
-															.setDatasetId(dsId)
-															.setQuadKey(quadKey)
-															.setBounds(PBUtils.toProto(bounds))
-															.setSampleRatio(sampleRatio)
-															.build();
-		
-		RecordSetRefResponse resp = m_dsBlockingStub.sampleSpatialCluster(req);
-		return m_marmot.deserialize(resp);
+		return ChunkInputStream.from(FStream.of(chunks).map(p -> Try.success(p.getBlock())));
 	}
 
 	public List<String> getDirAll() {
