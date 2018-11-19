@@ -1,6 +1,7 @@
 package marmot.command;
 
 import marmot.DataSet;
+import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.CommandLineParser;
@@ -49,6 +50,9 @@ public class PrintSchemaMain {
 				System.out.println("SRID     : " + info.getGeometryColumnInfo().srid());
 			}
 			System.out.println("HDFS PATH: " + info.getHdfsPath());
+			SpatialIndexInfo idxInfo = info.getDefaultSpatialIndexInfoOrNull();
+			System.out.printf("SPATIAL INDEX: %s%n", (idxInfo != null)
+														? idxInfo.getHdfsFilePath() : "none");
 			System.out.println("COLUMNS  :");
 			info.getRecordSchema().getColumnAll()
 					.stream()

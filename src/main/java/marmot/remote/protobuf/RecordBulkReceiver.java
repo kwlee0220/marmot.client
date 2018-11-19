@@ -52,11 +52,11 @@ class RecordBulkReceiver implements StreamObserver<RecordBulkResponse> {
 				}
 				break;
 			case END_OF_STREAM:
-				m_guard.runAndSignal(() -> m_eos = true);
+				m_guard.run(() -> m_eos = true, true);
 				break;
 			case ERROR:
 				Exception error = PBUtils.toException(value.getError());
-				m_guard.runAndSignal(() -> m_failure = error);
+				m_guard.run(() -> m_failure = error, true);
 				break;
 			default:
 				throw new AssertionError();
@@ -67,11 +67,11 @@ class RecordBulkReceiver implements StreamObserver<RecordBulkResponse> {
 	public void onError(Throwable cause) {
 		s_logger.error("unexpected incoming error: {}, class={}",
 						cause, RecordBulkReceiver.class);
-		m_guard.runAndSignal(() -> { m_done = true; m_failure = cause; });
+		m_guard.run(() -> { m_done = true; m_failure = cause; }, true);
 	}
 
 	@Override
 	public void onCompleted() {
-		m_guard.runAndSignal(() -> m_done = true);
+		m_guard.run(() -> m_done = true, true);
 	}
 }

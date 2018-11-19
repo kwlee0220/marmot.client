@@ -89,7 +89,7 @@ class GSPDataSetInfo {
 			}
 			else {
 				CompletableFuture.runAsync(() -> {
-					m_guard.runAndSignal(this::aggregate);
+					m_guard.run(this::aggregate, true);
 				});
 			}
 		}

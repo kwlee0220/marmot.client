@@ -13,7 +13,6 @@ import com.vividsolutions.jts.geom.Envelope;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import io.vavr.control.Option;
-import io.vavr.control.Try;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
@@ -28,8 +27,9 @@ import marmot.SpatialClusterInfo;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
+import marmot.proto.LongProto;
 import marmot.proto.StringProto;
-import marmot.proto.service.AppendRecordSetChunkProto;
+import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.ClusterDataSetRequest;
 import marmot.proto.service.CreateDataSetRequest;
@@ -41,6 +41,7 @@ import marmot.proto.service.DataSetServiceGrpc.DataSetServiceBlockingStub;
 import marmot.proto.service.DataSetServiceGrpc.DataSetServiceStub;
 import marmot.proto.service.DataSetTypeProto;
 import marmot.proto.service.DirectoryTraverseRequest;
+import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.LongResponse;
 import marmot.proto.service.MoveDataSetRequest;
@@ -51,12 +52,10 @@ import marmot.proto.service.ReadRawSpatialClusterRequest;
 import marmot.proto.service.SpatialClusterInfoProto;
 import marmot.proto.service.SpatialClusterInfoResponse;
 import marmot.proto.service.SpatialIndexInfoResponse;
-import marmot.proto.service.StreamChunkProto;
 import marmot.proto.service.StringResponse;
+import marmot.proto.service.UpChunkRequest;
 import marmot.proto.service.VoidResponse;
-import marmot.protobuf.ChunkInputStream;
 import marmot.protobuf.PBUtils;
-import marmot.protobuf.StreamUploader;
 import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
 import utils.Throwables;
@@ -183,71 +182,55 @@ public class PBDataSetServiceProxy {
 	}
 	
 	public RecordSet readDataSet(String dsId) throws DataSetNotFoundException {
-		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.readDataSet(PBUtils.toStringProto(dsId));
-		return PBInputStreamRecordSet.from(ChunkInputStream.from(chunks));
+		StreamDownloaderClient downloader = new StreamDownloaderClient();
+		StreamObserver<DownChunkRequest> channel = m_dsStub.readDataSet(downloader);
+		downloader.setOutputChannel(channel);
+
+		// start download by sending 'stream-download' request
+		InputStream is = downloader.start(PBUtils.toStringProto(dsId).toByteString());
+		
+		return PBInputStreamRecordSet.from(is);
 	}
 	
 	public RecordSet queryRange(String dsId, Envelope range, Option<String> filterExpr)
 		throws DataSetNotFoundException {
+		StreamDownloaderClient downloader = new StreamDownloaderClient();
+		StreamObserver<DownChunkRequest> channel = m_dsStub.readDataSet(downloader);
+		downloader.setOutputChannel(channel);
+		
 		QueryRangeRequest.Builder builder = QueryRangeRequest.newBuilder()
 															.setId(dsId)
 															.setRange(PBUtils.toProto(range));
 		filterExpr.forEach(builder::setFilterExpr);
 		QueryRangeRequest req = builder.build();
+
+		// start download by sending 'stream-download' request
+		InputStream is = downloader.start(req.toByteString());
 		
-		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.queryRange(req);
-		return PBInputStreamRecordSet.from(ChunkInputStream.from(chunks));
-	}
-	
-	private static class RecordSetUploader extends StreamUploader<AppendRecordSetChunkProto> {
-		private final AppendRecordSetChunkProto m_header;
-		
-		RecordSetUploader(String dsId, Option<Plan> plan, InputStream is) {
-			super(is);
-			
-			AppendRecordSetChunkProto.HeaderProto.Builder builder
-										= AppendRecordSetChunkProto.HeaderProto.newBuilder()
-																			.setDataset(dsId);
-			plan.map(Plan::toProto).forEach(builder::setPlan);
-			AppendRecordSetChunkProto.HeaderProto header = builder.build();
-			m_header = AppendRecordSetChunkProto.newBuilder()
-												.setHeader(header)
-												.build();
-		}
-
-		@Override
-		protected Option<AppendRecordSetChunkProto> newHeader() {
-			return Option.some(m_header);
-		}
-
-		@Override
-		protected AppendRecordSetChunkProto wrapChunk(ByteString chunk) {
-			return AppendRecordSetChunkProto.newBuilder()
-											.setBlock(chunk)
-											.build();
-		}
-
-		@Override
-		protected AppendRecordSetChunkProto wrapSync(int sync) {
-			return AppendRecordSetChunkProto.newBuilder()
-											.setSync(sync)
-											.build();
-		}
+		return PBInputStreamRecordSet.from(is);
 	}
 	
 	public long appendRecordSet(String dsId, RecordSet rset, Option<Plan> plan) {
 		try {
-			PBRecordSetInputStream is = PBRecordSetInputStream.from(rset);
-			RecordSetUploader uploader = new RecordSetUploader(dsId, plan, is);
+			InputStream is = PBRecordSetInputStream.from(rset);
 			
-			StreamObserver<AppendRecordSetChunkProto> channel = m_dsStub.appendRecordSet(uploader);
-			uploader.channel(channel);
-			uploader.executeWork();
+			StreamUploaderClient uploader = new StreamUploaderClient(is);
+			StreamObserver<UpChunkRequest> channel = m_dsStub.appendRecordSet(uploader);
+			uploader.setOutputChannel(channel);
 			
-			return uploader.waitForFinalReponse();
+			AppendRecordSetRequest.Builder builder = AppendRecordSetRequest.newBuilder().setId(dsId);
+			plan.map(Plan::toProto).forEach(builder::setPlan);
+			AppendRecordSetRequest req = builder.build();
+			uploader.sendRequest(req.toByteString());
+			
+			uploader.run();
+			
+			ByteString ret = uploader.get();
+			return LongProto.parseFrom(ret).getValue();	
 		}
 		catch ( Throwable e ) {
-			throw Throwables.toRuntimeException(e);
+			Throwable cause = Throwables.unwrapThrowable(e);
+			throw Throwables.toRuntimeException(cause);
 		}
 	}
 	
@@ -306,13 +289,16 @@ public class PBDataSetServiceProxy {
 	}
 	
 	public InputStream readRawSpatialCluster(String dsId, String quadKey) {
+		StreamDownloaderClient downloader = new StreamDownloaderClient();
+		StreamObserver<DownChunkRequest> channel = m_dsStub.readDataSet(downloader);
+		downloader.setOutputChannel(channel);
+
+		// start download by sending 'stream-download' request
 		ReadRawSpatialClusterRequest.Builder builder = ReadRawSpatialClusterRequest.newBuilder()
 																.setDatasetId(dsId)
 																.setQuadKey(quadKey);
 		ReadRawSpatialClusterRequest req = builder.build();
-		Iterator<StreamChunkProto> chunks = m_dsBlockingStub.readRawSpatialCluster(req);
-		
-		return ChunkInputStream.from(FStream.of(chunks).map(p -> Try.success(p.getBlock())));
+		return downloader.start(req.toByteString());
 	}
 
 	public List<String> getDirAll() {

@@ -155,14 +155,14 @@ class UploadRecordSet extends AbstractExecution<Long> {
 			switch ( resp.getEitherCase() ) {
 				case SYNC_ACK:
 					long ackNo = resp.getSyncAck();
-					m_guard.runAndSignal(() -> m_syncAck = ackNo);
+					m_guard.run(() -> m_syncAck = ackNo, true);
 					break;
 				case ERROR:
 					Exception cause = PBUtils.toException(resp.getError());
-					m_guard.runAndSignal(() -> m_failure = cause);
+					m_guard.run(() -> m_failure = cause, true);
 					break;
 				case RSET_CLOSED:
-					m_guard.runAndSignal(() -> m_isPeerClosed = true);
+					m_guard.run(() -> m_isPeerClosed = true, true);
 					break;
 				default:
 					throw new AssertionError();
@@ -171,14 +171,14 @@ class UploadRecordSet extends AbstractExecution<Long> {
 
 		@Override
 		public void onCompleted() {
-			m_guard.runAndSignal(() -> m_done = true);
+			m_guard.run(() -> m_done = true, true);
 		}
 
 		@Override
 		public void onError(Throwable cause) {
 			s_logger.error("unexpected incoming error: {}, class={}",
 							cause, UploadRecordResponseHandler.class);
-			m_guard.runAndSignal(() -> { m_failure = cause; m_done = true; });
+			m_guard.run(() -> { m_failure = cause; m_done = true; }, true);
 		}
 
 		@Override

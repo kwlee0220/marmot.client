@@ -3,6 +3,8 @@ package marmot.command;
 import java.io.File;
 import java.io.IOException;
 
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
@@ -14,9 +16,11 @@ import marmot.PlanBuilder;
 import marmot.geo.GeoClientUtils;
 import marmot.optor.geo.SpatialRelation;
 import marmot.remote.protobuf.PBMarmotClient;
+import utils.CSV;
 import utils.CommandLine;
 import utils.CommandLineParser;
 import utils.io.IOUtils;
+import utils.stream.FStream;
 
 
 /**
@@ -95,6 +99,7 @@ public class CopyDataSetMain extends PlanBasedMarmotCommand {
 		throws ParseException, IOException {
 		Option<String> rangePath = m_cl.getOptionString("range_file");
 		Option<String> rangeWkt = m_cl.getOptionString("range_wkt");
+		Option<String> rangeRect = m_cl.getOptionString("range_rect");
 		
 		if ( rangeWkt.isDefined() ) {
 			Geometry key = GeoClientUtils.fromWKT(rangeWkt.get());
@@ -104,6 +109,15 @@ public class CopyDataSetMain extends PlanBasedMarmotCommand {
 			File wktFile = new File(rangePath.get());
 			String wkt = IOUtils.toString(wktFile);
 			Geometry key = GeoClientUtils.fromWKT(wkt);
+			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
+		}
+		else if ( rangeRect.isDefined() ) {
+			double[] coords = FStream.of(CSV.parse(rangeRect.get(), ',', '\\'))
+										.mapToDouble(Double::parseDouble)
+										.toArray();
+			Envelope range = new Envelope(new Coordinate(coords[0], coords[1]),
+											new Coordinate(coords[2], coords[3]));
+			Geometry key = GeoClientUtils.toPolygon(range);
 			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
 		}
 		else {
