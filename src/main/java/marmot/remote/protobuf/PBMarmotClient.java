@@ -114,12 +114,6 @@ public class PBMarmotClient implements MarmotRuntime {
 		throws DataSetExistsException {
 		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
 	}
-
-	@Override
-	public DataSet createDataSet(String dsId, Plan plan, RecordSet input, DataSetOption... opts)
-			throws DataSetExistsException {
-		return m_dsService.createDataSet(dsId, plan, input, opts);
-	}
 	
 	@Override
 	public DataSet getDataSet(String dsId) {
@@ -234,12 +228,12 @@ public class PBMarmotClient implements MarmotRuntime {
 
 	@Override
 	public RecordSet executeLocally(Plan plan) {
-		return m_pexecService.executeLocally(plan, Option.none());
+		return m_pexecService.executeLocally(plan);
 	}
 
 	@Override
 	public RecordSet executeLocally(Plan plan, RecordSet input) {
-		return m_pexecService.executeLocally(plan, Option.some(input));
+		return m_pexecService.executeLocally(plan, input);
 	}
 
 	@Override

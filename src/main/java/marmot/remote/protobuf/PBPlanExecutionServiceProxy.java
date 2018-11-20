@@ -1,14 +1,20 @@
 package marmot.remote.protobuf;
 
+import java.io.InputStream;
 import java.util.Map;
 
+import com.google.protobuf.ByteString;
+
 import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
 import io.vavr.control.Option;
 import marmot.ExecutePlanOption;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.proto.service.DownChunkResponse;
+import marmot.proto.service.ExecutePlanLocallyRequest;
 import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.ExecuteProcessRequest;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
@@ -16,9 +22,12 @@ import marmot.proto.service.GetStreamRequest;
 import marmot.proto.service.OptionalRecordResponse;
 import marmot.proto.service.PlanExecutionServiceGrpc;
 import marmot.proto.service.PlanExecutionServiceGrpc.PlanExecutionServiceBlockingStub;
+import marmot.proto.service.PlanExecutionServiceGrpc.PlanExecutionServiceStub;
 import marmot.proto.service.RecordSchemaResponse;
 import marmot.proto.service.RecordSetRefResponse;
 import marmot.protobuf.PBUtils;
+import marmot.rset.PBInputStreamRecordSet;
+import marmot.rset.PBRecordSetInputStream;
 import marmot.support.DefaultRecord;
 import utils.Throwables;
 
@@ -28,19 +37,21 @@ import utils.Throwables;
  */
 public class PBPlanExecutionServiceProxy {
 	private final PBMarmotClient m_marmot;
-	private final PlanExecutionServiceBlockingStub m_stub;
+	private final PlanExecutionServiceBlockingStub m_blockingStub;
+	private final PlanExecutionServiceStub m_stub;
 
 	PBPlanExecutionServiceProxy(PBMarmotClient marmot, ManagedChannel channel) {
 		m_marmot = marmot;
-		m_stub = PlanExecutionServiceGrpc.newBlockingStub(channel);
+		m_blockingStub = PlanExecutionServiceGrpc.newBlockingStub(channel);
+		m_stub = PlanExecutionServiceGrpc.newStub(channel);
 	}
 	
 	public boolean getMapOutputCompression() {
-		return PBUtils.handle(m_stub.getMapOutputCompression(PBUtils.VOID));
+		return PBUtils.handle(m_blockingStub.getMapOutputCompression(PBUtils.VOID));
 	}
 
 	public boolean setMapOutputCompression(boolean flag) {
-		return PBUtils.handle(m_stub.setMapOutputCompression(PBUtils.toProto(flag)));
+		return PBUtils.handle(m_blockingStub.setMapOutputCompression(PBUtils.toProto(flag)));
 	}
 
 	public RecordSchema getOutputRecordSchema(Plan plan,
@@ -52,7 +63,7 @@ public class PBPlanExecutionServiceProxy {
 					.forEach(builder::setInputSchema);
 		GetOutputRecordSchemaRequest req = builder.build();
 		
-		RecordSchemaResponse resp = m_stub.getOutputRecordSchema(req);
+		RecordSchemaResponse resp = m_blockingStub.getOutputRecordSchema(req);
 		switch ( resp.getEitherCase() ) {
 			case RECORD_SCHEMA:
 				return RecordSchema.fromProto(resp.getRecordSchema());
@@ -65,24 +76,41 @@ public class PBPlanExecutionServiceProxy {
 	
 	public void execute(Plan plan, ExecutePlanOption... opts) {
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
-		PBUtils.handle(m_stub.execute(req));
+		PBUtils.handle(m_blockingStub.execute(req));
 	}
 
-	public RecordSet executeLocally(Plan plan, Option<RecordSet> input) {
-		ExecutePlanRequest.Builder builder = ExecutePlanRequest.newBuilder()
-															.setPlan(plan.toProto());
+	public RecordSet executeLocally(Plan plan) {
+		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
+		StreamObserver<DownChunkResponse> channel = m_stub.executeLocally(downloader);
+
+		// start download by sending 'stream-download' request
+		ExecutePlanRequest req = toExecutePlanRequest(plan);
+		InputStream is = downloader.receive(req.toByteString(), channel);
 		
-		if ( input.isDefined() ) {
-			RecordSet rset = input.get();
-			String rsetId = m_marmot.allocateRecordSet(rset.getRecordSchema());
-			UploadRecordSet.start(m_marmot, rsetId, rset);
+		return PBInputStreamRecordSet.from(is);
+	}
+
+	public RecordSet executeLocally(Plan plan, RecordSet input) {
+		try {
+			InputStream is = PBRecordSetInputStream.from(input);
+			StreamUpnDownloadClient client = new StreamUpnDownloadClient(is) {
+				@Override
+				protected ByteString getHeader() throws Exception {
+					ExecutePlanLocallyRequest req = ExecutePlanLocallyRequest.newBuilder()
+																			.setPlan(plan.toProto())
+																			.setHasInputRset(true)
+																			.build();
+					return req.toByteString();
+				}
+			};
 			
-			builder.setInputRsetId(rsetId);
+			InputStream stream = client.upAndDownload(m_stub.executeLocallyWithInput(client));
+			return PBInputStreamRecordSet.from(stream);
 		}
-		ExecutePlanRequest req = builder.build();
-		
-		RecordSetRefResponse resp = m_stub.executeLocally(req);
-		return m_marmot.deserialize(resp);
+		catch ( Throwable e ) {
+			Throwable cause = Throwables.unwrapThrowable(e);
+			throw Throwables.toRuntimeException(cause);
+		}
 	}
 
 	public Option<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
@@ -90,7 +118,7 @@ public class PBPlanExecutionServiceProxy {
 
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
 		
-		OptionalRecordResponse resp = m_stub.executeToSingle(req);
+		OptionalRecordResponse resp = m_blockingStub.executeToSingle(req);
 		switch ( resp.getEitherCase() ) {
 			case RECORD:
 				return Option.some(DefaultRecord.fromProto(outSchema, resp.getRecord()));
@@ -107,7 +135,7 @@ public class PBPlanExecutionServiceProxy {
 		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
 													.setPlan(plan.toProto())
 													.build();
-		RecordSetRefResponse resp = m_stub.executeToRecordSet(req);
+		RecordSetRefResponse resp = m_blockingStub.executeToRecordSet(req);
 		return m_marmot.deserialize(resp);
 	}
 	
@@ -116,7 +144,7 @@ public class PBPlanExecutionServiceProxy {
     											.setId(id)
     											.setPlan(plan.toProto())
     											.build();
-    	return m_marmot.deserialize(m_stub.executeToStream(req));
+    	return m_marmot.deserialize(m_blockingStub.executeToStream(req));
     }
 
 	public RecordSchema getProcessRecordSchema(String processId,
@@ -125,7 +153,7 @@ public class PBPlanExecutionServiceProxy {
 														.setProcessId(processId)
 														.setParams(PBUtils.toProto(params))
 														.build();
-		RecordSchemaResponse resp = m_stub.getProcessRecordSchema(req);
+		RecordSchemaResponse resp = m_blockingStub.getProcessRecordSchema(req);
 		switch ( resp.getEitherCase() ) {
 			case RECORD_SCHEMA:
 				return RecordSchema.fromProto(resp.getRecordSchema());
@@ -141,11 +169,11 @@ public class PBPlanExecutionServiceProxy {
 														.setProcessId(processId)
 														.setParams(PBUtils.toProto(params))
 														.build();
-		PBUtils.handle(m_stub.executeProcess(req));
+		PBUtils.handle(m_blockingStub.executeProcess(req));
 	}
 
 	public void executeModule(String id) {
-		PBUtils.handle(m_stub.executeModule(PBUtils.toStringProto(id)));
+		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
 	}
 	
 	static ExecutePlanRequest toExecutePlanRequest(Plan plan, ExecutePlanOption... opts) {

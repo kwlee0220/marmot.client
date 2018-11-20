@@ -20,27 +20,32 @@ import utils.Throwables;
 
 /**
  * 
+ * 사용자의 request 메시지가 있는 경우 (즉, receive()에 req가 전달된 경우),
+ * 해당 메시지를 전송하는 것으로 시작됨.
+ * 
  * @author Kang-Woo Lee (ETRI)
  */
-class StreamDownloaderClient implements StreamObserver<DownChunkResponse>, LoggerSettable {
+class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, LoggerSettable {
 	private final ChunkInputStream m_stream;
-	private StreamObserver<DownChunkRequest> m_channel;
-	private Logger m_logger = LoggerFactory.getLogger(StreamDownloaderClient.class);
+	private StreamObserver<DownChunkResponse> m_channel;
+	private Logger m_logger = LoggerFactory.getLogger(StreamDownloadReceiver.class);
 	
-	StreamDownloaderClient() {
+	StreamDownloadReceiver() {
 		m_stream = ChunkInputStream.create(4);
 	}
-	
-	void setOutputChannel(StreamObserver<DownChunkRequest> channel) {
+
+	InputStream receive(ByteString req, StreamObserver<DownChunkResponse> channel) {
 		Objects.requireNonNull(channel, "download stream channel");
-		
+
 		m_channel = channel;
+		m_channel.onNext(DownChunkResponse.newBuilder().setHeader(req).build());
+		return m_stream;
 	}
 
-	InputStream start(ByteString req) {
-		Preconditions.checkState(m_channel != null, "Download stream request channel is not set");
+	InputStream receive(StreamObserver<DownChunkResponse> channel) {
+		Objects.requireNonNull(channel, "download stream channel");
 
-		m_channel.onNext(DownChunkRequest.newBuilder().setHeader(req).build());
+		m_channel = channel;
 		return m_stream;
 	}
 
@@ -55,14 +60,12 @@ class StreamDownloaderClient implements StreamObserver<DownChunkResponse>, Logge
 	}
 
 	@Override
-	public void onNext(DownChunkResponse resp) {
+	public void onNext(DownChunkRequest resp) {
 		switch ( resp.getEitherCase() ) {
 			case CHUNK:
 				try {
 					ByteString chunk = resp.getChunk();
-					if ( getLogger().isDebugEnabled() ) {
-						getLogger().debug("received CHUNK[size={}]", chunk.size());
-					}
+					getLogger().trace("received CHUNK[size={}]", chunk.size());
 					m_stream.supply(resp.getChunk());
 				}
 				catch ( PBStreamClosedException e ) {
@@ -80,14 +83,11 @@ class StreamDownloaderClient implements StreamObserver<DownChunkResponse>, Logge
 				getLogger().debug("received SYNC[{}]", sync);
 				
 				if ( !m_stream.isClosed() ) {
-					m_channel.onNext(DownChunkRequest.newBuilder()
+					getLogger().debug("send SYNC_BACK[{}]", sync);
+					m_channel.onNext(DownChunkResponse.newBuilder()
 													.setSyncBack(sync)
 													.build());
 				}
-				break;
-			case EOS:
-				getLogger().debug("received END_OF_STREAM");
-				m_stream.endOfSupply();
 				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
@@ -107,12 +107,12 @@ class StreamDownloaderClient implements StreamObserver<DownChunkResponse>, Logge
 	
 	@Override
 	public void onError(Throwable cause) {
-		getLogger().warn("received SYSTEM_ERROR[cause={}]", cause);
+		getLogger().warn("received SYSTEM_ERROR[cause=" + cause + "]");
 		m_stream.endOfSupply(Throwables.unwrapThrowable(cause));
 	}
 	
 	private void sendError(Throwable cause) {
-		m_channel.onNext(DownChunkRequest.newBuilder()
+		m_channel.onNext(DownChunkResponse.newBuilder()
 										.setError(PBUtils.toErrorProto(cause))
 										.build());
 	}
