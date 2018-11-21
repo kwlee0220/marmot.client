@@ -24,7 +24,6 @@ import marmot.proto.service.PlanExecutionServiceGrpc;
 import marmot.proto.service.PlanExecutionServiceGrpc.PlanExecutionServiceBlockingStub;
 import marmot.proto.service.PlanExecutionServiceGrpc.PlanExecutionServiceStub;
 import marmot.proto.service.RecordSchemaResponse;
-import marmot.proto.service.RecordSetRefResponse;
 import marmot.protobuf.PBUtils;
 import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
@@ -132,19 +131,28 @@ public class PBPlanExecutionServiceProxy {
 	}
 	
 	public RecordSet executeToRecordSet(Plan plan) {
-		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
-													.setPlan(plan.toProto())
-													.build();
-		RecordSetRefResponse resp = m_blockingStub.executeToRecordSet(req);
-		return m_marmot.deserialize(resp);
+		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
+		StreamObserver<DownChunkResponse> channel = m_stub.executeToRecordSet(downloader);
+
+		// start download by sending 'stream-download' request
+		ExecutePlanRequest req = toExecutePlanRequest(plan);
+		InputStream is = downloader.receive(req.toByteString(), channel);
+		
+		return PBInputStreamRecordSet.from(is);
 	}
 	
     public RecordSet executeToStream(String id, Plan plan) {
-    	GetStreamRequest req = GetStreamRequest.newBuilder()
-    											.setId(id)
-    											.setPlan(plan.toProto())
-    											.build();
-    	return m_marmot.deserialize(m_blockingStub.executeToStream(req));
+		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
+		StreamObserver<DownChunkResponse> channel = m_stub.executeToStream(downloader);
+
+		// start download by sending 'stream-download' request
+		GetStreamRequest req = GetStreamRequest.newBuilder()
+												.setId(id)
+												.setPlan(plan.toProto())
+												.build();
+		InputStream is = downloader.receive(req.toByteString(), channel);
+		
+		return PBInputStreamRecordSet.from(is);
     }
 
 	public RecordSchema getProcessRecordSchema(String processId,

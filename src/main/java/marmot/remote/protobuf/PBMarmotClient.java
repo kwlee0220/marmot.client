@@ -23,15 +23,6 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
-import marmot.proto.service.RecordSetRefProto;
-import marmot.proto.service.RecordSetRefResponse;
-import marmot.proto.service.RecordSetServiceGrpc;
-import marmot.proto.service.RecordSetServiceGrpc.RecordSetServiceBlockingStub;
-import marmot.proto.service.RecordSetServiceGrpc.RecordSetServiceStub;
-import marmot.protobuf.PBUtils;
-import utils.Throwables;
-import utils.async.Execution;
-import utils.async.Executors;
 
 /**
  * 
@@ -44,8 +35,6 @@ public class PBMarmotClient implements MarmotRuntime {
 	private final PBFileServiceProxy m_fileService;
 	private final PBDataSetServiceProxy m_dsService;
 	private final PBPlanExecutionServiceProxy m_pexecService;
-	private final RecordSetServiceStub m_rsetStub;
-	private final RecordSetServiceBlockingStub m_rsetBlockingStub;
 	
 	public static PBMarmotClient connect(String host, int port) throws IOException {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
@@ -60,10 +49,7 @@ public class PBMarmotClient implements MarmotRuntime {
 		
 		m_fileService = new PBFileServiceProxy(this, channel);
 		m_dsService = new PBDataSetServiceProxy(this, channel);
-
 		m_pexecService = new PBPlanExecutionServiceProxy(this, channel);
-		m_rsetStub = RecordSetServiceGrpc.newStub(channel);
-		m_rsetBlockingStub = RecordSetServiceGrpc.newBlockingStub(channel);
 
 		m_server = ServerBuilder.forPort(0).build();
 		m_server.start();
@@ -84,10 +70,6 @@ public class PBMarmotClient implements MarmotRuntime {
 	
 	public PBPlanExecutionServiceProxy getPlanExecutionService() {
 		return m_pexecService;
-	}
-	
-	public RecordSetServiceBlockingStub getRecordSetService() {
-		return m_rsetBlockingStub;
 	}
 
 	@Override
@@ -265,37 +247,5 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public void executeModule(String id) {
 		m_pexecService.executeModule(id);
-	}
-
-	private static final int RSET_BULK_SIZE = 16;
-	public RecordSet deserialize(RecordSetRefProto ref) {
-		String rsetId = ref.getId();
-		RecordSchema schema = RecordSchema.fromProto(ref.getRecordSchema());
-		
-		// 서버에서 레코드를 pull해서 로컬 pipe에 옮기는 작업을 시작시킴.
-		ServerRecordSetPuller puller = new ServerRecordSetPuller(rsetId, schema, m_rsetStub,
-																RSET_BULK_SIZE);
-		Executors.start(puller);
-		
-		return puller.getConsumerRecordSet();
-	}
-	
-	public RecordSet deserialize(RecordSetRefResponse resp) {
-		switch ( resp.getEitherCase() ) {
-			case RSET_REF:
-				return deserialize(resp.getRsetRef());
-			case ERROR:
-				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
-			default:
-				throw new AssertionError();
-		}
-	}
-	
-	String allocateRecordSet(RecordSchema schema) {
-		return PBUtils.handle(m_rsetBlockingStub.allocateRecordSet(schema.toProto()));
-	}
-	
-	Execution<Long> startRecordSetUpload(String rsetId, RecordSet rset) {
-		return UploadRecordSet.start(this, rsetId, rset);
 	}
 }
