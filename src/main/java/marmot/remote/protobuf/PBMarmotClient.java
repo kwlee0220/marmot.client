@@ -165,7 +165,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void renameDir(String path, String newPath) {
+	public void moveDir(String path, String newPath) {
 		m_dsService.renameDir(path, newPath);
 	}
 
