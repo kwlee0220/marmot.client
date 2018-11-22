@@ -165,7 +165,7 @@ public class PBDataSetServiceProxy {
 
 		// start download by sending 'stream-download' request
 		StreamObserver<DownChunkResponse> channel = m_dsStub.readDataSet(downloader);
-		InputStream is = downloader.receive(PBUtils.toStringProto(dsId).toByteString(), channel);
+		InputStream is = downloader.start(PBUtils.toStringProto(dsId).toByteString(), channel);
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -173,7 +173,7 @@ public class PBDataSetServiceProxy {
 	public RecordSet queryRange(String dsId, Envelope range, Option<String> filterExpr)
 		throws DataSetNotFoundException {
 		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
-		StreamObserver<DownChunkResponse> channel = m_dsStub.readDataSet(downloader);
+		StreamObserver<DownChunkResponse> channel = m_dsStub.queryRange(downloader);
 		
 		QueryRangeRequest.Builder builder = QueryRangeRequest.newBuilder()
 															.setId(dsId)
@@ -182,7 +182,7 @@ public class PBDataSetServiceProxy {
 		QueryRangeRequest req = builder.build();
 
 		// start download by sending 'stream-download' request
-		InputStream is = downloader.receive(req.toByteString(), channel);
+		InputStream is = downloader.start(req.toByteString(), channel);
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -275,8 +275,8 @@ public class PBDataSetServiceProxy {
 																.setDatasetId(dsId)
 																.setQuadKey(quadKey);
 		ReadRawSpatialClusterRequest req = builder.build();
-		StreamObserver<DownChunkResponse> channel = m_dsStub.readDataSet(downloader);
-		return downloader.receive(req.toByteString(), channel);
+		StreamObserver<DownChunkResponse> channel = m_dsStub.readRawSpatialCluster(downloader);
+		return downloader.start(req.toByteString(), channel);
 	}
 
 	public List<String> getDirAll() {

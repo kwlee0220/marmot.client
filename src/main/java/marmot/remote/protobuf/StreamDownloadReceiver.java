@@ -33,16 +33,17 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 		m_stream = ChunkInputStream.create(4);
 	}
 
-	InputStream receive(ByteString req, StreamObserver<DownChunkResponse> channel) {
-		Objects.requireNonNull(channel, "download stream channel");
+	InputStream start(ByteString req, StreamObserver<DownChunkResponse> channel) {
+		Objects.requireNonNull(req, "download-stream-consumer request");
+		Objects.requireNonNull(channel, "download-stream channel");
 
 		m_channel = channel;
 		m_channel.onNext(DownChunkResponse.newBuilder().setHeader(req).build());
 		return m_stream;
 	}
 
-	InputStream receive(StreamObserver<DownChunkResponse> channel) {
-		Objects.requireNonNull(channel, "download stream channel");
+	InputStream start(StreamObserver<DownChunkResponse> channel) {
+		Objects.requireNonNull(channel, "download-stream channel");
 
 		m_channel = channel;
 		return m_stream;
@@ -68,9 +69,12 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 					m_stream.supply(resp.getChunk());
 				}
 				catch ( PBStreamClosedException e ) {
+					getLogger().info("detect STREAM CLOSED", e.toString());
+					
+					// download된 stream 사용자가 stream을 이미 close시킨 경우.
 					sendError(e);
 				}
-				catch ( InterruptedException e ) {
+				catch ( Exception e ) {
 					sendError(e);
 					
 					m_stream.endOfSupply(e);

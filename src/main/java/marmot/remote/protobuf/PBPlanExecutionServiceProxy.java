@@ -84,7 +84,7 @@ public class PBPlanExecutionServiceProxy {
 
 		// start download by sending 'stream-download' request
 		ExecutePlanRequest req = toExecutePlanRequest(plan);
-		InputStream is = downloader.receive(req.toByteString(), channel);
+		InputStream is = downloader.start(req.toByteString(), channel);
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -136,7 +136,7 @@ public class PBPlanExecutionServiceProxy {
 
 		// start download by sending 'stream-download' request
 		ExecutePlanRequest req = toExecutePlanRequest(plan);
-		InputStream is = downloader.receive(req.toByteString(), channel);
+		InputStream is = downloader.start(req.toByteString(), channel);
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -150,7 +150,7 @@ public class PBPlanExecutionServiceProxy {
 												.setId(id)
 												.setPlan(plan.toProto())
 												.build();
-		InputStream is = downloader.receive(req.toByteString(), channel);
+		InputStream is = downloader.start(req.toByteString(), channel);
 		
 		return PBInputStreamRecordSet.from(is);
     }

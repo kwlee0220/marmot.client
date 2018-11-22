@@ -37,11 +37,14 @@ abstract class StreamUpnDownloadClient implements StreamObserver<UpResponseDownR
 		Objects.requireNonNull(channel, "UpRequestDownResponse stream channel");
 		
 		ClientUpDownChannel upDown = StreamObservers.getClientUpDownChannel(channel);
+		
+		// download되어 내려올 chunk를 받을 준비. (uploader 시작 이전에 수행 필요)
+		InputStream result = m_downloader.start(upDown.getDownloadChannel());
 
 		m_uploader.setChannel(upDown.getUploadChannel());
 		m_uploader.start();
 		
-		return m_downloader.receive(upDown.getDownloadChannel());
+		return result;
 	}
 
 	@Override
