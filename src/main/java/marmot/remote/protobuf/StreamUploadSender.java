@@ -2,6 +2,7 @@ package marmot.remote.protobuf;
 
 import java.io.InputStream;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.LoggerFactory;
 
@@ -16,18 +17,18 @@ import marmot.protobuf.PBUtils;
 import net.jcip.annotations.GuardedBy;
 import utils.Guard;
 import utils.Throwables;
-import utils.async.AbstractExecution;
-import utils.async.CancellableWork;
+import utils.async.ExecutableExecution;
 import utils.io.IOUtils;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-abstract class StreamUploaderSender extends AbstractExecution<ByteString>
-									implements CancellableWork, StreamObserver<UpChunkResponse> {
+abstract class StreamUploadSender extends ExecutableExecution<ByteString>
+									implements StreamObserver<UpChunkResponse> {
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
+	private static final int MAX_RESULT_TIMEOUT = 5;	// 5s
 	
 	private final InputStream m_stream;
 	private StreamObserver<UpChunkRequest> m_channel = null;
@@ -40,11 +41,11 @@ abstract class StreamUploaderSender extends AbstractExecution<ByteString>
 	
 	abstract protected ByteString getHeader() throws Exception;
 	
-	protected StreamUploaderSender(InputStream stream) {
+	protected StreamUploadSender(InputStream stream) {
 		Objects.requireNonNull(stream, "Stream to upload");
 		
 		m_stream = stream;
-		setLogger(LoggerFactory.getLogger(StreamUploaderSender.class));
+		setLogger(LoggerFactory.getLogger(StreamUploadSender.class));
 	}
 	
 	void setChannel(StreamObserver<UpChunkRequest> channel) {
@@ -61,18 +62,25 @@ abstract class StreamUploaderSender extends AbstractExecution<ByteString>
 			m_channel.onNext(UpChunkRequest.newBuilder().setHeader(getHeader()).build());
 			
 			int chunkCount = 0;
-			while ( true ) {
-				// chunk를 보내는 과정 중에 자체적으로 또는 상대방쪽에서
-				// 오류가 발생되어있을 수 있으니 확인한다.
-				if ( !isRunning() ) {
-					return get();
-				}
-				
+			while ( isRunning() ) {
 				try {
 					LimitedInputStream chunkedStream = new LimitedInputStream(m_stream, m_chunkSize);
 					ByteString chunk = ByteString.readFrom(chunkedStream);
 					if ( chunk.isEmpty() ) {
-						break;
+						// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기하고
+						// End-of-Stream 메시지를 보낸다.
+						if ( m_guard.get(()->m_sync) < chunkCount ) {
+							sync(chunkCount, chunkCount);
+						}
+						m_channel.onNext(UpChunkRequest.newBuilder()
+														.setEos(PBUtils.VOID)
+														.build());
+						getLogger().debug("sent END_OF_STREAM");
+						
+						// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
+						// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
+						return m_guard.awaitUntilAndGet(this::isUploadCompleted, () -> m_result,
+														MAX_RESULT_TIMEOUT, TimeUnit.SECONDS);
 					}
 					m_channel.onNext(UpChunkRequest.newBuilder().setChunk(chunk).build());
 					++chunkCount;
@@ -92,22 +100,7 @@ abstract class StreamUploaderSender extends AbstractExecution<ByteString>
 				}
 			}
 			
-			// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기하고
-			// End-of-Stream 메시지를 보낸다.
-			if ( m_guard.get(()->m_sync) < chunkCount ) {
-				sync(chunkCount, chunkCount);
-			}
-			m_channel.onNext(UpChunkRequest.newBuilder()
-											.setEos(PBUtils.VOID)
-											.build());
-			getLogger().debug("sent END_OF_STREAM");
-			
-			// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
-			// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
-			ByteString result = m_guard.awaitUntilAndGet(this::isUploadCompleted, () -> m_result);
-			notifyCompleted(result);
-			
-			return get();
+			return m_guard.get(() -> m_result);
 		}
 		catch ( Throwable e ) {
 			e.printStackTrace();
@@ -118,11 +111,6 @@ abstract class StreamUploaderSender extends AbstractExecution<ByteString>
 			
 			IOUtils.closeQuietly(m_stream);
 		}
-	}
-
-	@Override
-	public boolean cancelWork() {
-		return true;
 	}
 
 	@Override
@@ -155,15 +143,14 @@ abstract class StreamUploaderSender extends AbstractExecution<ByteString>
 	@Override
 	public void onError(Throwable cause) {
 		getLogger().warn("received SYSTEM_ERROR[cause=" + cause + "]");
-		cancel();
+		
+		notifyFailed(cause);
 	}
 
 	@Override
 	public void onCompleted() {
 		getLogger().debug("received SERVER_COMPLETE");
 		m_guard.run(() -> m_serverClosed = true, true);
-		
-		cancel();
 	}
 	
 	private boolean isUploadCompleted() {

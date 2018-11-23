@@ -16,7 +16,7 @@ import marmot.remote.protobuf.StreamObservers.ClientUpDownChannel;
  * @author Kang-Woo Lee (ETRI)
  */
 abstract class StreamUpnDownloadClient implements StreamObserver<UpResponseDownRequest> {
-	private final StreamUploaderSender m_uploader;
+	private final StreamUploadSender m_uploader;
 	private final StreamDownloadReceiver m_downloader;
 	
 	abstract protected ByteString getHeader() throws Exception;
@@ -24,7 +24,7 @@ abstract class StreamUpnDownloadClient implements StreamObserver<UpResponseDownR
 	StreamUpnDownloadClient(InputStream stream) {
 		Objects.requireNonNull(stream, "Stream to upload");
 		
-		m_uploader = new StreamUploaderSender(stream) {
+		m_uploader = new StreamUploadSender(stream) {
 			@Override
 			protected ByteString getHeader() throws Exception {
 				return StreamUpnDownloadClient.this.getHeader();

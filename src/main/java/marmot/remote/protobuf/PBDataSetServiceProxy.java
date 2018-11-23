@@ -190,7 +190,7 @@ public class PBDataSetServiceProxy {
 	public long appendRecordSet(String dsId, RecordSet rset, Option<Plan> plan) {
 		try {
 			InputStream is = PBRecordSetInputStream.from(rset);
-			StreamUploaderSender uploader = new StreamUploaderSender(is) {
+			StreamUploadSender uploader = new StreamUploadSender(is) {
 				@Override
 				protected ByteString getHeader() throws Exception {
 					AppendRecordSetRequest.Builder builder = AppendRecordSetRequest.newBuilder()

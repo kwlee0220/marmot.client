@@ -1,9 +1,9 @@
 package marmot.remote.protobuf;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
@@ -13,8 +13,8 @@ import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.protobuf.ChunkInputStream;
 import marmot.protobuf.PBUtils;
-import utils.LoggerSettable;
 import utils.Throwables;
+import utils.async.EventDrivenExecution;
 
 
 /**
@@ -24,13 +24,15 @@ import utils.Throwables;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, LoggerSettable {
+class StreamDownloadReceiver extends EventDrivenExecution<Void>
+							implements StreamObserver<DownChunkRequest> {
 	private final ChunkInputStream m_stream;
 	private StreamObserver<DownChunkResponse> m_channel;
-	private Logger m_logger = LoggerFactory.getLogger(StreamDownloadReceiver.class);
 	
 	StreamDownloadReceiver() {
 		m_stream = ChunkInputStream.create(4);
+		
+		setLogger(LoggerFactory.getLogger(StreamDownloadReceiver.class));
 	}
 
 	InputStream start(ByteString req, StreamObserver<DownChunkResponse> channel) {
@@ -39,6 +41,8 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 
 		m_channel = channel;
 		m_channel.onNext(DownChunkResponse.newBuilder().setHeader(req).build());
+		notifyStarted();
+		
 		return m_stream;
 	}
 
@@ -46,17 +50,9 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 		Objects.requireNonNull(channel, "download-stream channel");
 
 		m_channel = channel;
+		notifyStarted();
+		
 		return m_stream;
-	}
-
-	@Override
-	public Logger getLogger() {
-		return m_logger;
-	}
-
-	@Override
-	public void setLogger(Logger logger) {
-		m_logger = logger;
 	}
 
 	@Override
@@ -66,19 +62,24 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 				try {
 					ByteString chunk = resp.getChunk();
 					getLogger().trace("received CHUNK[size={}]", chunk.size());
-					m_stream.supply(resp.getChunk());
+					
+					m_stream.supply(chunk);
 				}
 				catch ( PBStreamClosedException e ) {
-					getLogger().info("detect STREAM CLOSED", e.toString());
-					
-					// download된 stream 사용자가 stream을 이미 close시킨 경우.
-					sendError(e);
+					if ( isRunning() ) {
+						getLogger().info("detect STREAM CLOSED");
+						
+						// download된 stream 사용자가 stream을 이미 close시킨 경우.
+						sendError(e);
+						notifyCancelled();
+					}
 				}
 				catch ( Exception e ) {
+					Throwable cause = Throwables.unwrapThrowable(e);
+					getLogger().info("detect STREAM ERROR[cause={}]",cause);
+
 					sendError(e);
-					
-					m_stream.endOfSupply(e);
-					getLogger().info("detect STREAM ERROR[cause={}]", e.toString());
+					notifyFailed(e);
 				}
 				break;
 			case SYNC:
@@ -92,10 +93,18 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 													.build());
 				}
 				break;
+			case EOS:
+				getLogger().debug("received END_OF_STREAM");
+				m_stream.endOfSupply();
+				
+				notifyCompleted(null);
+				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
 				getLogger().info("received PEER_ERROR[cause={}]", cause.toString());
 				m_stream.endOfSupply(cause);
+				
+				notifyFailed(cause);
 				break;
 			default:
 				throw new AssertionError();
@@ -104,14 +113,21 @@ class StreamDownloadReceiver implements StreamObserver<DownChunkRequest>, Logger
 
 	@Override
 	public void onCompleted() {
-		getLogger().debug("received COMPLETE");
-		m_stream.endOfSupply();
+		if ( !isDone() ) {
+			Throwable cause = new IOException("Peer has broken the pipe");
+			m_stream.endOfSupply(cause);
+			notifyFailed(cause);
+		}
 	}
 	
 	@Override
 	public void onError(Throwable cause) {
 		getLogger().warn("received SYSTEM_ERROR[cause=" + cause + "]");
-		m_stream.endOfSupply(Throwables.unwrapThrowable(cause));
+		if ( !isDone() ) {
+			cause = new IOException("Peer has broken the pipe");
+			m_stream.endOfSupply(cause);
+			notifyFailed(cause);
+		}
 	}
 	
 	private void sendError(Throwable cause) {
