@@ -76,9 +76,6 @@ class PlanBasedMarmotCommand {
 		parser.addArgOption("expand", "expr", "expand expression", false);
 		parser.addArgOption("update", "expr", "update expression", false);
 		parser.addArgOption("filter", "expr", "filter expression", false);
-		parser.addArgOption("range_file", "path", "file path to WKT file", false);
-		parser.addArgOption("range_wkt", "wkt", "key geometry in WKT", false);
-		parser.addArgOption("range_rect", "rect", "rectangle coordinates", false);
 		parser.addArgOption("spatial_join", "cols:dsid",
 							"join columns, parameter join dataset", false);
 		parser.addArgOption("join", "cols:dsid:join_cols",

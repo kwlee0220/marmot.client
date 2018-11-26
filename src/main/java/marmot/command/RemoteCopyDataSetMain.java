@@ -41,11 +41,11 @@ import utils.stream.FStream;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class CopyDataSetMain extends PlanBasedMarmotCommand {
+public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 	private DataSet m_input;
 	
-	private CopyDataSetMain(PBMarmotClient marmot, CommandLine cl, DataSet input, String outDsId,
-							GeometryColumnInfo gcInfo) {
+	private RemoteCopyDataSetMain(PBMarmotClient marmot, CommandLine cl, DataSet input,
+									String outDsId, GeometryColumnInfo gcInfo) {
 		super(marmot, cl, outDsId, gcInfo);
 		
 		m_input = input;
@@ -58,6 +58,9 @@ public class CopyDataSetMain extends PlanBasedMarmotCommand {
 		parser.addArgumentName("src_dataset");
 		parser.addArgumentName("output_dataset");
 		PlanBasedMarmotCommand.setCommandLineParser(parser);
+		parser.addArgOption("range_file", "path", "file path to WKT file", false);
+		parser.addArgOption("range_wkt", "wkt", "key geometry in WKT", false);
+		parser.addArgOption("range_rect", "rect", "rectangle coordinates", false);
 
 		try {
 			CommandLine cl = parser.parseArgs(args);
@@ -76,7 +79,7 @@ public class CopyDataSetMain extends PlanBasedMarmotCommand {
 			GeometryColumnInfo gcInfo = input.hasGeometryColumn()
 										? input.getGeometryColumnInfo() : null;
 			
-			CopyDataSetMain copy = new CopyDataSetMain(marmot, cl, input, outDsId, gcInfo);
+			RemoteCopyDataSetMain copy = new RemoteCopyDataSetMain(marmot, cl, input, outDsId, gcInfo);
 			copy.run();
 		}
 		catch ( Exception e ) {
