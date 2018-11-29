@@ -15,8 +15,8 @@ import utils.CommandLineParser;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class RemoteEquiJoinMain extends PlanBasedMarmotCommand {
-	private RemoteEquiJoinMain(PBMarmotClient marmot, CommandLine cl, String outDsId,
+public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
+	private RemoteHashJoinMain(PBMarmotClient marmot, CommandLine cl, String outDsId,
 									GeometryColumnInfo gcInfo) {
 		super(marmot, cl, outDsId, gcInfo);
 	}
@@ -55,7 +55,7 @@ public class RemoteEquiJoinMain extends PlanBasedMarmotCommand {
 			DataSet left = marmot.getDataSet(cl.getArgument(0));
 			GeometryColumnInfo gcInfo = left.getGeometryColumnInfo();
 			
-			RemoteEquiJoinMain join = new RemoteEquiJoinMain(marmot, cl, outDsId, gcInfo);
+			RemoteHashJoinMain join = new RemoteHashJoinMain(marmot, cl, outDsId, gcInfo);
 			join.run();
 		}
 		catch ( Exception e ) {
@@ -87,7 +87,7 @@ public class RemoteEquiJoinMain extends PlanBasedMarmotCommand {
 			opts = opts.workerCount(Integer.parseInt(m_cl.getArgument(6)));
 		}
 		
-		return builder.loadEquiJoin(leftDsId, leftJoinCols, rightDsId, rightJoinCols,
+		return builder.loadHashJoin(leftDsId, leftJoinCols, rightDsId, rightJoinCols,
 									outCols, opts);
 	}
 }
