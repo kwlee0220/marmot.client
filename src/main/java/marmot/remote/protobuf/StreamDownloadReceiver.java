@@ -67,11 +67,12 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 				}
 				catch ( PBStreamClosedException e ) {
 					if ( isRunning() ) {
-						getLogger().info("detect STREAM CLOSED");
+						getLogger().info("detect consumer has closed the stream");
 						
 						// download된 stream 사용자가 stream을 이미 close시킨 경우.
-						sendError(e);
+//						m_stream.endOfSupply();
 						notifyCancelled();
+						sendError(e);
 					}
 				}
 				catch ( Exception e ) {
