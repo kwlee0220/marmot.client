@@ -45,12 +45,12 @@ public class PBPlanExecutionServiceProxy {
 		m_stub = PlanExecutionServiceGrpc.newStub(channel);
 	}
 	
-	public boolean getMapOutputCompression() {
-		return PBUtils.handle(m_blockingStub.getMapOutputCompression(PBUtils.VOID));
+	public String getDefaultMapOutputCompressCodec() {
+		return PBUtils.handle(m_blockingStub.getDefaultMapOutputCompressCodec(PBUtils.VOID));
 	}
 
-	public boolean setMapOutputCompression(boolean flag) {
-		return PBUtils.handle(m_blockingStub.setMapOutputCompression(PBUtils.toProto(flag)));
+	public void setDefaultMapOutputCompressCodec(String codec) {
+		PBUtils.handle(m_blockingStub.setDefaultMapOutputCompressCodec(PBUtils.toStringProto(codec)));
 	}
 
 	public RecordSchema getOutputRecordSchema(Plan plan,

@@ -179,13 +179,13 @@ public class PBMarmotClient implements MarmotRuntime {
 	/////////////////////////////////////////////////////////////////////
 
 	@Override
-	public boolean getMapOutputCompression() {
-		return m_pexecService.getMapOutputCompression();
+	public String getDefaultMapOutputCompressCodec() {
+		return m_pexecService.getDefaultMapOutputCompressCodec();
 	}
 
 	@Override
-	public boolean setMapOutputCompression(boolean flag) {
-		return m_pexecService.setMapOutputCompression(flag);
+	public void setDefaultMapOutputCompressCodec(String codec) {
+		m_pexecService.setDefaultMapOutputCompressCodec(codec);
 	}
 
 	@Override
