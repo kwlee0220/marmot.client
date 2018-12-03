@@ -47,7 +47,7 @@ public class CountRecordsMain {
 			Plan plan = builder.aggregate(AggregateFunction.COUNT())
 								.build();
 			try ( RecordSet result = marmot.executeToRecordSet(plan) ) {
-				long count = result.fstream().mapToLong(r -> r.getLong(0)).first().get();
+				long count = result.fstream().mapToLong(r -> r.getLong(0)).next().get();
 				System.out.println(count);
 			}
 		}

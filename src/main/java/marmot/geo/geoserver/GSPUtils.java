@@ -68,7 +68,7 @@ public class GSPUtils {
 			List<Filter> filters = ((And)filter).getChildren();
 			Option<BBOX> bbox = FStream.of(filters)
 										.castSafely(BBOX.class)
-										.first();
+										.next();
 			if ( bbox.isDefined() ) {
 				Option<BoundingBox> bounds = bbox.map(BBOX::getBounds);
 				filter = FILTER_FACT.and(FStream.of(filters)
