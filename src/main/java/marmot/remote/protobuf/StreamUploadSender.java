@@ -28,7 +28,8 @@ abstract class StreamUploadSender extends ExecutableExecution<ByteString>
 									implements StreamObserver<UpChunkResponse> {
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
-	private static final int MAX_RESULT_TIMEOUT = 5;	// 5s
+	// KWLEE
+	private static final int MAX_RESULT_TIMEOUT = 50000;	// 5s
 	
 	private final InputStream m_stream;
 	private StreamObserver<UpChunkRequest> m_channel = null;
