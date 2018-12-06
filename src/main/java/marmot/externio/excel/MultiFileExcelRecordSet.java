@@ -49,7 +49,7 @@ public class MultiFileExcelRecordSet extends ConcatedRecordSet {
 			m_schema = m_first.getRecordSchema();
 		}
 		catch ( IOException e ) {
-			throw new RecordSetException("fails to parse GeoJSON", e);
+			throw new RecordSetException("fails to parse Excel, cause=" + e);
 		}
 	}
 	

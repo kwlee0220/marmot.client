@@ -14,7 +14,7 @@ import marmot.RecordSet;
 import marmot.RecordSetException;
 import marmot.externio.ImportIntoDataSet;
 import marmot.externio.ImportParameters;
-import marmot.externio.ImportPlanSupplier;
+import marmot.support.MetaPlanLoader;
 import utils.CommandLine;
 import utils.StopWatch;
 import utils.Throwables;
@@ -118,7 +118,12 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 
 		@Override
 		protected Option<Plan> loadMetaPlan() {
-			return ImportPlanSupplier.from(m_start).get();
+			try {
+				return MetaPlanLoader.load(m_start);
+			}
+			catch ( IOException e ) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 	
