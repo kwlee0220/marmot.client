@@ -179,16 +179,6 @@ public class PBMarmotClient implements MarmotRuntime {
 	/////////////////////////////////////////////////////////////////////
 
 	@Override
-	public String getDefaultMapOutputCompressCodec() {
-		return m_pexecService.getDefaultMapOutputCompressCodec();
-	}
-
-	@Override
-	public void setDefaultMapOutputCompressCodec(String codec) {
-		m_pexecService.setDefaultMapOutputCompressCodec(codec);
-	}
-
-	@Override
 	public PlanBuilder planBuilder(String planName) {
 		return new PlanBuilder(planName);
 	}
