@@ -3,7 +3,6 @@ package marmot.command;
 import java.io.File;
 import java.nio.charset.Charset;
 
-import io.vavr.control.Option;
 import marmot.externio.ImportIntoDataSet;
 import marmot.externio.ImportParameters;
 import marmot.externio.text.ImportTextFile;
@@ -13,6 +12,7 @@ import utils.CommandLine;
 import utils.CommandLineParser;
 import utils.StopWatch;
 import utils.UnitUtils;
+import utils.func.FOption;
 
 /**
  * 
@@ -55,7 +55,7 @@ public class RemoteImportTextLineFileMain {
 		String geomCol = cl.getOptionString("geom_col").getOrNull();
 		String srid = cl.getOptionString("srid").getOrNull();
 		Charset charset = Charset.forName(cl.getOptionString("charset").getOrElse("utf-8"));
-		Option<String> comment = cl.getOptionString("comment");
+		FOption<String> comment = cl.getOptionString("comment");
 		String glob = cl.getString("glob");
 		long blkSize = cl.getOptionString("block_size")
 							.map(UnitUtils::parseByteSize)
@@ -75,7 +75,7 @@ public class RemoteImportTextLineFileMain {
 		TextLineParameters txtParams = TextLineParameters.parameters()
 														.glob(glob)
 														.charset(charset);
-		comment.forEach(txtParams::commentMarker);
+		comment.ifPresent(txtParams::commentMarker);
 		ImportIntoDataSet importFile = new ImportTextFile(file, txtParams, params);
 		importFile.getProgressObservable()
 					.subscribe(report -> {

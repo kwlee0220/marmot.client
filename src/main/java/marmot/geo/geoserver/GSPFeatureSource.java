@@ -51,6 +51,7 @@ import marmot.optor.geo.SpatialRelation;
 import marmot.rset.RecordSets;
 import marmot.support.DataSetPartitionCache;
 import utils.Throwables;
+import utils.func.FOption;
 import utils.stream.FStream;
 
 
@@ -180,9 +181,9 @@ public class GSPFeatureSource extends ContentFeatureSource {
 				return m_mbr.get();
 			}
 			else {
-				Tuple2<BoundingBox, Option<Filter>> resolved
+				Tuple2<BoundingBox, FOption<Filter>> resolved
 										= GSPUtils.resolveQuery(m_mbr.get(), query);
-				if ( resolved._1 == null && resolved._2.isEmpty() ) {
+				if ( resolved._1 == null && resolved._2.isAbsent() ) {
 					return new ReferencedEnvelope(m_mbr.get());
 				}
 				
@@ -201,9 +202,9 @@ public class GSPFeatureSource extends ContentFeatureSource {
 
 	@Override
 	protected int getCountInternal(Query query) throws IOException {
-		Tuple2<BoundingBox, Option<Filter>> resolved
+		Tuple2<BoundingBox, FOption<Filter>> resolved
 										= GSPUtils.resolveQuery(m_mbr.get(), query);
-		if ( resolved._1 == null && resolved._2.isEmpty() ) {
+		if ( resolved._1 == null && resolved._2.isAbsent() ) {
 			return (int)m_dsInfo.getRecordCount();
 		}
 		
@@ -216,7 +217,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected FeatureReader<SimpleFeatureType, SimpleFeature> getReaderInternal(Query query) {
 		try {
-			Tuple2<BoundingBox, Option<Filter>> resolved
+			Tuple2<BoundingBox, FOption<Filter>> resolved
 											= GSPUtils.resolveQuery(m_mbr.get(), query);
 			BoundingBox bbox = resolved._1;
 			
@@ -237,7 +238,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 												m_dsInfo.getRecordSchema());
 	}
 	
-	private PlanBuilder newPlanBuilder(BoundingBox bbox, Option<Filter> filter) {
+	private PlanBuilder newPlanBuilder(BoundingBox bbox, FOption<Filter> filter) {
 		PlanBuilder builder = m_marmot.planBuilder("query_Dataset");
 		
 		if ( bbox != null ) {

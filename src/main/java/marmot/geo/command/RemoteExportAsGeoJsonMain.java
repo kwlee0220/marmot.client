@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.cli.ParseException;
 
-import io.vavr.control.Option;
 import marmot.command.MarmotClientCommands;
 import marmot.externio.ExternIoUtils;
 import marmot.externio.geojson.ExportAsGeoJson;
@@ -14,6 +13,7 @@ import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.CommandLineException;
 import utils.CommandLineParser;
+import utils.func.FOption;
 
 
 /**
@@ -59,7 +59,7 @@ public class RemoteExportAsGeoJsonMain {
 			// 원격 MarmotServer에 접속.
 			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 			
-			Option<String> output = cl.getOptionString("output");
+			FOption<String> output = cl.getOptionString("output");
 			BufferedWriter writer = ExternIoUtils.toWriter(output, charset);
 			long count = export.run(marmot, writer);
 			

@@ -232,10 +232,10 @@ public class PBDataSetServiceProxy {
 	public SpatialIndexInfo clusterDataSet(String id, ClusterDataSetOptions opts) {
 		ClusterDataSetRequest.Builder builder = ClusterDataSetRequest.newBuilder()
 																	.setId(id);
-		opts.quadKeyFilePath().forEach(builder::setQuadKeyFile);
-		opts.sampleRatio().forEach(builder::setSampleRatio);
-		opts.blockSize().forEach(builder::setBlockSize);
-		opts.blockFillRatio().forEach(builder::setBlockFillRatio);
+		opts.quadKeyFilePath().ifPresent(builder::setQuadKeyFile);
+		opts.sampleRatio().ifPresent(builder::setSampleRatio);
+		opts.blockSize().ifPresent(builder::setBlockSize);
+		opts.blockFillRatio().ifPresent(builder::setBlockFillRatio);
 		ClusterDataSetRequest req = builder.build();
 		
 		return handle(m_dsBlockingStub.clusterDataSet(req));

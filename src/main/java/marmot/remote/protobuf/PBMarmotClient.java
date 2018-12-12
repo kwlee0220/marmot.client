@@ -23,6 +23,7 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import utils.func.FOption;
 
 /**
  * 
@@ -73,7 +74,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, Option<Long> blockSize)
+	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, FOption<Long> blockSize)
 		throws IOException {
 		m_fileService.copyToHdfsFile(path, blocks, blockSize);
 	}

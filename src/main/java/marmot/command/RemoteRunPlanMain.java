@@ -104,7 +104,7 @@ public class RemoteRunPlanMain {
 			
 			cl.getOptionString("block_size")
 				.map(UnitUtils::parseByteSize)
-				.forEach(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
+				.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
 			
 			if ( cl.hasOption("compress") ) {
 				optList.add(DataSetOption.COMPRESS);

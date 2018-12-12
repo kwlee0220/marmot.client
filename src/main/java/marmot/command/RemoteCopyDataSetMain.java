@@ -8,7 +8,6 @@ import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
@@ -19,6 +18,7 @@ import marmot.remote.protobuf.PBMarmotClient;
 import utils.CSV;
 import utils.CommandLine;
 import utils.CommandLineParser;
+import utils.func.FOption;
 import utils.io.IOUtils;
 import utils.stream.FStream;
 
@@ -100,21 +100,21 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 	
 	private PlanBuilder addLoad(PlanBuilder builder)
 		throws ParseException, IOException {
-		Option<String> rangePath = m_cl.getOptionString("range_file");
-		Option<String> rangeWkt = m_cl.getOptionString("range_wkt");
-		Option<String> rangeRect = m_cl.getOptionString("range_rect");
+		FOption<String> rangePath = m_cl.getOptionString("range_file");
+		FOption<String> rangeWkt = m_cl.getOptionString("range_wkt");
+		FOption<String> rangeRect = m_cl.getOptionString("range_rect");
 		
-		if ( rangeWkt.isDefined() ) {
+		if ( rangeWkt.isPresent() ) {
 			Geometry key = GeoClientUtils.fromWKT(rangeWkt.get());
 			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
 		}
-		else if ( rangePath.isDefined() ) {
+		else if ( rangePath.isPresent() ) {
 			File wktFile = new File(rangePath.get());
 			String wkt = IOUtils.toString(wktFile);
 			Geometry key = GeoClientUtils.fromWKT(wkt);
 			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
 		}
-		else if ( rangeRect.isDefined() ) {
+		else if ( rangeRect.isPresent() ) {
 			double[] coords = FStream.of(CSV.parse(rangeRect.get(), ',', '\\'))
 										.mapToDouble(Double::parseDouble)
 										.toArray();

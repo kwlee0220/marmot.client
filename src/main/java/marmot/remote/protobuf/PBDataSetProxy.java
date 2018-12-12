@@ -60,7 +60,7 @@ public class PBDataSetProxy implements DataSet {
 
 	@Override
 	public boolean hasGeometryColumn() {
-		return m_info.getGeometryColumnInfo().isDefined();
+		return m_info.getGeometryColumnInfo().isPresent();
 	}
 
 	@Override

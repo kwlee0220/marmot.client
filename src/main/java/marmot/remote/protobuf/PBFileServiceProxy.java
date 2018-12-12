@@ -10,7 +10,6 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.CallStreamObserver;
-import io.vavr.control.Option;
 import marmot.proto.service.CopyToHdfsFileRequest;
 import marmot.proto.service.CopyToHdfsFileRequest.HeaderProto;
 import marmot.proto.service.FileServiceGrpc;
@@ -21,6 +20,7 @@ import marmot.protobuf.SingleValueObserver;
 import utils.StopWatch;
 import utils.Throwables;
 import utils.UnitUtils;
+import utils.func.FOption;
 
 /**
  * 
@@ -38,7 +38,7 @@ public class PBFileServiceProxy {
 		m_stub = FileServiceGrpc.newStub(channel);
 	}
 
-	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, Option<Long> blockSize)
+	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, FOption<Long> blockSize)
 		throws IOException {
 		StopWatch watch = StopWatch.start();
 		int nblocks = 0;
@@ -49,7 +49,7 @@ public class PBFileServiceProxy {
 		try {
 			HeaderProto.Builder hbuilder = HeaderProto.newBuilder()
 													.setPath(PBUtils.toStringProto(path));
-			blockSize.forEach(sz -> hbuilder.setBlockSize(sz));
+			blockSize.ifPresent(sz -> hbuilder.setBlockSize(sz));
 			HeaderProto header = hbuilder.build();
 			supplier.onNext(CopyToHdfsFileRequest.newBuilder().setHeader(header).build());
 

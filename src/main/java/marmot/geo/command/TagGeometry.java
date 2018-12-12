@@ -3,7 +3,6 @@ package marmot.geo.command;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
@@ -13,6 +12,7 @@ import marmot.optor.JoinOptions;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.CommandLineParser;
+import utils.func.FOption;
 
 /**
  * 
@@ -47,7 +47,7 @@ public class TagGeometry {
 		String refDsId = cl.getString("ref");
 		String refCol = cl.getString("ref_col");
 		String outDs = cl.getString("output");
-		Option<Integer> nworkers = cl.getOptionInt("workers");
+		FOption<Integer> nworkers = cl.getOptionInt("workers");
 		
 		// 원격 MarmotServer에 접속.
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);

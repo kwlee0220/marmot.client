@@ -14,7 +14,7 @@ import org.opengis.geometry.BoundingBox;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.control.Option;
+import utils.func.FOption;
 import utils.stream.FStream;
 
 /**
@@ -38,10 +38,10 @@ public class GSPUtils {
 		return "/" + sfTypeName.replace('.', '/');
 	}
 	
-	static Tuple2<BoundingBox,Option<Filter>> resolveQuery(BoundingBox mbr, Query query) {
-		Tuple2<Option<BoundingBox>,Option<Filter>> ret = parseCql(query.getFilter());
+	static Tuple2<BoundingBox,FOption<Filter>> resolveQuery(BoundingBox mbr, Query query) {
+		Tuple2<FOption<BoundingBox>,FOption<Filter>> ret = parseCql(query.getFilter());
 		
-		if ( ret._1.isDefined() ) {
+		if ( ret._1.isPresent() ) {
 			BoundingBox bbox = ret._1.get();
 //			if ( bbox.contains(mbr) ) {
 //				return Tuple.of(null, ret._2);
@@ -57,32 +57,32 @@ public class GSPUtils {
 
 	private static final FilterFactory2 FILTER_FACT
 					= CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
-	private static Tuple2<Option<BoundingBox>,Option<Filter>> parseCql(Filter filter) {
+	private static Tuple2<FOption<BoundingBox>,FOption<Filter>> parseCql(Filter filter) {
 		Objects.requireNonNull(filter);
 
 		if ( filter instanceof BBOX ) {
 			BoundingBox bbox = ((BBOX)filter).getBounds();
-			return Tuple.of(Option.some(bbox), Option.none());
+			return Tuple.of(FOption.of(bbox), FOption.empty());
 		}
 		else if ( filter instanceof And ) {
 			List<Filter> filters = ((And)filter).getChildren();
-			Option<BBOX> bbox = FStream.of(filters)
+			FOption<BBOX> bbox = FStream.of(filters)
 										.castSafely(BBOX.class)
 										.next();
-			if ( bbox.isDefined() ) {
-				Option<BoundingBox> bounds = bbox.map(BBOX::getBounds);
+			if ( bbox.isPresent() ) {
+				FOption<BoundingBox> bounds = bbox.map(BBOX::getBounds);
 				filter = FILTER_FACT.and(FStream.of(filters)
 												.filter(f -> f != bbox.get())
 												.toList());
 				
-				return Tuple.of(bounds, Option.some(filter));
+				return Tuple.of(bounds, FOption.of(filter));
 			}
 			else {
-				return Tuple.of(Option.none(), Option.some(filter));
+				return Tuple.of(FOption.empty(), FOption.of(filter));
 			}
 		}
 		else {
-			return Tuple.of(Option.none(), Option.some(filter));
+			return Tuple.of(FOption.empty(), FOption.of(filter));
 		}
 	}
 }

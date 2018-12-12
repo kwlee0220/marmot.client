@@ -8,6 +8,7 @@ import org.apache.log4j.PropertyConfigurator;
 import io.vavr.control.Option;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
+import utils.func.FOption;
 
 
 /**
@@ -71,8 +72,8 @@ public class MarmotClientCommands {
 	}
 	
 	public static int getMarmotPort(CommandLine cl, String optId) {
-		Option<Integer> port = cl.getOptionInt(optId);
-		if ( port.isDefined() ) {
+		FOption<Integer> port = cl.getOptionInt(optId);
+		if ( port.isPresent() ) {
 			return port.get();
 		}
 		

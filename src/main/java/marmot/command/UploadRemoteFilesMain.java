@@ -2,11 +2,11 @@ package marmot.command;
 
 import java.io.File;
 
-import io.vavr.control.Option;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.CommandLineParser;
 import utils.UnitUtils;
+import utils.func.FOption;
 
 /**
  * 
@@ -38,7 +38,7 @@ public class UploadRemoteFilesMain {
 			
 			File start = new File(cl.getArgument(0));
 			String dest = cl.getArgument(1);
-			Option<Long> blockSize = cl.getOptionString("block_size")
+			FOption<Long> blockSize = cl.getOptionString("block_size")
 										.map(UnitUtils::parseByteSize);
 			String glob = cl.getOptionString("glob").getOrNull();
 			boolean force = cl.hasOption("f");

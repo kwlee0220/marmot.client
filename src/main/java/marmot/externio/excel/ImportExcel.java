@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import io.vavr.Tuple2;
-import io.vavr.control.Option;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -19,6 +18,7 @@ import utils.CommandLine;
 import utils.StopWatch;
 import utils.Throwables;
 import utils.UnitUtils;
+import utils.func.FOption;
 
 /**
  * 
@@ -27,7 +27,7 @@ import utils.UnitUtils;
 public abstract class ImportExcel extends ImportIntoDataSet {
 	protected final ExcelParameters m_excelParams;
 	
-	protected abstract Option<Plan> loadMetaPlan();
+	protected abstract FOption<Plan> loadMetaPlan();
 	
 	public static ImportExcel from(File file, ExcelParameters csvParams,
 											ImportParameters importParams) {
@@ -36,13 +36,13 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	
 	public static ImportExcel from(InputStream is, ExcelParameters csvParams,
 											ImportParameters importParams) {
-		return new ImportExcelStreamIntoDataSet(is, Option.none(), csvParams, importParams);
+		return new ImportExcelStreamIntoDataSet(is, FOption.empty(), csvParams, importParams);
 	}
 	
 	public static ImportExcel from(InputStream is, Plan plan,
 											ExcelParameters excelParams,
 											ImportParameters importParams) {
-		return new ImportExcelStreamIntoDataSet(is, Option.some(plan), excelParams,
+		return new ImportExcelStreamIntoDataSet(is, FOption.of(plan), excelParams,
 												importParams);
 	}
 
@@ -53,32 +53,32 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	}
 
 	@Override
-	protected Option<Plan> loadImportPlan(MarmotRuntime marmot) {
+	protected FOption<Plan> loadImportPlan(MarmotRuntime marmot) {
 		try {
-			Option<Plan> importPlan = loadMetaPlan();
-			Option<Plan> toPointPlan = getToPointPlan();
+			FOption<Plan> importPlan = loadMetaPlan();
+			FOption<Plan> toPointPlan = getToPointPlan();
 			
-			if ( importPlan.isEmpty() && toPointPlan.isEmpty() ) {
-				return Option.none();
+			if ( importPlan.isAbsent() && toPointPlan.isAbsent() ) {
+				return FOption.empty();
 			}
-			if ( importPlan.isEmpty() ) {
+			if ( importPlan.isAbsent() ) {
 				return toPointPlan;
 			}
-			if ( toPointPlan.isEmpty() ) {
+			if ( toPointPlan.isAbsent() ) {
 				return importPlan;
 			}
 			
-			return Option.some(Plan.concat(toPointPlan.get(), importPlan.get()));
+			return FOption.of(Plan.concat(toPointPlan.get(), importPlan.get()));
 		}
 		catch ( Exception e ) {
 			throw Throwables.toRuntimeException(e);
 		}
 	}
 
-	private Option<Plan> getToPointPlan() {
+	private FOption<Plan> getToPointPlan() {
 		if ( !m_excelParams.pointColumn().isDefined()
-			|| !m_params.getGeometryColumnInfo().isDefined() ) {
-			return Option.none();
+			|| !m_params.getGeometryColumnInfo().isPresent() ) {
+			return FOption.empty();
 		}
 		
 		PlanBuilder builder = new PlanBuilder("import_csv");
@@ -98,7 +98,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 			}
 		}
 		
-		return Option.some(builder.build());
+		return FOption.of(builder.build());
 	}
 	
 	private static class ImportCsvFileIntoDataSet extends ImportExcel {
@@ -117,7 +117,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		}
 
 		@Override
-		protected Option<Plan> loadMetaPlan() {
+		protected FOption<Plan> loadMetaPlan() {
 			try {
 				return MetaPlanLoader.load(m_start);
 			}
@@ -129,9 +129,9 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	
 	private static class ImportExcelStreamIntoDataSet extends ImportExcel {
 		private final InputStream m_is;
-		private final Option<Plan> m_plan;
+		private final FOption<Plan> m_plan;
 		
-		ImportExcelStreamIntoDataSet(InputStream is, Option<Plan> plan,
+		ImportExcelStreamIntoDataSet(InputStream is, FOption<Plan> plan,
 									ExcelParameters csvParams, ImportParameters importParams) {
 			super(csvParams, importParams);
 			
@@ -150,7 +150,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		}
 
 		@Override
-		protected Option<Plan> loadMetaPlan() {
+		protected FOption<Plan> loadMetaPlan() {
 			return m_plan;
 		}
 	}
@@ -159,9 +159,9 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		File file = new File(cl.getArgument("excel_file"));
 		
 		boolean headerFirst = cl.hasOption("header_first");
-		Option<String> nullString = cl.getOptionString("null_string");
-		Option<String> pointCols = cl.getOptionString("point_col");
-		Option<String> excelSrid = cl.getOptionString("excel_srid");
+		FOption<String> nullString = cl.getOptionString("null_string");
+		FOption<String> pointCols = cl.getOptionString("point_col");
+		FOption<String> excelSrid = cl.getOptionString("excel_srid");
 		String dsId = cl.getString("dataset");
 		String geomCol = cl.getOptionString("geom_col").getOrNull();
 		String srid = cl.getOptionString("srid").getOrNull();
@@ -186,9 +186,9 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		
 		ExcelParameters csvParams = ExcelParameters.create()
 												.headerFirst(headerFirst);
-		pointCols.forEach(csvParams::pointColumn);
-		nullString.forEach(csvParams::nullString);
-		excelSrid.forEach(csvParams::excelSrid);
+		pointCols.ifPresent(csvParams::pointColumn);
+		nullString.ifPresent(csvParams::nullString);
+		excelSrid.ifPresent(csvParams::excelSrid);
 		
 		ImportIntoDataSet importFile = ImportExcel.from(file, csvParams, importParams);
 		importFile.getProgressObservable()

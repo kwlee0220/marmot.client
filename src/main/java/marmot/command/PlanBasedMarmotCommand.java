@@ -16,7 +16,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.protobuf.util.JsonFormat;
 
-import io.vavr.control.Option;
 import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
@@ -33,6 +32,7 @@ import utils.CSV;
 import utils.CommandLine;
 import utils.CommandLineParser;
 import utils.UnitUtils;
+import utils.func.FOption;
 
 
 /**
@@ -245,11 +245,11 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addJoin(PlanBuilder builder) {
-		Option<String> join = m_cl.getOptionString("join");
-		Option<String> joinOutputs = m_cl.getOptionString("join_output_cols");
-		Option<String> joinTypeStr = m_cl.getOptionString("join_type");
+		FOption<String> join = m_cl.getOptionString("join");
+		FOption<String> joinOutputs = m_cl.getOptionString("join_output_cols");
+		FOption<String> joinTypeStr = m_cl.getOptionString("join_type");
 
-		if ( join.isDefined() ) {
+		if ( join.isPresent() ) {
 			List<String> parts = CSV.parse(join.get(), ':', '\\');
 			if ( parts.size() != 3 ) {
 				System.err.printf("invalid join argument: 'join': '%s'%n", join.get());
@@ -264,7 +264,7 @@ class PlanBasedMarmotCommand {
 											.getOrElse(() -> JoinType.INNER_JOIN);
 			JoinOptions opts = new JoinOptions().joinType(joinType);
 			
-			if ( joinOutputs.isDefined() ) {
+			if ( joinOutputs.isPresent() ) {
 				String outCols = joinOutputs.get();
 				return builder.join(joinCols, paramDsId, paramJoinCols, outCols, opts);
 			}
@@ -278,10 +278,10 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addGroupBy(PlanBuilder builder) {
-		Option<String> grpByStr = m_cl.getOptionString("group_by");
+		FOption<String> grpByStr = m_cl.getOptionString("group_by");
 		AggregateFunction[] aggrs = parseAggregate();
 
-		if ( grpByStr.isDefined() ) {
+		if ( grpByStr.isPresent() ) {
 			List<String> parts = CSV.parse(grpByStr.get(), ':', '\\');
 			
 			GroupByPlanBuilder grpBuilder = builder.groupBy(parts.get(0));
@@ -477,7 +477,7 @@ class PlanBasedMarmotCommand {
 			
 			m_cl.getOptionString("block_size")
 				.map(UnitUtils::parseByteSize)
-				.forEach(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
+				.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
 			
 			if ( m_cl.hasOption("compress") ) {
 				optList.add(DataSetOption.COMPRESS);
