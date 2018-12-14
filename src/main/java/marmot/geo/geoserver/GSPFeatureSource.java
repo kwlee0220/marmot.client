@@ -150,7 +150,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 			FStream<Record> recStream = FStream.of(quadKeys)
 												.flatMap(qk -> query(context, qk));
 			
-			return RecordSets.from(m_dsInfo.getRecordSchema(), recStream);
+			return RecordSet.from(m_dsInfo.getRecordSchema(), recStream);
 		}
 		catch ( Throwable e ) {
 			throw Throwables.toRuntimeException(Throwables.unwrapThrowable(e));

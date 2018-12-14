@@ -103,7 +103,7 @@ public class SquareGridAnalysis {
 								"__ratio = (ST_Area(__overlap) /  ST_Area(the_geom))")
 						.update(updateExpr)
 						.groupBy("cell_id")
-							.tagWith("cell_geom,cell_pos")
+							.withTags("cell_geom,cell_pos")
 							.aggregate(aggrs)
 						.expand("x:long,y:long", "x = cell_pos.getX(); y = cell_pos.getY()")
 						.project("cell_geom as the_geom, x, y, *-{cell_geom,x,y,cell_id,cell_pos}")

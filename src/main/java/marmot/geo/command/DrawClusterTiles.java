@@ -55,7 +55,7 @@ public class DrawClusterTiles {
 		
 		Plan plan = marmot.planBuilder("read_cluster_index")
 							.loadSpatialClusterIndexFile(dsId)
-							.expand1("the_geom:polygon", toGeom)
+							.defineColumn("the_geom:polygon", toGeom)
 							.project("the_geom,pack_id,quad_key,count,length")
 							.build();
 		

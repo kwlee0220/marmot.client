@@ -286,7 +286,7 @@ class PlanBasedMarmotCommand {
 			
 			GroupByPlanBuilder grpBuilder = builder.groupBy(parts.get(0));
 			if ( parts.size() > 1 ) {
-				grpBuilder = grpBuilder.tagWith(parts.get(1));
+				grpBuilder = grpBuilder.withTags(parts.get(1));
 			}
 			
 			if ( aggrs == null ) {
