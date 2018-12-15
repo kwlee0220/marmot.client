@@ -134,7 +134,7 @@ public class ExcelRecordSet extends AbstractRecordSet {
 				output.set(i, null);
 			}
 			else {
-				Object v = readCell(cell, output.getSchema().getColumnAt(i).type(), i);
+				Object v = readCell(cell, output.getRecordSchema().getColumnAt(i).type(), i);
 				output.set(i, v);
 			}
 		}
