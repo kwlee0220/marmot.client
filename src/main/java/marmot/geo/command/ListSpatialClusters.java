@@ -50,11 +50,11 @@ public class ListSpatialClusters {
 	
 	private static final void printIndexEntry(Record record) {
 		String packId = record.getString("pack_id");
-		int blockNo = record.getInt("block_no", -1);
+		int blockNo = record.getInt("block_no");
 		String quadKey = record.getString("quad_key");
-		long count = record.getLong("count", -1);
-		String start = UnitUtils.toByteSizeString(record.getLong("start", -1));
-		String len = UnitUtils.toByteSizeString(record.getLong("length", -1));
+		long count = record.getLong("count");
+		String start = UnitUtils.toByteSizeString(record.getLong("start"));
+		String len = UnitUtils.toByteSizeString(record.getLong("length"));
 		
 		System.out.printf("pack_id=%s, block_no=%02d, quad_key=%s, count=%d, start=%s, length=%s%n",
 							packId, blockNo, quadKey, count, start, len);
