@@ -1,5 +1,7 @@
 package marmot.command;
 
+import static marmot.optor.geo.SpatialRelation.INTERSECTS;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -9,16 +11,18 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
 import marmot.DataSet;
-import marmot.GeometryColumnInfo;
+import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.geo.GeoClientUtils;
-import marmot.optor.geo.SpatialRelation;
-import marmot.remote.protobuf.PBMarmotClient;
+import marmot.type.MapTile;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import utils.CSV;
-import utils.CommandLine;
-import utils.CommandLineParser;
-import utils.func.FOption;
 import utils.io.IOUtils;
 import utils.stream.FStream;
 
@@ -41,90 +45,87 @@ import utils.stream.FStream;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
+@Command(name="mc_copy", description="execute simple plan",
+		mixinStandardHelpOptions=false)
 public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
-	private DataSet m_input;
-	
-	private RemoteCopyDataSetMain(PBMarmotClient marmot, CommandLine cl, DataSet input,
-									String outDsId, GeometryColumnInfo gcInfo) {
-		super(marmot, cl, outDsId, gcInfo);
-		
-		m_input = input;
-	}
-	
+	@Mixin Params m_params;
+
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
 		
-		CommandLineParser parser = new CommandLineParser("mc_copy ");
-		parser.addArgumentName("src_dataset");
-		parser.addArgumentName("output_dataset");
-		PlanBasedMarmotCommand.setCommandLineParser(parser);
-		parser.addArgOption("range_file", "path", "file path to WKT file", false);
-		parser.addArgOption("range_wkt", "wkt", "key geometry in WKT", false);
-		parser.addArgOption("range_rect", "rect", "rectangle coordinates", false);
-
-		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
+		RemoteCopyDataSetMain cmd = new RemoteCopyDataSetMain();
+		CommandLine commandLine = new CommandLine(cmd);
+		commandLine.parse(args);
+		
+		if ( commandLine.isUsageHelpRequested() ) {
+			commandLine.usage(System.out, Ansi.OFF);
+		}
+		else {
+			try {
+				Plan plan = cmd.buildPlan("copy_dataset");
+				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
 			}
-			
-			// 원격 MarmotServer에 접속.
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			
-			String inDsId = cl.getArgument("src_dataset");
-			String outDsId = cl.getArgument("output_dataset");
-			DataSet input = marmot.getDataSet(inDsId);
-			GeometryColumnInfo gcInfo = input.hasGeometryColumn()
-										? input.getGeometryColumnInfo() : null;
-			
-			RemoteCopyDataSetMain copy = new RemoteCopyDataSetMain(marmot, cl, input, outDsId, gcInfo);
-			copy.run();
-		}
-		catch ( Exception e ) {
-			System.err.println(e);
-			parser.exitWithUsage(-1);
+			catch ( Exception e ) {
+				System.err.println(e);
+				commandLine.usage(System.out, Ansi.OFF);
+			}
 		}
 	}
 	
-	public void run() throws Exception {
-		PlanBuilder builder = m_marmot.planBuilder("copy_dataset");
-		
-		builder = addLoad(builder);
-		builder = appendOperators(builder);
-		
-		Plan plan = builder.build();
-		run(plan);
-	}
-	
-	private PlanBuilder addLoad(PlanBuilder builder)
+	@Override
+	protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder)
 		throws ParseException, IOException {
-		FOption<String> rangePath = m_cl.getOptionString("range_file");
-		FOption<String> rangeWkt = m_cl.getOptionString("range_wkt");
-		FOption<String> rangeRect = m_cl.getOptionString("range_rect");
-		
-		if ( rangeWkt.isPresent() ) {
-			Geometry key = GeoClientUtils.fromWKT(rangeWkt.get());
-			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
+		DataSet input = marmot.getDataSet(m_params.m_inputDsId);
+		if ( input.hasGeometryColumn() ) {
+			setGeometryColumnInfo(input.getGeometryColumnInfo());
 		}
-		else if ( rangePath.isPresent() ) {
-			File wktFile = new File(rangePath.get());
+		
+		if ( m_params.m_rangeWkt != null ) {
+			Geometry key = GeoClientUtils.fromWKT(m_params.m_rangeWkt);
+			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+		}
+		else if ( m_params.m_rangePath != null ) {
+			File wktFile = new File(m_params.m_rangePath);
 			String wkt = IOUtils.toString(wktFile);
 			Geometry key = GeoClientUtils.fromWKT(wkt);
-			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
 		}
-		else if ( rangeRect.isPresent() ) {
-			double[] coords = FStream.of(CSV.parse(rangeRect.get(), ',', '\\'))
-										.mapToDouble(Double::parseDouble)
-										.toArray();
+		else if ( m_params.m_rangeRect != null ) {
+			double[] coords = FStream.of(CSV.parseCSV(m_params.m_rangeRect))
+									.mapToDouble(Double::parseDouble)
+									.toArray();
 			Envelope range = new Envelope(new Coordinate(coords[0], coords[1]),
 											new Coordinate(coords[2], coords[3]));
 			Geometry key = GeoClientUtils.toPolygon(range);
-			return builder.query(m_input.getId(), SpatialRelation.INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+		}
+		else if ( m_params.m_rangeQuadKey != null ) {
+			Envelope range = MapTile.fromQuadKey(m_params.m_rangeQuadKey).getBounds();
+			Geometry key = GeoClientUtils.toPolygon(range);
+			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
 		}
 		else {
-			return builder.load(m_input.getId());
+			return builder.load(m_params.m_inputDsId);
 		}
+	}
+	
+	private static class Params {
+		@Parameters(paramLabel="input_dataset", index="0", description={"input dataset id"})
+		private String m_inputDsId;
+		
+		@Parameters(paramLabel="output_dataset", index="1", description={"output dataset id"})
+		private String m_outputDsId;
+		
+		@Option(names={"-range_file"}, paramLabel="path", description={"file path to WKT file"})
+		String m_rangePath;
+		
+		@Option(names={"-range_wkt"}, paramLabel="wkt", description={"key geometry in WKT"})
+		String m_rangeWkt;
+		
+		@Option(names={"-range_rect"}, paramLabel="rect", description={"rectangle coordinates"})
+		String m_rangeRect;
+		
+		@Option(names={"-range_qkey"}, paramLabel="qkey", description={"range query with quad-key"})
+		String m_rangeQuadKey;
 	}
 }

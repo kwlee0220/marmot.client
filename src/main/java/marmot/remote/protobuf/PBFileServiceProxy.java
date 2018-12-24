@@ -30,11 +30,11 @@ public class PBFileServiceProxy {
 	private static final Logger s_logger = LoggerFactory.getLogger(PBFileServiceProxy.class);
 	private static final long REPORT_INTERVAL = UnitUtils.parseByteSize("512mb");
 	
-	private final PBMarmotClient m_marmot;
+//	private final PBMarmotClient m_marmot;
 	private final FileServiceStub m_stub;
 
 	PBFileServiceProxy(PBMarmotClient marmot, ManagedChannel channel) {
-		m_marmot = marmot;
+//		m_marmot = marmot;
 		m_stub = FileServiceGrpc.newStub(channel);
 	}
 
@@ -99,7 +99,7 @@ public class PBFileServiceProxy {
 			long velo = (watch.getElapsedInSeconds() > 0)
 						? totalUploaded / watch.getElapsedInSeconds() : -1;
 			String veloStr = UnitUtils.toByteSizeString(velo);
-			String msg = String.format("path=%s, total=%s, velo=%s/s, elapsed=%ss",
+			String msg = String.format("path=%s, total=%s, velo=%s/s, elapsed=%s",
 										path, size, veloStr, watch.getElapsedSecondString());
 			s_logger.info(msg);
 		}

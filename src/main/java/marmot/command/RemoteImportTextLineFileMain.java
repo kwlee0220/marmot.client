@@ -4,7 +4,6 @@ import java.io.File;
 import java.nio.charset.Charset;
 
 import marmot.externio.ImportIntoDataSet;
-import marmot.externio.ImportParameters;
 import marmot.externio.text.ImportTextFile;
 import marmot.externio.text.TextLineParameters;
 import marmot.remote.protobuf.PBMarmotClient;
@@ -66,12 +65,13 @@ public class RemoteImportTextLineFileMain {
 		// 원격 MarmotServer에 접속.
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 		
-		ImportParameters params = ImportParameters.create()
-												.setDatasetId(dsId)
-												.setGeometryColumnInfo("the_geom", srid)
-												.setBlockSize(blkSize)
-												.setReportInterval(reportInterval)
-												.setForce(force);
+		ImportParameters params = new ImportParameters();
+		params.setDataSetId(dsId);
+		params.setGeometryColumnInfo("the_geom", srid);
+		params.setBlockSize(blkSize);
+		params.setReportInterval(reportInterval);
+		params.setForce(force);
+		
 		TextLineParameters txtParams = TextLineParameters.parameters()
 														.glob(glob)
 														.charset(charset);

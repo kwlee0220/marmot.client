@@ -16,7 +16,6 @@ public class NormalizeProcessMain {
 		MarmotClientCommands.configureLog4j();
 //		LogManager.getRootLogger().setLevel(Level.OFF);
 		
-		
 		CommandLineParser parser = new CommandLineParser("mc_process_normalize ");
 		parser.addArgumentName("input_dataset");
 		parser.addArgumentName("output_dataset");

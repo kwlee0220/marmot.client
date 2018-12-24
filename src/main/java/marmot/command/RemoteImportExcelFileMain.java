@@ -1,53 +1,75 @@
 package marmot.command;
 
+import java.io.File;
+
+import marmot.externio.ImportIntoDataSet;
+import marmot.externio.excel.ExcelParameters;
 import marmot.externio.excel.ImportExcel;
 import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
+import utils.StopWatch;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class RemoteImportExcelFileMain {
+@Command(name="mc_import_excel",
+		parameterListHeading = "Parameters:%n",
+		optionListHeading = "Options:%n",
+		description="import Excel files into a dataset")
+public class RemoteImportExcelFileMain implements Runnable {
+	@Mixin private MarmotConnector m_connector;
+	@Mixin private ExcelParameters m_excelParams;
+	@Mixin private ImportParameters m_importParams;
+	@Mixin private UsageHelp m_help;
+
+	@Parameters(paramLabel="path", description={"path to the excel file to import"})
+	private String m_path;
+
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
-//		LogManager.getRootLogger().setLevel(Level.OFF);
 		
-		CommandLineParser parser = new CommandLineParser("mc_import_excel ");
-		parser.addArgumentName("excel_file");
-		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
-		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
-		parser.addOption("header_first", "get the first line as header", false);
-		parser.addArgOption("point_col", "x:y", "X,Y fields for point", false);
-		parser.addArgOption("excel_srid", "code", "EPSG code for the input Excel file", false);
-		parser.addArgOption("null_string", "string", "null string", false);
-		parser.addArgOption("dataset", "name", "dataset name", true);
-		parser.addArgOption("geom_col", "name", "default Geometry column", false);
-		parser.addArgOption("srid", "code", "EPSG code for result dataset", false);
-		parser.addArgOption("block_size", "nbytes", "block size (eg: '64mb')", false);
-		parser.addArgOption("report_interval", "count", "progress report interval", false);
-		parser.addOption("f", "force to create a new dataset", false);
-		parser.addOption("a", "append to the existing dataset", false);
-		parser.addOption("h", "help usage", false);
+		RemoteImportExcelFileMain cmd = new RemoteImportExcelFileMain();
+		CommandLine commandLine = new CommandLine(cmd);
+		commandLine.parse(args);
 		
-		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
-			}
+		if ( commandLine.isUsageHelpRequested() ) {
+			commandLine.usage(System.out, Ansi.OFF);
+		}
+		else {
+			cmd.run();
+		}
+	}
 
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			
+	@Override
+	public void run() {
+		try {
 			// 원격 MarmotServer에 접속.
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			ImportExcel.runCommand(marmot, cl);
-			marmot.disconnect();
+			PBMarmotClient marmot = m_connector.connect();
+			
+			StopWatch watch = StopWatch.start();
+			
+			File file = new File(m_path);
+			ImportIntoDataSet importFile = ImportExcel.from(file, m_excelParams, m_importParams);
+			importFile.getProgressObservable()
+						.subscribe(report -> {
+							double velo = report / watch.getElapsedInFloatingSeconds();
+							System.out.printf("imported: count=%d, elapsed=%s, velo=%.0f/s%n",
+											report, watch.getElapsedMillisString(), velo);
+						});
+			long count = importFile.run(marmot);
+			
+			double velo = count / watch.getElapsedInFloatingSeconds();
+			System.out.printf("imported: dataset=%s count=%d elapsed=%s, velo=%.1f/s%n",
+								m_importParams.getDataSetId(), count,
+								watch.getElapsedMillisString(), velo);
 		}
 		catch ( Exception e ) {
 			System.err.println("" + e);
-			parser.exitWithUsage(0);
 		}
 	}
 }

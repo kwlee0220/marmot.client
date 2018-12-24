@@ -1,5 +1,7 @@
 package marmot.command;
 
+import static marmot.DataSetOption.FORCE;
+import static marmot.DataSetOption.GEOMETRY;
 import static marmot.optor.AggregateFunction.AVG;
 import static marmot.optor.AggregateFunction.CONVEX_HULL;
 import static marmot.optor.AggregateFunction.COUNT;
@@ -14,7 +16,6 @@ import java.util.List;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.protobuf.util.JsonFormat;
 
 import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
@@ -28,10 +29,9 @@ import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
 import marmot.optor.geo.SpatialRelation;
 import marmot.plan.SpatialJoinOption;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Option;
 import utils.CSV;
-import utils.CommandLine;
-import utils.CommandLineParser;
-import utils.UnitUtils;
 import utils.func.FOption;
 
 
@@ -53,68 +53,62 @@ import utils.func.FOption;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-class PlanBasedMarmotCommand {
-	protected final MarmotRuntime m_marmot;
-	protected final CommandLine m_cl;
-	protected final String m_outputDsId;
+abstract class PlanBasedMarmotCommand {
+	@Mixin private MarmotConnector m_connector;
+	@Mixin private OpParams m_opParams;
+	@Mixin private StoreDataSetParameters m_storeParams;
+	@Mixin private UsageHelp m_help;
+
+	private MarmotRuntime m_marmot;
+	private GeometryColumnInfo m_gcInfo;
 	
-	protected GeometryColumnInfo m_gcInfo;
+	abstract protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder)
+		throws Exception;
 	
-	protected PlanBasedMarmotCommand(MarmotRuntime marmot, CommandLine cl, String outDsId,
-									GeometryColumnInfo gcInfo) {
-		m_marmot = marmot;
-		m_cl = cl;
-		m_outputDsId = outDsId;
+	protected void setGeometryColumnInfo(GeometryColumnInfo gcInfo) {
 		m_gcInfo = gcInfo;
 	}
-	
-	static final void setCommandLineParser(CommandLineParser parser) {
-		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
-		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
-		parser.addOption("centroid", "perform centroid on the geometry column", false);
-		parser.addArgOption("buffer", "meter", "buffer radius", false);
-		parser.addArgOption("expand", "expr", "expand expression", false);
-		parser.addArgOption("update", "expr", "update expression", false);
-		parser.addArgOption("filter", "expr", "filter expression", false);
-		parser.addArgOption("spatial_join", "cols:dsid",
-							"join columns, parameter join dataset", false);
-		parser.addArgOption("join", "cols:dsid:join_cols",
-							"join columns, parameter join dataset, and columns", false);
-		parser.addArgOption("join_output_cols", "cols", "join output columns", false);
-		parser.addArgOption("join_type", "type",
-							"join type: inner|left_outer|right_outer|full_outer|semi|aggregate (default: inner)", false);
-		parser.addArgOption("join_expr", "expr", "join expression. (eg: within_distance(15)", false);
-		parser.addArgOption("group_by", "cols:tags",
-							"groupping columns (and optionally tag columns)", false);
-		parser.addArgOption("aggregate", "funcs", "aggregate functions", false);
-		parser.addArgOption("project", "colums", "target column list", false);
-		parser.addArgOption("sample", "count", "target sample count", false);
-		parser.addArgOption("shard", "count", "partition count", false);
-		parser.addArgOption("dest_srid", "EPSG_code", "destination EPSG code", false);
-		parser.addArgOption("block_size", "nbytes",
-							"block size (default: source file block_size)", false);
-		parser.addOption("compress", "compress output dataset");
-		parser.addOption("a", "append into the existing dataset");
-		parser.addOption("p", "print plan");
-		parser.addOption("f", "delete the output dataset if it exists already", false);
-		parser.addOption("h", "help usage");
+
+	protected Plan buildPlan(String planName) throws Exception {
+		m_marmot = m_connector.connect();
+		
+		PlanBuilder builder = m_marmot.planBuilder(planName);
+		builder = addLoad(m_marmot, builder);
+		builder = appendOperators(builder);
+		
+		return builder.build();
 	}
 	
-	public void run(Plan plan) throws Exception {
-		boolean force = m_cl.hasOption("f");
-		if ( force ) {
-			m_marmot.deleteDataSet(m_outputDsId);
+	protected void createDataSet(String outDsId, Plan plan) throws Exception {
+		if ( !m_storeParams.getAppend() ) {
+			List<DataSetOption> optList = Lists.newArrayList();
+			
+			if ( m_gcInfo != null ) {
+				RecordSchema outSchema = m_marmot.getOutputRecordSchema(plan);
+				if ( outSchema.existsColumn(m_gcInfo.name()) ) {
+					optList.add(GEOMETRY(m_gcInfo));
+				}
+			}
+			
+			if ( m_storeParams.getForce() ) {
+				optList.add(FORCE);
+			}
+			
+			m_storeParams.getBlockSize()
+						.map(DataSetOption::BLOCK_SIZE)
+						.ifPresent(optList::add);
+			m_storeParams.getCompress()
+						.ifPresent(flag -> optList.add(DataSetOption.COMPRESS));
+			
+			DataSetOption[] opts = Iterables.toArray(optList, DataSetOption.class);
+			m_marmot.createDataSet(outDsId, plan, opts);
 		}
-		
-		if ( m_cl.hasOption("p") ) {
-			System.out.println(JsonFormat.printer().print(plan.toProto()));
-			return;
+		else {
+			m_marmot.execute(plan);
 		}
-		
-		createDataSet(plan);
 	}
 	
-	protected PlanBuilder appendOperators(PlanBuilder builder) throws Exception {
+	private PlanBuilder appendOperators(PlanBuilder builder) {
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
 		builder = addExpand(builder);
@@ -122,16 +116,18 @@ class PlanBasedMarmotCommand {
 		builder = addFilter(builder);
 		
 		// 'spatial_join' 관련 인자가 있는 경우, spatial_join 연산을 추가한다.
-		builder = addSpatialJoin(builder);
-		
-		// 'join' 관련 인자가 있는 경우, join 연산을 추가한다.
-		builder = addJoin(builder);
+		if ( m_opParams.m_spatialJoin != null ) {
+			addSpatialJoin(builder);
+		}
+		else {
+			// 'join' 관련 인자가 있는 경우, join 연산을 추가한다.
+			addJoin(builder);
+		}
 		
 		// 'groupBy' 관련 인자가 있는 경우, groupBy 연산을 추가한다.
-		builder = addGroupBy(builder);
+		addGroupBy(builder);
 		
 		builder = addProject(builder);
-		
 		builder = addTransformCrs(builder);
 		builder = addShard(builder);
 		
@@ -139,10 +135,9 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addCentroid(PlanBuilder builder) {
-		if ( m_cl.hasOption("centroid") ) {
+		if ( m_opParams.m_centroid ) {
 			if ( m_gcInfo == null ) {
-				System.err.println("dataset does not have default Geometry column");
-				m_cl.exitWithUsage(-1);
+				throw new IllegalArgumentException("dataset does not have default Geometry column");
 			}
 
 			builder = builder.centroid(m_gcInfo.name());
@@ -152,65 +147,56 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addBuffer(PlanBuilder builder) {
-		double dist = m_cl.getOptionDouble("buffer").getOrElse(-1d);
-		if ( dist > 0 ) {
+		if ( m_opParams.m_bufferRadius > 0 ) {
 			if ( m_gcInfo == null ) {
-				System.err.println("dataset does not have default Geometry column");
-				m_cl.exitWithUsage(-1);
+				throw new IllegalArgumentException("dataset does not have default Geometry column");
 			}
 
-			builder = builder.buffer(m_gcInfo.name(), dist);
+			builder = builder.buffer(m_gcInfo.name(), m_opParams.m_bufferRadius);
 		}
 		
 		return builder;
 	}
 	
 	private PlanBuilder addExpand(PlanBuilder builder) {
-		String expr = m_cl.getOptionString("expand").getOrNull();
-		if ( expr == null ) {
-			return builder;
+		if ( m_opParams.m_expandExpr != null ) {
+			builder = builder.expand(m_opParams.m_expandExpr);
 		}
-		
-		return builder.expand(expr);
+		return builder;
 	}
 	
 	private PlanBuilder addUpdate(PlanBuilder builder) {
-		String expr = m_cl.getOptionString("update").getOrNull();
-		if ( expr == null ) {
-			return builder;
+		if ( m_opParams.m_updateExpr != null ) {
+			builder = builder.update(m_opParams.m_updateExpr);
 		}
-		
-		return builder.update(expr);
+		return builder;
 	}
 	
 	private PlanBuilder addFilter(PlanBuilder builder) {
-		String expr = m_cl.getOptionString("filter").getOrNull();
-		
-		if ( expr != null ) {
-			builder = builder.filter(expr);
+		if ( m_opParams.m_filterExpr != null ) {
+			builder = builder.filter(m_opParams.m_filterExpr);
 		}
 		return builder;
 	}
 	
 	private PlanBuilder addSpatialJoin(PlanBuilder builder) {
-		String join = m_cl.getOptionString("spatial_join").getOrNull();
+		String join = m_opParams.m_spatialJoin;
 		if ( join == null ) {
 			return builder;
 		}
 		
-		String outCols = m_cl.getOptionString("join_output_cols").getOrNull();
-		String joinType = m_cl.getOptionString("join_type").getOrElse("inner");
-		
 		List<String> parts = CSV.parse(join, ':', '\\');
 		if ( parts.size() != 2 ) {
-			System.err.printf("invalid spatial_join argument: '%s'%n", join);
-			m_cl.exitWithUsage(-1);
+			String details = String.format("invalid spatial_join argument: '%s'%n", join);
+			throw new IllegalArgumentException(details);
 		}
 		String joinCols = parts.get(0);
 		String paramDsId = parts.get(1);
 		
-		SpatialJoinOption[] opts = parseSpatialJoinOption();
+		String outCols = m_opParams.m_joinOutCols;
+		String joinType = FOption.ofNullable(m_opParams.m_joinType).getOrElse("inner");
 		
+		SpatialJoinOption[] opts = parseSpatialJoinOption();
 		switch ( joinType ) {
 			case "inner":
 				if ( outCols != null ) {
@@ -231,58 +217,50 @@ class PlanBasedMarmotCommand {
 			case "aggregate":
 				AggregateFunction[] aggrs = parseAggregate();
 				if ( aggrs == null ) {
-					System.err.printf("aggregate join has no aggregation functions");
-					m_cl.exitWithUsage(-1);
+					throw new IllegalArgumentException("aggregate join has no aggregation functions");
 				}
 				return builder.spatialAggregateJoin(joinCols, paramDsId, aggrs, opts);
 			default:
-				System.err.printf("'invalid spatial_join type: " + joinType);
-				m_cl.exitWithUsage(-1);
-				
+				throw new IllegalArgumentException("'invalid spatial_join type: " + joinType);
 		}
-		
-		return null;
 	}
 	
 	private PlanBuilder addJoin(PlanBuilder builder) {
-		FOption<String> join = m_cl.getOptionString("join");
-		FOption<String> joinOutputs = m_cl.getOptionString("join_output_cols");
-		FOption<String> joinTypeStr = m_cl.getOptionString("join_type");
-
-		if ( join.isPresent() ) {
-			List<String> parts = CSV.parse(join.get(), ':', '\\');
+		if ( m_opParams.m_join != null ) {
+			List<String> parts = CSV.parse(m_opParams.m_join, ':', '\\');
 			if ( parts.size() != 3 ) {
-				System.err.printf("invalid join argument: 'join': '%s'%n", join.get());
-				m_cl.exitWithUsage(-1);
+				String details = String.format("invalid join argument: 'join': '%s'",
+												m_opParams.m_join);
+				throw new IllegalArgumentException(details);
 			}
 			String joinCols = parts.get(0);
 			String paramDsId = parts.get(1);
 			String paramJoinCols = parts.get(2);
 			
-			JoinType joinType = joinTypeStr.map(s -> s + "_join")
-											.map(JoinType::fromString)
-											.getOrElse(() -> JoinType.INNER_JOIN);
+			JoinType joinType = FOption.ofNullable(m_opParams.m_joinType)
+										.map(s -> s + "_join")
+										.map(JoinType::fromString)
+										.getOrElse(() -> JoinType.INNER_JOIN);
 			JoinOptions opts = new JoinOptions().joinType(joinType);
 			
-			if ( joinOutputs.isPresent() ) {
-				String outCols = joinOutputs.get();
-				return builder.join(joinCols, paramDsId, paramJoinCols, outCols, opts);
+			if ( m_opParams.m_joinOutCols != null ) {
+				return builder.join(joinCols, paramDsId, paramJoinCols,
+									m_opParams.m_joinOutCols, opts);
 			}
 			else {
-				System.err.printf("'join_output_col' is not present");
-				m_cl.exitWithUsage(-1);
+				throw new IllegalArgumentException("'join_output_col' is not present");
 			}
 		}
-		
-		return builder;
+		else {
+			return builder;
+		}
 	}
 	
 	private PlanBuilder addGroupBy(PlanBuilder builder) {
-		FOption<String> grpByStr = m_cl.getOptionString("group_by");
 		AggregateFunction[] aggrs = parseAggregate();
 
-		if ( grpByStr.isPresent() ) {
-			List<String> parts = CSV.parse(grpByStr.get(), ':', '\\');
+		if ( m_opParams.m_groupBy != null ) {
+			List<String> parts = CSV.parse(m_opParams.m_groupBy, ':', '\\');
 			
 			GroupByPlanBuilder grpBuilder = builder.groupBy(parts.get(0));
 			if ( parts.size() > 1 ) {
@@ -290,8 +268,7 @@ class PlanBasedMarmotCommand {
 			}
 			
 			if ( aggrs == null ) {
-				System.err.printf("no aggregation for GroupBy'%n");
-				m_cl.exitWithUsage(-1);
+				throw new IllegalArgumentException("no aggregation for GroupBy");
 			}
 
 			return grpBuilder.aggregate(aggrs);
@@ -305,30 +282,26 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private SpatialJoinOption[] parseSpatialJoinOption() {
-		String joinExpr = m_cl.getOptionString("join_expr")
-								.map(String::toLowerCase).getOrElse("intersects");
-		
-		SpatialRelation rel = SpatialRelation.parse(joinExpr);
+		SpatialRelation rel = FOption.ofNullable(m_opParams.m_joinExpr)
+									.map(String::toLowerCase)
+									.map(SpatialRelation::parse)
+									.getOrElse(SpatialRelation.INTERSECTS);
 		switch ( rel.getCode() ) {
 			case CODE_INTERSECTS:
 			case CODE_WITHIN_DISTANCE:
 				return new SpatialJoinOption[] {SpatialJoinOption.JOIN_EXPR(rel)};
 			default:
-				System.err.printf("unknown spatial_join_expression: %s'%n", rel);
-				m_cl.exitWithUsage(-1);
-				return null;
+				throw new IllegalArgumentException("unknown spatial_join_expression: " + rel);
 		}
 	}
 	
 	private AggregateFunction[] parseAggregate() {
-		String aggrsStr = m_cl.getOptionString("aggregate").getOrNull();
-		
-		if ( aggrsStr == null ) {
+		if ( m_opParams.m_aggregates == null ) {
 			return null;
 		}
 
 		List<AggregateFunction> aggrs = Lists.newArrayList();
-		for ( String aggrSpecStr: CSV.parse(aggrsStr, ',', '\\') ) {
+		for ( String aggrSpecStr: CSV.parse(m_opParams.m_aggregates, ',', '\\') ) {
 			List<String> aggrSpec = CSV.parse(aggrSpecStr, ':', '\\');
 			
 			AggregateFunction aggr = null;
@@ -341,8 +314,7 @@ class PlanBasedMarmotCommand {
 						aggr = SUM(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("SUM: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("SUM: target column is not specified");
 					}
 					break;
 				case "AVG":
@@ -350,8 +322,7 @@ class PlanBasedMarmotCommand {
 						aggr = AVG(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("AVG: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("AVG: target column is not specified");
 					}
 					break;
 				case "MAX":
@@ -359,8 +330,7 @@ class PlanBasedMarmotCommand {
 						aggr = MAX(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("MAX: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("MAX: target column is not specified");
 					}
 					break;
 				case "MIN":
@@ -368,8 +338,7 @@ class PlanBasedMarmotCommand {
 						aggr = MIN(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("MIN: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("MIN: target column is not specified");
 					}
 					break;
 				case "STDDEV":
@@ -377,8 +346,7 @@ class PlanBasedMarmotCommand {
 						aggr = STDDEV(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("STDDEV: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("STDDEV: target column is not specified");
 					}
 					break;
 				case "CONVEX_HULL":
@@ -386,8 +354,7 @@ class PlanBasedMarmotCommand {
 						aggr = CONVEX_HULL(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("CONVEX_HULL: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("CONVEX_HULL: target column is not specified");
 					}
 					break;
 				case "ENVELOPE":
@@ -395,8 +362,7 @@ class PlanBasedMarmotCommand {
 						aggr = ENVELOPE(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("ENVELOPE: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("ENVELOPE: target column is not specified");
 					}
 					break;
 				case "GEOM_UNION":
@@ -404,13 +370,12 @@ class PlanBasedMarmotCommand {
 						aggr = GEOM_UNION(aggrSpec.get(1));
 					}
 					else {
-						System.err.printf("GEOM_UNION: target column is not specified%n");
-						m_cl.exitWithUsage(-1);
+						throw new IllegalArgumentException("GEOM_UNION: target column is not specified");
 					}
 					break;
 				default:
-					System.err.printf("invalid aggregation function: %s'%n", aggrSpec.get(0));
-					m_cl.exitWithUsage(-1);
+					String details = String.format("invalid aggregation function: %s'%n", aggrSpec.get(0));
+					throw new IllegalArgumentException(details);
 					
 			}
 			if ( aggrSpec.size() >= 3 ) {
@@ -423,27 +388,24 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addProject(PlanBuilder builder) {
-		String expr = m_cl.getOptionString("project").getOrNull();
-		
-		if ( expr != null ) {
-			builder = builder.project(expr);
+		if ( m_opParams.m_projectExpr != null ) {
+			builder = builder.project(m_opParams.m_projectExpr);
 		}
+		
 		return builder;
 	}
 	
 	private PlanBuilder addTransformCrs(PlanBuilder builder) {
-		String destSrid = m_cl.getOptionString("dest_srid").getOrNull();
-
-		if ( destSrid != null ) {
+		if ( m_opParams.m_transformSrid != null ) {
 			if ( m_gcInfo == null ) {
-				System.err.println("dataSet does not have default Geometry column");
-				m_cl.exitWithUsage(-1);
+				throw new IllegalArgumentException("dataSet does not have default Geometry column");
 			}
 			
-			if ( !m_gcInfo.srid().equals(destSrid) ) {
-				builder = builder.transformCrs(m_gcInfo.name(), m_gcInfo.srid(), destSrid);
+			if ( !m_gcInfo.srid().equals(m_opParams.m_transformSrid) ) {
+				builder = builder.transformCrs(m_gcInfo.name(), m_gcInfo.srid(),
+												m_opParams.m_transformSrid);
 				
-				m_gcInfo = new GeometryColumnInfo(m_gcInfo.name(), destSrid);
+				m_gcInfo = new GeometryColumnInfo(m_gcInfo.name(), m_opParams.m_transformSrid);
 			}
 		}
 		
@@ -451,43 +413,66 @@ class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addShard(PlanBuilder builder) {
-		int nparts = m_cl.getOptionInt("shard").getOrElse(-1);
-		
-		if ( nparts > 0 ) {
-			builder = builder.shard(nparts);
+		if ( m_opParams.m_shardCount > 0 ) {
+			builder = builder.shard(m_opParams.m_shardCount);
 		}
 		return builder;
 	}
 	
-	private void createDataSet(Plan plan) {
-		boolean append = m_cl.hasOption("a");		
-		if ( !append ) {
-			List<DataSetOption> optList = Lists.newArrayList();
-			
-			if ( m_gcInfo != null ) {
-				RecordSchema outSchema = m_marmot.getOutputRecordSchema(plan);
-				if ( outSchema.existsColumn(m_gcInfo.name()) ) {
-					optList.add(DataSetOption.GEOMETRY(m_gcInfo));
-				}
-			}
-			
-			if ( m_cl.hasOption("f") ) {
-				optList.add(DataSetOption.FORCE);
-			}
-			
-			m_cl.getOptionString("block_size")
-				.map(UnitUtils::parseByteSize)
-				.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
-			
-			if ( m_cl.hasOption("compress") ) {
-				optList.add(DataSetOption.COMPRESS);
-			}
+	private static class OpParams {
+		@Option(names={"-filter"}, paramLabel="expr", description={"filter expression"})
+		String m_filterExpr;
+		
+		@Option(names={"-update"}, paramLabel="expr", description={"update expression"})
+		String m_updateExpr;
+		
+		@Option(names={"-expand"}, paramLabel="expr", description={"expand expression"})
+		String m_expandExpr;
+		
+		@Option(names={"-project"}, paramLabel="colums", description={"target column list"})
+		String m_projectExpr;
+		
+		@Option(names={"-aggregate"}, paramLabel="funcs", description={"aggregate functions)"})
+		String m_aggregates;
+		
+		@Option(names={"-sample"}, paramLabel="ratio", description={"sampling ratio"})
+		double m_sampleRatio;
+		
+		@Option(names={"-shard"}, paramLabel="count", description={"reducer count"})
+		int m_shardCount = -1;
+		
+		@Option(names={"-buffer"}, paramLabel="meter", description={"buffer radius"})
+		double m_bufferRadius = -1;
+		
+		@Option(names={"-centroid"}, description={"perform centroid on the geometry column"})
+		boolean m_centroid;
+		
+		@Option(names={"-transform_srid"}, paramLabel="srid",
+				description={"destination SRID for transformCRS"})
+		String m_transformSrid;
+		
+		@Option(names={"-group_by"}, paramLabel="cols:tags",
+				description={"groupping columns (and optionally tag columns)"})
+		String m_groupBy;
+		
+		@Option(names={"-join"}, paramLabel="cols:dsid:join_cols",
+				description={"join columns, parameter join dataset, and columns"})
+		String m_join;
 
-			m_marmot.createDataSet(m_outputDsId, plan, Iterables.toArray(optList,
-									DataSetOption.class));
-		}
-		else {
-			m_marmot.execute(plan);
-		}
+		@Option(names={"-spatial_join"}, paramLabel="cols:dsid",
+				description={"join columns, parameter join dataset"})
+		String m_spatialJoin;
+		
+		@Option(names={"-join_type"}, paramLabel="type",
+				description={"join type: inner|left_outer|right_outer|full_outer|semi|aggregate (default: inner)"})
+		String m_joinType;
+		
+		@Option(names={"-join_expr"}, paramLabel="expr",
+				description={"join expression. (eg: within_distance(15)"})
+		String m_joinExpr;
+		
+		@Option(names={"-join_output_cols"}, paramLabel="cols",
+				description={"join output columns"})
+		String m_joinOutCols;
 	}
 }

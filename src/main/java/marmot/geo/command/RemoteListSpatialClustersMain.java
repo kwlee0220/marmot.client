@@ -1,26 +1,29 @@
-package marmot.command;
+package marmot.geo.command;
 
+import marmot.command.MarmotClientCommands;
+import marmot.command.MarmotConnector;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine;
-import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
+
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-@Command(name="mc_import_csv",
+@Command(name="mc_list_spatial_clusters",
 		parameterListHeading = "Parameters:%n",
 		optionListHeading = "Options:%n",
-		description="import CSV files into a dataset")
-public class RemoteImportCsvFileMain extends ImportCsvFileCommand {
+		description="display spatial cluster information for a dataset")
+public class RemoteListSpatialClustersMain extends ListSpatialClustersCommand {
 	@Mixin private MarmotConnector m_connector;
 
 	public static final void main(String... args) {
 		MarmotClientCommands.configureLog4j();
 
-		RemoteImportCsvFileMain cmd = new RemoteImportCsvFileMain();
+		RemoteListSpatialClustersMain cmd = new RemoteListSpatialClustersMain();
 		CommandLine commandLine = new CommandLine(cmd).setUsageHelpWidth(100);
 		try {
 			commandLine.parse(args);
@@ -29,7 +32,6 @@ public class RemoteImportCsvFileMain extends ImportCsvFileCommand {
 				commandLine.usage(System.out, Ansi.OFF);
 			}
 			else {
-				// 원격 MarmotServer에 접속.
 				PBMarmotClient marmot = cmd.m_connector.connect();
 				cmd.accept(marmot);
 			}

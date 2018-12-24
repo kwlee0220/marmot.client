@@ -1,84 +1,80 @@
 package marmot.command;
 
+import java.io.IOException;
+
+import com.vividsolutions.jts.io.ParseException;
+
 import marmot.DataSet;
-import marmot.GeometryColumnInfo;
+import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
-import marmot.command.MarmotClientCommands;
-import marmot.command.PlanBasedMarmotCommand;
-import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
 
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
+@Command(name="mc_spatial_join", description="execute spatial join based plan",
+		mixinStandardHelpOptions=false)
 public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
-	private RemoteSpatialJoinMain(PBMarmotClient marmot, CommandLine cl, String outDsId,
-									GeometryColumnInfo gcInfo) {
-		super(marmot, cl, outDsId, gcInfo);
-	}
+	@Mixin SpatialJoinParams m_params;
 	
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
 		
-		CommandLineParser parser = new CommandLineParser("mc_spatial_join ");
-		parser.addArgumentName("left_dataset");
-		parser.addArgumentName("right_dataset");
-		parser.addArgumentName("output_dataset");
-		parser.addArgumentName("[output_columns]");
-		PlanBasedMarmotCommand.setCommandLineParser(parser);
-
-		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
-			}
-			
-			if ( cl.getArgumentCount() < 3 ) {
-				System.err.println("insufficient arguments");
-				cl.exitWithUsage(-1);
-			}
-			
-			// 원격 MarmotServer에 접속.
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			
-			String outDsId = cl.getArgument("output_dataset");
-			DataSet left = marmot.getDataSet(cl.getArgument(0));
-			GeometryColumnInfo gcInfo = left.getGeometryColumnInfo();
-			
-			RemoteSpatialJoinMain join = new RemoteSpatialJoinMain(marmot, cl, outDsId, gcInfo);
-			join.run();
-		}
-		catch ( Exception e ) {
-			System.err.println(e);
-		}
-	}
-	
-	public void run() throws Exception {
-		PlanBuilder builder = m_marmot.planBuilder("load_spatial_join");
+		RemoteSpatialJoinMain cmd = new RemoteSpatialJoinMain();
+		CommandLine commandLine = new CommandLine(cmd);
+		commandLine.parse(args);
 		
-		builder = addLoadSpatialJoin(builder);
-		builder = appendOperators(builder);
-		
-		Plan plan = builder.build();
-		run(plan);
-	}
-	
-	private PlanBuilder addLoadSpatialJoin(PlanBuilder builder) {
-		String leftDsId = m_cl.getArgument(0);
-		String rightDsId = m_cl.getArgument(1);
-		String outCols = (m_cl.getArgumentCount() > 3) ? m_cl.getArgument(3) : null;
-		
-		if ( outCols != null ) {
-			return builder.loadSpatialIndexJoin(leftDsId, rightDsId, outCols);
+		if ( commandLine.isUsageHelpRequested() ) {
+			commandLine.usage(System.out, Ansi.OFF);
 		}
 		else {
-			return builder.loadSpatialIndexJoin(leftDsId, rightDsId);
+			try {
+				Plan plan = cmd.buildPlan("load_spatial_join");
+				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+			}
+			catch ( Exception e ) {
+				System.err.println(e);
+				commandLine.usage(System.out, Ansi.OFF);
+			}
 		}
+	}
+	
+	@Override
+	protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder)
+		throws ParseException, IOException {
+		DataSet left = marmot.getDataSet(m_params.m_leftDsId);
+		if ( left.hasGeometryColumn() ) {
+			setGeometryColumnInfo(left.getGeometryColumnInfo());
+		}
+		
+		if ( m_params.m_outCols != null ) {
+			return builder.loadSpatialIndexJoin(m_params.m_leftDsId, m_params.m_rightDsId,
+												m_params.m_outCols);
+		}
+		else {
+			return builder.loadSpatialIndexJoin(m_params.m_leftDsId, m_params.m_rightDsId);
+		}
+	}
+	
+	private static class SpatialJoinParams {
+		@Parameters(paramLabel="left_dataset", index="0", description={"left dataset id"})
+		private String m_leftDsId;
+		
+		@Parameters(paramLabel="right_dataset", index="1", description={"right dataset id"})
+		private String m_rightDsId;
+		
+		@Parameters(paramLabel="output_dataset", index="2", description={"output dataset id"})
+		private String m_outputDsId;
+		
+		@Parameters(paramLabel="output_columns", arity="0..1", index="3",
+					description={"output columns"})
+		private String m_outCols;
 	}
 }

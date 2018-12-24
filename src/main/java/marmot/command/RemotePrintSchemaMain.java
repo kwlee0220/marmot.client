@@ -3,39 +3,47 @@ package marmot.command;
 import marmot.DataSet;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
 import utils.UnitUtils;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class PrintSchemaMain {
+@Command(name="mc_schema", description="display the schema information of a dataset")
+public class RemotePrintSchemaMain implements Runnable {
+	@Mixin private MarmotConnector m_connector;
+	@Mixin private UsageHelp m_help;
+	
+	@Parameters(paramLabel="dataset_id", description={"dataset id to display"})
+	private String m_dsId;
+
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
-//		LogManager.getRootLogger().setLevel(Level.OFF);
 		
-		CommandLineParser parser = new CommandLineParser("mc_schema ");
-		parser.addArgumentName("dataset");
-		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
-		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
-		parser.addOption("h", "help usage", false);
+		RemotePrintSchemaMain cmd = new RemotePrintSchemaMain();
+		CommandLine commandLine = new CommandLine(cmd);
+		commandLine.parse(args);
 		
+		if ( commandLine.isUsageHelpRequested() ) {
+			commandLine.usage(System.out, Ansi.OFF);
+		}
+		else {
+			cmd.run();
+		}
+	}
+
+	@Override
+	public void run() {
 		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
-			}
-			
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			String dsId = cl.getArgument("dataset");
-			
 			// 원격 MarmotServer에 접속.
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
+			PBMarmotClient marmot = m_connector.connect();
 	
-			DataSet info = marmot.getDataSet(dsId);
+			DataSet info = marmot.getDataSet(m_dsId);
 			
 			System.out.println("TYPE     : " + info.getType());
 			if ( info.getRecordCount() > 0 ) {
@@ -60,7 +68,6 @@ public class PrintSchemaMain {
 		}
 		catch ( Exception e ) {
 			System.err.println("" + e);
-			parser.exitWithUsage(-1);
 		}
 	}
 }

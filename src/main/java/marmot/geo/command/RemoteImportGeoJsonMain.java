@@ -1,52 +1,87 @@
 package marmot.geo.command;
 
+import java.io.File;
+
+import io.vavr.CheckedRunnable;
+import marmot.command.ImportParameters;
 import marmot.command.MarmotClientCommands;
+import marmot.command.MarmotConnector;
+import marmot.command.UsageHelp;
+import marmot.externio.geojson.GeoJsonParameters;
 import marmot.externio.geojson.ImportGeoJson;
 import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
+import utils.StopWatch;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class RemoteImportGeoJsonMain {
-	public static final void main(String... args) throws Exception {
-		MarmotClientCommands.configureLog4j();
-//		LogManager.getRootLogger().setLevel(Level.OFF);
-		
-		CommandLineParser parser = new CommandLineParser("mc_import_geojson ");
-		parser.addArgumentName("geojson_file");
-		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
-		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
-		parser.addArgOption("charset", "charset", "Character encoding (default: utf-8)", false);
-		parser.addArgOption("src_srid", "code", "EPSG code for input GeoJSON file", false);
-		parser.addArgOption("dataset", "name", "dataset name", true);
-		parser.addArgOption("geom_col", "name", "Geometry column name for output dataset (default: the_geom)", false);
-		parser.addArgOption("srid", "code", "EPSG code for output dataset", true);
-		parser.addArgOption("block_size", "nbytes", "block size (eg: '64mb')", false);
-		parser.addArgOption("report_interval", "count", "progress report interval", false);
-		parser.addOption("f", "force to create a new dataset", false);
-		parser.addOption("a", "append to the existing dataset", false);
-		parser.addOption("h", "help usage", false);
-		
-		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
-			}
+@Command(name="mc_import_geojson",
+		parameterListHeading = "Parameters:%n",
+		optionListHeading = "Options:%n",
+		description="import GeoJson files into a dataset")
+public class RemoteImportGeoJsonMain implements CheckedRunnable {
+	@Mixin private MarmotConnector m_connector;
+	@Mixin private Params m_params;
+	@Mixin private ImportParameters m_importParams;
+	@Mixin private GeoJsonParameters m_gjsonParams;
+	@Mixin private UsageHelp m_help;
 	
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
+	private static class Params {
+		@Parameters(paramLabel="path", index="0", arity="1..1",
+					description={"path to the target geojson files (or directories)"})
+		private String m_path;
+	}
+
+	public static final void main(String... args) {
+		MarmotClientCommands.configureLog4j();
+
+		RemoteImportGeoJsonMain cmd = new RemoteImportGeoJsonMain();
+		CommandLine commandLine = new CommandLine(cmd).setUsageHelpWidth(100);
+		try {
+			commandLine.parse(args);
 			
-			// 원격 MarmotServer에 접속.
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			ImportGeoJson.runCommand(marmot, cl);
-			marmot.disconnect();
+			if ( commandLine.isUsageHelpRequested() ) {
+				commandLine.usage(System.out, Ansi.OFF);
+			}
+			else {
+				cmd.run();
+			}
 		}
 		catch ( Exception e ) {
-			System.out.println("" + e);
-			parser.exitWithUsage(-1);
+			System.err.println(e);
+			commandLine.usage(System.out, Ansi.OFF);
 		}
+	}
+
+	@Override
+	public void run() throws Exception {
+		PBMarmotClient marmot = m_connector.connect();
+		
+		StopWatch watch = StopWatch.start();
+		
+		if ( m_importParams.getGeometryColumnInfo().isAbsent() ) {
+			throw new IllegalArgumentException("Option '-geom_col' is missing");
+		}
+		
+		File gjsonFile = new File(m_params.m_path);
+		ImportGeoJson importFile = ImportGeoJson.from(gjsonFile, m_gjsonParams, m_importParams);
+		importFile.getProgressObservable()
+					.subscribe(report -> {
+						double velo = report / watch.getElapsedInFloatingSeconds();
+						System.out.printf("imported: count=%d, elapsed=%s, velo=%.1f/s%n",
+										report, watch.getElapsedMillisString(), velo);
+					});
+		long count = importFile.run(marmot);
+		
+		double velo = count / watch.getElapsedInFloatingSeconds();
+		System.out.printf("imported: dataset=%s count=%d elapsed=%s, velo=%.1f/s%n",
+							m_importParams.getDataSetId(), count, watch.getElapsedMillisString(),
+							velo);
 	}
 }

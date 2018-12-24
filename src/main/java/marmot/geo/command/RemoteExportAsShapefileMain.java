@@ -1,46 +1,44 @@
 package marmot.geo.command;
 
 import marmot.command.MarmotClientCommands;
-import marmot.externio.shp.ExportDataSetAsShapefile;
+import marmot.command.MarmotConnector;
 import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class RemoteExportAsShapefileMain {
-	public static final void main(String... args) throws Exception {
-		MarmotClientCommands.configureLog4j();
-		
-		CommandLineParser parser = new CommandLineParser("mc_export_shapefile ");
-		parser.addArgumentName("dataset");
-		parser.addArgOption("output_dir", "path", "directory path where output shpfiles are put", true);
-		parser.addArgOption("charset", "name", "character encoding (default: utf-8)", false);
-		parser.addArgOption("split_size", "size", "max size (shp and dbf), (default: 2gb)", false);
-		parser.addOption("f", "delete the output directory if it exists already", false);
-		parser.addArgOption("report_interval", "count", "progress report interval", false);
-		parser.addOption("h", "help usage", false);
+@Command(name="mc_export_shapefile",
+		parameterListHeading = "Parameters:%n",
+		optionListHeading = "Options:%n",
+		description="export a dataset as Shapefile format")
+public class RemoteExportAsShapefileMain extends ExportAsShapefileCommand {
+	@Mixin private MarmotConnector m_connector;
 
+	public static final void main(String... args) {
+		MarmotClientCommands.configureLog4j();
+
+		RemoteExportAsShapefileMain cmd = new RemoteExportAsShapefileMain();
+		CommandLine commandLine = new CommandLine(cmd).setUsageHelpWidth(100);
 		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
+			commandLine.parse(args);
+			
+			if ( commandLine.isUsageHelpRequested() ) {
+				commandLine.usage(System.out, Ansi.OFF);
 			}
-	
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			
-			// 원격 MarmotServer에 접속.
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			
-			long count = ExportDataSetAsShapefile.run(marmot, cl);
-			System.out.printf("done: %d records%n", count);
+			else {
+				PBMarmotClient marmot = cmd.m_connector.connect();
+				cmd.accept(marmot);
+			}
 		}
 		catch ( Exception e ) {
 			System.err.println(e);
-			parser.exitWithUsage(-1);
+			commandLine.usage(System.out, Ansi.OFF);
 		}
 	}
 }

@@ -11,13 +11,10 @@ import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.RecordSet;
 import marmot.RecordSetException;
+import marmot.command.ImportParameters;
 import marmot.externio.ImportIntoDataSet;
-import marmot.externio.ImportParameters;
 import marmot.support.MetaPlanLoader;
-import utils.CommandLine;
-import utils.StopWatch;
 import utils.Throwables;
-import utils.UnitUtils;
 import utils.func.FOption;
 
 /**
@@ -30,12 +27,12 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	protected abstract FOption<Plan> loadMetaPlan();
 	
 	public static ImportExcel from(File file, ExcelParameters csvParams,
-											ImportParameters importParams) {
-		return new ImportCsvFileIntoDataSet(file, csvParams, importParams);
+									ImportParameters importParams) {
+		return new ImportExcelFileIntoDataSet(file, csvParams, importParams);
 	}
 	
 	public static ImportExcel from(InputStream is, ExcelParameters csvParams,
-											ImportParameters importParams) {
+									ImportParameters importParams) {
 		return new ImportExcelStreamIntoDataSet(is, FOption.empty(), csvParams, importParams);
 	}
 	
@@ -76,7 +73,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	}
 
 	private FOption<Plan> getToPointPlan() {
-		if ( !m_excelParams.pointColumn().isDefined()
+		if ( !m_excelParams.pointColumn().isPresent()
 			|| !m_params.getGeometryColumnInfo().isPresent() ) {
 			return FOption.empty();
 		}
@@ -91,7 +88,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 															ptCols._1, ptCols._2);
 		builder = builder.project(prjExpr);
 			
-		if ( m_excelParams.excelSrid().isDefined() ) {
+		if ( m_excelParams.excelSrid().isPresent() ) {
 			String srcSrid = m_excelParams.excelSrid().get();
 			if ( !srcSrid.equals(info.srid()) ) {
 				builder = builder.transformCrs(info.name(), srcSrid, info.srid());
@@ -101,11 +98,11 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		return FOption.of(builder.build());
 	}
 	
-	private static class ImportCsvFileIntoDataSet extends ImportExcel {
+	private static class ImportExcelFileIntoDataSet extends ImportExcel {
 		private final File m_start;
 		
-		ImportCsvFileIntoDataSet(File file, ExcelParameters csvParams,
-								ImportParameters importParams) {
+		ImportExcelFileIntoDataSet(File file, ExcelParameters csvParams,
+									ImportParameters importParams) {
 			super(csvParams, importParams);
 			
 			m_start = file;
@@ -153,54 +150,5 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		protected FOption<Plan> loadMetaPlan() {
 			return m_plan;
 		}
-	}
-
-	public static final void runCommand(MarmotRuntime marmot, CommandLine cl) throws IOException {
-		File file = new File(cl.getArgument("excel_file"));
-		
-		boolean headerFirst = cl.hasOption("header_first");
-		FOption<String> nullString = cl.getOptionString("null_string");
-		FOption<String> pointCols = cl.getOptionString("point_col");
-		FOption<String> excelSrid = cl.getOptionString("excel_srid");
-		String dsId = cl.getString("dataset");
-		String geomCol = cl.getOptionString("geom_col").getOrNull();
-		String srid = cl.getOptionString("srid").getOrNull();
-		long blkSize = cl.getOptionString("block_size")
-						.map(UnitUtils::parseByteSize)
-						.getOrElse(-1L);
-		boolean force = cl.hasOption("f");
-		boolean append = cl.hasOption("a");
-		int reportInterval = cl.getOptionInt("report_interval").getOrElse(-1);
-		
-		StopWatch watch = StopWatch.start();
-		
-		ImportParameters importParams = ImportParameters.create()
-														.setDatasetId(dsId)
-														.setBlockSize(blkSize)
-														.setReportInterval(reportInterval)
-														.setForce(force)
-														.setAppend(append);
-		if ( geomCol != null && srid != null ) {
-			importParams.setGeometryColumnInfo(geomCol, srid);
-		}
-		
-		ExcelParameters csvParams = ExcelParameters.create()
-												.headerFirst(headerFirst);
-		pointCols.ifPresent(csvParams::pointColumn);
-		nullString.ifPresent(csvParams::nullString);
-		excelSrid.ifPresent(csvParams::excelSrid);
-		
-		ImportIntoDataSet importFile = ImportExcel.from(file, csvParams, importParams);
-		importFile.getProgressObservable()
-					.subscribe(report -> {
-						double velo = report / watch.getElapsedInFloatingSeconds();
-						System.out.printf("imported: count=%d, elapsed=%s, velo=%.0f/s%n",
-										report, watch.getElapsedMillisString(), velo);
-					});
-		long count = importFile.run(marmot);
-		
-		double velo = count / watch.getElapsedInFloatingSeconds();
-		System.out.printf("imported: dataset=%s count=%d elapsed=%s, velo=%.1f/s%n",
-							dsId, count, watch.getElapsedMillisString(), velo);
 	}
 }

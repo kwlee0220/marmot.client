@@ -1,93 +1,83 @@
 package marmot.command;
 
-import marmot.DataSet;
-import marmot.GeometryColumnInfo;
+import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
-import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineParser;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
 
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
+@Command(name="mc_hash_join", description="hash join", mixinStandardHelpOptions=false)
 public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
-	private RemoteHashJoinMain(PBMarmotClient marmot, CommandLine cl, String outDsId,
-									GeometryColumnInfo gcInfo) {
-		super(marmot, cl, outDsId, gcInfo);
-	}
-	
+	@Mixin HashJoinParams m_params;
+
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
 		
-		CommandLineParser parser = new CommandLineParser("mc_join ");
-		parser.addArgumentName("left_dataset");
-		parser.addArgumentName("left_join_cols");
-		parser.addArgumentName("right_dataset");
-		parser.addArgumentName("right_join_cols");
-		parser.addArgumentName("output_dataset");
-		parser.addArgumentName("output_columns");
-		parser.addArgumentName("[join_type]");
-		parser.addArgumentName("[nworkers]");
-		PlanBasedMarmotCommand.setCommandLineParser(parser);
+		RemoteHashJoinMain cmd = new RemoteHashJoinMain();
+		CommandLine commandLine = new CommandLine(cmd);
+		commandLine.parse(args);
+		
+		if ( commandLine.isUsageHelpRequested() ) {
+			commandLine.usage(System.out, Ansi.OFF);
+		}
+		else {
+			try {
+				Plan plan = cmd.buildPlan("hash_join");
+				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+			}
+			catch ( Exception e ) {
+				System.err.println(e);
+				commandLine.usage(System.out, Ansi.OFF);
+			}
+		}
+	}
 
-		try {
-			CommandLine cl = parser.parseArgs(args);
-			if ( cl.hasOption("h") ) {
-				cl.exitWithUsage(0);
-			}
-			
-			if ( cl.getArgumentCount() < 3 ) {
-				System.err.println("insufficient arguments");
-				cl.exitWithUsage(-1);
-			}
-			
-			// 원격 MarmotServer에 접속.
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			
-			String outDsId = cl.getArgument("output_dataset");
-			DataSet left = marmot.getDataSet(cl.getArgument(0));
-			GeometryColumnInfo gcInfo = left.getGeometryColumnInfo();
-			
-			RemoteHashJoinMain join = new RemoteHashJoinMain(marmot, cl, outDsId, gcInfo);
-			join.run();
-		}
-		catch ( Exception e ) {
-			System.err.println(e);
-		}
-	}
-	
-	public void run() throws Exception {
-		PlanBuilder builder = m_marmot.planBuilder("join");
-		
-		builder = addLoadJoin(builder);
-		builder = appendOperators(builder);
-		
-		Plan plan = builder.build();
-		run(plan);
-	}
-	
-	private PlanBuilder addLoadJoin(PlanBuilder builder) {
-		String leftDsId = m_cl.getArgument(0);
-		String leftJoinCols = m_cl.getArgument(1);
-		String rightDsId = m_cl.getArgument(2);
-		String rightJoinCols = m_cl.getArgument(3);
-		String outCols = m_cl.getArgument(4);
-		
-		String joinTypeStr = m_cl.getArgumentCount() > 5 ? m_cl.getArgument(5) : "inner";
-		JoinType joinType = JoinType.fromString(joinTypeStr + "_join"); 
+	@Override
+	protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder) {
+		JoinType joinType = JoinType.fromString(m_params.m_joinType + "_join");
 		JoinOptions opts = new JoinOptions().joinType(joinType);
-		if ( m_cl.getArgumentCount() > 6) {
-			opts = opts.workerCount(Integer.parseInt(m_cl.getArgument(6)));
+		if ( m_params.m_nworkers > 0 ) {
+			opts = opts.workerCount(m_params.m_nworkers);
 		}
 		
-		return builder.loadHashJoin(leftDsId, leftJoinCols, rightDsId, rightJoinCols,
-									outCols, opts);
+		return builder.loadHashJoin(m_params.m_leftDsId, m_params.m_leftCols,
+									m_params.m_rightDsId, m_params.m_rightCols,
+									m_params.m_outputCols, opts);
+	}
+	
+	private static class HashJoinParams {
+		@Parameters(paramLabel="left_dataset", index="0", description={"left dataset id"})
+		private String m_leftDsId;
+		
+		@Parameters(paramLabel="left_join_cols", index="1", description={"left join columns"})
+		private String m_leftCols;
+		
+		@Parameters(paramLabel="right_dataset", index="2", description={"right dataset id"})
+		private String m_rightDsId;
+		
+		@Parameters(paramLabel="right_join_cols", index="3", description={"right join columns"})
+		private String m_rightCols;
+		
+		@Parameters(paramLabel="output_dataset", index="4", description={"output dataset id"})
+		private String m_outputDsId;
+		
+		@Parameters(paramLabel="output_cols", index="5", description={"output columns"})
+		private String m_outputCols;
+		
+		@Parameters(paramLabel="join_type", index="6", arity="0..1", description={"hash join type"})
+		private String m_joinType = "inner";
+		
+		@Parameters(paramLabel="nworkers", index="7", arity="0..1", description={"join workers"})
+		private int m_nworkers = -1;
 	}
 }

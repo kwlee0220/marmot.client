@@ -63,8 +63,6 @@ import marmot.GeometryColumnInfo;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSet;
-import marmot.command.DataSetExplorer.DetailTableModel;
-import marmot.command.DataSetExplorer.TreeCellRenderer;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ShapefileParameters;
 import marmot.remote.protobuf.PBMarmotClient;
