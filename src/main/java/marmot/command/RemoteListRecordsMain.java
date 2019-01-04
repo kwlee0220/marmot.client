@@ -79,10 +79,10 @@ public class RemoteListRecordsMain implements Runnable {
 			if ( !m_displayGeom ) {
 				Plan tmp = builder.build();
 				RecordSchema schema = marmot.getOutputRecordSchema(tmp);
-				String cols = schema.stream()
+				String cols = schema.columnFStream()
 									.filter(col -> col.type().isGeometryType())
 									.map(Column::name)
-									.collect(Collectors.joining(","));
+									.join(",");
 				if ( cols.length() > 0 ) {
 					builder.project(String.format("*-{%s}", cols));
 				}

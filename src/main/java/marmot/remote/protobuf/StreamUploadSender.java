@@ -17,14 +17,14 @@ import marmot.protobuf.PBUtils;
 import net.jcip.annotations.GuardedBy;
 import utils.Guard;
 import utils.Throwables;
-import utils.async.ExecutableExecution;
+import utils.async.AbstractThreadedExecution;
 import utils.io.IOUtils;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-abstract class StreamUploadSender extends ExecutableExecution<ByteString>
+abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 									implements StreamObserver<UpChunkResponse> {
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
