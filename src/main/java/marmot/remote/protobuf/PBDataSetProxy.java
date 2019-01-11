@@ -72,7 +72,7 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public Envelope getBounds() {
 		if ( hasGeometryColumn() ) {
-			return m_info.getBounds();
+			return new Envelope(m_info.getBounds());
 		}
 		else {
 			throw new GeometryColumnNotExistsException();
