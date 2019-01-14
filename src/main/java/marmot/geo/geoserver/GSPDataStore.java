@@ -1,10 +1,11 @@
 package marmot.geo.geoserver;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import org.geotools.data.Transaction;
 import org.geotools.data.simple.SimpleFeatureSource;
@@ -24,8 +25,8 @@ import com.google.common.cache.LoadingCache;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.remote.protobuf.PBMarmotClient;
-import marmot.support.DataSetPartitionCache;
 import utils.UnitUtils;
+import utils.func.FOption;
 import utils.stream.FStream;
 
 /**
@@ -39,7 +40,8 @@ public class GSPDataStore extends ContentDataStore {
 	private final PBMarmotClient m_marmot;
 	private final LoadingCache<String, GSPDataSetInfo> m_dsCache;
 	private final DataSetPartitionCache m_cache;
-	private int m_sampleCount = -1;
+	private FOption<Long> m_sampleCount = FOption.empty();
+	private volatile boolean m_usePrefetch = false;
 	private String[] m_prefixes = new String[0];
 	
 	public GSPDataStore(PBMarmotClient marmot, long cacheSize, int evicMinutes, File cacheDir) {
@@ -53,11 +55,11 @@ public class GSPDataStore extends ContentDataStore {
 		m_cache = DataSetPartitionCache.builder()
 										.fileStoreDir(cacheDir)
 										.maxSize(cacheSize)
-										.timeout(evicMinutes, TimeUnit.MINUTES)
+										.timeout(evicMinutes, MINUTES)
 										.build(marmot);
 		
 		m_dsCache = CacheBuilder.newBuilder()
-								.expireAfterAccess(60, TimeUnit.MINUTES)
+								.expireAfterAccess(60, MINUTES)
 								.build(new CacheLoader<String,GSPDataSetInfo>() {
 									@Override
 									public GSPDataSetInfo load(String dsId) throws Exception {
@@ -74,12 +76,17 @@ public class GSPDataStore extends ContentDataStore {
 		return m_marmot;
 	}
 	
-	public long getSampleCount() {
+	public FOption<Long> getSampleCount() {
 		return m_sampleCount;
 	}
 	
-	public GSPDataStore sampleCount(int count) {
-		m_sampleCount = count;
+	public GSPDataStore sampleCount(long count) {
+		m_sampleCount = FOption.of(count);
+		return this;
+	}
+	
+	public GSPDataStore usePrefetch(boolean flag) {
+		m_usePrefetch = flag;
 		return this;
 	}
 	
@@ -99,12 +106,9 @@ public class GSPDataStore extends ContentDataStore {
 		String dsId = GSPUtils.toDataSetId(entry.getTypeName());
 		
 		GSPDataSetInfo dsInfo = m_dsCache.getUnchecked(dsId);
-		GSPFeatureSource source = new GSPFeatureSource(entry, dsInfo, m_cache);
-		if ( m_sampleCount > 0 ) {
-			source.setSampleCount(m_sampleCount);
-		}
-		
-		return source;
+		return new GSPFeatureSource(entry, dsInfo, m_cache)
+					.setSampleCount(m_sampleCount)
+					.usePrefetch(m_usePrefetch);
 	}
 
 	@Override

@@ -29,6 +29,7 @@ import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
 import marmot.support.DefaultRecord;
 import utils.Throwables;
+import utils.func.FOption;
 
 /**
  * 
@@ -104,7 +105,7 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 
-	public Option<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
+	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
 		RecordSchema outSchema = getOutputRecordSchema(plan, Option.none());
 
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
@@ -112,11 +113,11 @@ public class PBPlanExecutionServiceProxy {
 		OptionalRecordResponse resp = m_blockingStub.executeToSingle(req);
 		switch ( resp.getEitherCase() ) {
 			case RECORD:
-				return Option.some(DefaultRecord.fromProto(outSchema, resp.getRecord()));
+				return FOption.of(DefaultRecord.fromProto(outSchema, resp.getRecord()));
 			case ERROR:
 				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
 			case NONE:
-				return Option.none();
+				return FOption.empty();
 			default:
 				throw new AssertionError();
 		}

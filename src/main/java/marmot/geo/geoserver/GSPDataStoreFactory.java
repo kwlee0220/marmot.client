@@ -40,6 +40,8 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 														getDefaultDiskCacheDir().getAbsolutePath());
 	private static final Param MARMOT_SAMPLE_COUNT = new Param("Sample count", Integer.class,
 																"Sample count", false, 100000);
+	private static final Param USE_PREFETCH = new Param("Enable background prefetch", Boolean.class,
+														"Enable background prefetch", false, false);
 	
 	public GSPDataStoreFactory() {
 	}
@@ -64,6 +66,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			GSPDataStoreFactory.EVICTION_TIMEOUT,
 			GSPDataStoreFactory.DISK_CACHE_DIR,
 			GSPDataStoreFactory.MARMOT_SAMPLE_COUNT,
+			GSPDataStoreFactory.USE_PREFETCH,
 		};
 	}
 
@@ -115,8 +118,12 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			prefixes = CSV.parseAsArray(prefixesStr, ',', '\\');
 		}
 		store.datasetPrefixes(prefixes);
-		s_logger.info("create MarmotDataStore: cache[size={}, dir={}], sample_count={}",
-						cacheSizeStr, cacheDir, sampleCount);
+		
+		boolean usePrefetch = (Boolean)USE_PREFETCH.lookUp(params);
+		store.usePrefetch(usePrefetch);
+		
+		s_logger.info("create MarmotDataStore: cache[size={}, dir={}], sample_count={}, "
+					+ "prefetch={}", cacheSizeStr, cacheDir, sampleCount, usePrefetch);
 		
 		return store;
 	}

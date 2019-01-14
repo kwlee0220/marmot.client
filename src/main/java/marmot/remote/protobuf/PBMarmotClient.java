@@ -210,7 +210,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public Option<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
+	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
 		return m_pexecService.executeToRecord(plan, opts);
 	}
 
