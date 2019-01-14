@@ -7,7 +7,6 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
-import io.vavr.control.Option;
 import marmot.ExecutePlanOption;
 import marmot.Plan;
 import marmot.Record;
@@ -47,12 +46,12 @@ public class PBPlanExecutionServiceProxy {
 	}
 
 	public RecordSchema getOutputRecordSchema(Plan plan,
-											Option<RecordSchema> inputSchema) {
+											FOption<RecordSchema> inputSchema) {
 		GetOutputRecordSchemaRequest.Builder builder
 								= GetOutputRecordSchemaRequest.newBuilder()
 															.setPlan(plan.toProto());
 		inputSchema.map(RecordSchema::toProto)
-					.forEach(builder::setInputSchema);
+					.ifPresent(builder::setInputSchema);
 		GetOutputRecordSchemaRequest req = builder.build();
 		
 		RecordSchemaResponse resp = m_blockingStub.getOutputRecordSchema(req);
@@ -106,7 +105,7 @@ public class PBPlanExecutionServiceProxy {
 	}
 
 	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
-		RecordSchema outSchema = getOutputRecordSchema(plan, Option.none());
+		RecordSchema outSchema = getOutputRecordSchema(plan, FOption.empty());
 
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
 		

@@ -6,7 +6,6 @@ import java.util.Objects;
 
 import com.vividsolutions.jts.geom.Envelope;
 
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.DataSetType;
 import marmot.GeometryColumnInfo;
@@ -19,6 +18,7 @@ import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
+import utils.func.FOption;
 
 /**
  * 
@@ -126,7 +126,7 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public RecordSet queryRange(Envelope range, Option<String> filterExpr) {
+	public RecordSet queryRange(Envelope range, FOption<String> filterExpr) {
 		return m_service.queryRange(getId(), range, filterExpr);
 	}
 
@@ -134,7 +134,7 @@ public class PBDataSetProxy implements DataSet {
 	public long append(RecordSet rset) {
 		Objects.requireNonNull(rset, "RecordSet is null");
 		
-		long count = m_service.appendRecordSet(getId(), rset, Option.none());
+		long count = m_service.appendRecordSet(getId(), rset, FOption.empty());
 		m_info = m_service.getDataSet(getId()).m_info;
 		
 		return count;
@@ -145,7 +145,7 @@ public class PBDataSetProxy implements DataSet {
 		Objects.requireNonNull(rset, "RecordSet is null");
 		Objects.requireNonNull(plan, "Plan is null");
 		
-		long count = m_service.appendRecordSet(getId(), rset, Option.some(plan));
+		long count = m_service.appendRecordSet(getId(), rset, FOption.of(plan));
 		m_info = m_service.getDataSet(getId()).m_info;
 		
 		return count;

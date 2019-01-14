@@ -12,7 +12,6 @@ import com.vividsolutions.jts.geom.Envelope;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
@@ -59,6 +58,7 @@ import marmot.protobuf.PBUtils;
 import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
 import utils.Throwables;
+import utils.func.FOption;
 import utils.stream.FStream;
 
 /**
@@ -110,13 +110,13 @@ public class PBDataSetServiceProxy {
 	}
 
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
-										Option<GeometryColumnInfo> geomColInfo) {
+										FOption<GeometryColumnInfo> geomColInfo) {
 		DataSetTypeProto dsTypeProto = DataSetTypeProto.valueOf(type.id());
 		BindDataSetRequest.Builder builder = BindDataSetRequest.newBuilder()
 													.setDataset(dsId)
 													.setFilePath(srcPath)
 													.setType(dsTypeProto);
-		geomColInfo.forEach(info -> builder.setGeometryInfo(info.toProto()));
+		geomColInfo.ifPresent(info -> builder.setGeometryInfo(info.toProto()));
 		BindDataSetRequest req = builder.build();
 		
 		return toDataSet(m_dsBlockingStub.bindDataSet(req));
@@ -170,7 +170,7 @@ public class PBDataSetServiceProxy {
 		return PBInputStreamRecordSet.from(is);
 	}
 	
-	public RecordSet queryRange(String dsId, Envelope range, Option<String> filterExpr)
+	public RecordSet queryRange(String dsId, Envelope range, FOption<String> filterExpr)
 		throws DataSetNotFoundException {
 		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
 		StreamObserver<DownChunkResponse> channel = m_dsStub.queryRange(downloader);
@@ -178,7 +178,7 @@ public class PBDataSetServiceProxy {
 		QueryRangeRequest.Builder builder = QueryRangeRequest.newBuilder()
 															.setId(dsId)
 															.setRange(PBUtils.toProto(range));
-		filterExpr.forEach(builder::setFilterExpr);
+		filterExpr.ifPresent(builder::setFilterExpr);
 		QueryRangeRequest req = builder.build();
 
 		// start download by sending 'stream-download' request
@@ -187,7 +187,7 @@ public class PBDataSetServiceProxy {
 		return PBInputStreamRecordSet.from(is);
 	}
 	
-	public long appendRecordSet(String dsId, RecordSet rset, Option<Plan> plan) {
+	public long appendRecordSet(String dsId, RecordSet rset, FOption<Plan> plan) {
 		try {
 			InputStream is = PBRecordSetInputStream.from(rset);
 			StreamUploadSender uploader = new StreamUploadSender(is) {
@@ -195,7 +195,7 @@ public class PBDataSetServiceProxy {
 				protected ByteString getHeader() throws Exception {
 					AppendRecordSetRequest.Builder builder = AppendRecordSetRequest.newBuilder()
 																					.setId(dsId);
-					plan.map(Plan::toProto).forEach(builder::setPlan);
+					plan.map(Plan::toProto).ifPresent(builder::setPlan);
 					AppendRecordSetRequest req = builder.build();
 					return req.toByteString();
 				}

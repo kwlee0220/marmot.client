@@ -10,7 +10,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetOption;
@@ -131,13 +130,13 @@ public class PBMarmotClient implements MarmotRuntime {
 
 	@Override
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type) {
-		return m_dsService.bindExternalDataSet(dsId, srcPath, type, Option.none());
+		return m_dsService.bindExternalDataSet(dsId, srcPath, type, FOption.empty());
 	}
 
 	@Override
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
 										GeometryColumnInfo geomColInfo) {
-		return m_dsService.bindExternalDataSet(dsId, srcPath, type, Option.some(geomColInfo));
+		return m_dsService.bindExternalDataSet(dsId, srcPath, type, FOption.of(geomColInfo));
 	}
 
 	@Override
@@ -186,12 +185,12 @@ public class PBMarmotClient implements MarmotRuntime {
 
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan) {
-		return m_pexecService.getOutputRecordSchema(plan, Option.none());
+		return m_pexecService.getOutputRecordSchema(plan, FOption.empty());
 	}
 
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
-		return m_pexecService.getOutputRecordSchema(plan, Option.some(inputSchema));
+		return m_pexecService.getOutputRecordSchema(plan, FOption.of(inputSchema));
 	}
 	
 	@Override

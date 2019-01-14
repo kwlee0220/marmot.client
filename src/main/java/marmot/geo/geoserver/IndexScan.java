@@ -18,7 +18,6 @@ import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.control.Option;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -169,7 +168,7 @@ class IndexScan {
 		// 샘플 수가 정의되지 않거나, 대상 데이터세트의 레코드 갯수가 샘플 수보다 작은 경우
 		// 데이터세트 전체를 반환한다. 성능을 위해 query() 연산 활용함.
 		if ( m_sampleRatio >= 1 ) {
-			return m_ds.queryRange(m_range, Option.none());
+			return m_ds.queryRange(m_range, FOption.empty());
 		}
 		else {
 			String planName = String.format("index_scan(ratio=%s)", ratioStr);
