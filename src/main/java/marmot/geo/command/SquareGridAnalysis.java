@@ -57,7 +57,7 @@ public class SquareGridAnalysis {
 			String output = cl.getArgument("out_dataset");
 			String cellSizeStr = cl.getOptionString("cell_size").getOrNull();  
 			String gridDimStr = cl.getOptionString("grid_dim").getOrNull();
-			List<String> valueColNames = CSV.parse(cl.getString("values"), ',', '\\');
+			List<String> valueColNames = CSV.parseCsv(cl.getString("values")).toList();
 			String tiffPath = cl.getOptionString("tiff").getOrNull();
 			boolean force = cl.hasOption("f");
 			

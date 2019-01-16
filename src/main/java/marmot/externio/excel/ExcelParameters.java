@@ -7,6 +7,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import picocli.CommandLine.Option;
 import utils.CSV;
+import utils.CSV;
 import utils.func.FOption;
 
 /**
@@ -54,7 +55,7 @@ public class ExcelParameters {
 	
 	public FOption<Tuple2<String,String>> pointColumn() {
 		return m_pointCols.map(cols -> {
-			List<String> parts = CSV.parse(cols, ',', '\\');
+			List<String> parts = CSV.parseCsv(cols, ',', '\\').toList();
 			return Tuple.of(parts.get(0), parts.get(1));
 		});
 	}

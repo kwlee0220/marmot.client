@@ -185,7 +185,7 @@ abstract class PlanBasedMarmotCommand {
 			return builder;
 		}
 		
-		List<String> parts = CSV.parse(join, ':', '\\');
+		List<String> parts = CSV.parseCsv(join, ':', '\\').toList();
 		if ( parts.size() != 2 ) {
 			String details = String.format("invalid spatial_join argument: '%s'%n", join);
 			throw new IllegalArgumentException(details);
@@ -227,7 +227,7 @@ abstract class PlanBasedMarmotCommand {
 	
 	private PlanBuilder addJoin(PlanBuilder builder) {
 		if ( m_opParams.m_join != null ) {
-			List<String> parts = CSV.parse(m_opParams.m_join, ':', '\\');
+			List<String> parts = CSV.parseCsv(m_opParams.m_join, ':', '\\').toList();
 			if ( parts.size() != 3 ) {
 				String details = String.format("invalid join argument: 'join': '%s'",
 												m_opParams.m_join);
@@ -260,7 +260,7 @@ abstract class PlanBasedMarmotCommand {
 		AggregateFunction[] aggrs = parseAggregate();
 
 		if ( m_opParams.m_groupBy != null ) {
-			List<String> parts = CSV.parse(m_opParams.m_groupBy, ':', '\\');
+			List<String> parts = CSV.parseCsv(m_opParams.m_groupBy, ':', '\\').toList();
 			
 			GroupByPlanBuilder grpBuilder = builder.groupBy(parts.get(0));
 			if ( parts.size() > 1 ) {
@@ -301,8 +301,8 @@ abstract class PlanBasedMarmotCommand {
 		}
 
 		List<AggregateFunction> aggrs = Lists.newArrayList();
-		for ( String aggrSpecStr: CSV.parse(m_opParams.m_aggregates, ',', '\\') ) {
-			List<String> aggrSpec = CSV.parse(aggrSpecStr, ':', '\\');
+		for ( String aggrSpecStr: CSV.parseCsv(m_opParams.m_aggregates, ',', '\\').toList() ) {
+			List<String> aggrSpec = CSV.parseCsv(aggrSpecStr, ':', '\\').toList();
 			
 			AggregateFunction aggr = null;
 			switch ( aggrSpec.get(0).toUpperCase()) {

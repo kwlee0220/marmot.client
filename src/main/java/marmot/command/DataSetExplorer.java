@@ -613,7 +613,7 @@ public class DataSetExplorer extends JFrame {
 
 		@Override
 		public String getColumnName(int i) {
-			return columns.get(i).name();
+			return columns.get(i).name().get();
 		}
 
 		@Override

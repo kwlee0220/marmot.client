@@ -27,7 +27,7 @@ public class ViewDataSet {
 	    String srid = null;
 	    SimpleFeatureCollection sfColl;
 		for ( String dsId: cl.getArgumentAll() ) {
-			List<String> parts = CSV.parse(dsId, ':', '\\');
+			List<String> parts = CSV.parseCsv(dsId, ':', '\\').toList();
 			
 			DataSet ds = marmot.getDataSet(parts.get(0));
 			GeometryColumnInfo gcInfo = ds.getGeometryColumnInfo();

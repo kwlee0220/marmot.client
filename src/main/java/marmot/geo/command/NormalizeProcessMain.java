@@ -40,8 +40,8 @@ public class NormalizeProcessMain {
 			
 			String inDsId = cl.getArgument("input_dataset");
 			String outDsId = cl.getArgument("output_dataset");
-			String[] inFeatures = CSV.parseCSVAsArray(cl.getString("in_features"));
-			String[] outFeatures = CSV.parseCSVAsArray(cl.getString("out_features"));
+			String[] inFeatures = CSV.parseCsvAsArray(cl.getString("in_features"));
+			String[] outFeatures = CSV.parseCsvAsArray(cl.getString("out_features"));
 			
 			NormalizeParameters params = new NormalizeParameters();
 			params.inputDataset(inDsId);

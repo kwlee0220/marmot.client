@@ -115,7 +115,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		String[] prefixes = new String[0];
 		String prefixesStr = (String)DATASET_PREFIXES.lookUp(params);
 		if ( prefixesStr != null ) {
-			prefixes = CSV.parseAsArray(prefixesStr, ',', '\\');
+			prefixes = CSV.parseCsvAsArray(prefixesStr);
 		}
 		store.datasetPrefixes(prefixes);
 		

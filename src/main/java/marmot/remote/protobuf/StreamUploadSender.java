@@ -29,7 +29,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
 	// KWLEE
-	private static final int MAX_RESULT_TIMEOUT = 50000;	// 5s
+	private static final int MAX_RESULT_TIMEOUT = 5;	// 5s
 	
 	private final InputStream m_stream;
 	private StreamObserver<UpChunkRequest> m_channel = null;
@@ -80,7 +80,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 						
 						// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
 						// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
-						return m_guard.awaitUntilAndGet(this::isUploadCompleted, () -> m_result,
+						return m_guard.awaitUntilAndGet(this::isUploadCompletedInGuard, () -> m_result,
 														MAX_RESULT_TIMEOUT, TimeUnit.SECONDS);
 					}
 					m_channel.onNext(UpChunkRequest.newBuilder().setChunk(chunk).build());
@@ -154,7 +154,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 		m_guard.run(() -> m_serverClosed = true, true);
 	}
 	
-	private boolean isUploadCompleted() {
+	private boolean isUploadCompletedInGuard() {
 		return m_result != null && m_serverClosed;
 	}
 	

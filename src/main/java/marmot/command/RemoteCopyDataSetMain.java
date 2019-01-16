@@ -23,6 +23,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.CSV;
+import utils.CSV;
 import utils.io.IOUtils;
 import utils.stream.FStream;
 
@@ -91,7 +92,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
 		}
 		else if ( m_params.m_rangeRect != null ) {
-			double[] coords = FStream.of(CSV.parseCSV(m_params.m_rangeRect))
+			double[] coords = CSV.parseCsv(m_params.m_rangeRect)
 									.mapToDouble(Double::parseDouble)
 									.toArray();
 			Envelope range = new Envelope(new Coordinate(coords[0], coords[1]),
