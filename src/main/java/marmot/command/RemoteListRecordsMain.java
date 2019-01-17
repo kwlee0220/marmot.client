@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import marmot.Column;
-import marmot.ColumnName;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.Record;
@@ -92,7 +91,7 @@ public class RemoteListRecordsMain implements Runnable {
 			try ( RecordSet rset = marmot.executeLocally(builder.build()) ) {
 				Record record = DefaultRecord.of(rset.getRecordSchema());
 				while ( rset.next(record) ) {
-					Map<ColumnName,Object> values = record.toMap();
+					Map<String,Object> values = record.toMap();
 					
 					if ( m_asCsv ) {
 						System.out.println(toCsv(values.values(), m_delim));
