@@ -113,7 +113,7 @@ public class GSPDataStore extends ContentDataStore {
 
 	@Override
 	protected List<Name> createTypeNames() throws IOException {
-		return FStream.of(m_marmot.getDataSetAll())
+		return FStream.from(m_marmot.getDataSetAll())
 						.filter(DataSet::hasGeometryColumn)
 						.map(DataSet::getId)
 						.filter(id -> !id.startsWith("/tmp/"))

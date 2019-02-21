@@ -62,7 +62,7 @@ public class RemotePrintSchemaMain implements Runnable {
 			System.out.printf("SPATIAL INDEX: %s%n", (idxInfo != null)
 														? idxInfo.getHdfsFilePath() : "none");
 			System.out.println("COLUMNS  :");
-			info.getRecordSchema().getColumnAll()
+			info.getRecordSchema().getColumns()
 					.stream()
 					.forEach(c -> System.out.println("\t" + c));
 		}

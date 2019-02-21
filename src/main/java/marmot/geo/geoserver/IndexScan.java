@@ -27,7 +27,7 @@ import marmot.SpatialClusterInfo;
 import marmot.geo.GeoClientUtils;
 import utils.StopWatch;
 import utils.async.AbstractThreadedExecution;
-import utils.async.AsyncExecution;
+import utils.async.StartableExecution;
 import utils.async.op.AsyncExecutions;
 import utils.func.FOption;
 import utils.stream.FStream;
@@ -117,11 +117,11 @@ class IndexScan {
 		
 		// quad-key들 중에서 캐슁되지 않은 cluster들의 갯수를 구한다.
 		int nclusters = m_matches.size();
-		List<String> cachedKeys = FStream.of(m_matches.values())
+		List<String> cachedKeys = FStream.from(m_matches.values())
 										.map(m -> m.m_info.getQuadKey())
 										.filter(qkey -> m_cache.existsAtDisk(m_dsId, qkey))
 										.toList();
-		List<String> memCachedKeys = FStream.of(cachedKeys)
+		List<String> memCachedKeys = FStream.from(cachedKeys)
 											.filter(qkey -> m_cache.existsAtMemory(m_dsId, qkey))
 											.toList();
 		int nonCachedCount = nclusters - cachedKeys.size();
@@ -135,9 +135,9 @@ class IndexScan {
 		if ( nclusters > MAX_CACHE_SIZE || diskIOCount > MAX_DISK_IO
 			|| nonCachedCount > MAX_NETWORK_IO ) {
 			if ( m_usePrefetch ) {
-				AsyncExecution<RecordSet> fg = AsyncExecutions.from(this::runAtServer);
-				AsyncExecution<?> bg = forkClusterPrefetcher();
-				AsyncExecution<RecordSet> exec = AsyncExecutions.backgrounded(fg, bg);
+				StartableExecution<RecordSet> fg = AsyncExecutions.from(this::runAtServer);
+				StartableExecution<?> bg = forkClusterPrefetcher();
+				StartableExecution<RecordSet> exec = AsyncExecutions.backgrounded(fg, bg);
 				exec.start();
 				
 				return exec.getUnchecked();
@@ -185,7 +185,7 @@ class IndexScan {
 		String ratioStr = String.format("%.2f%%", m_sampleRatio*100);
 		s_logger.info("query on caches: ds_id={}, ratio={}", m_dsId, ratioStr);
 		
-		FStream<Record> recStream = FStream.of(m_matches.values())
+		FStream<Record> recStream = FStream.from(m_matches.values())
 											.map(info -> info.m_info.getQuadKey())
 											.flatMap(qk -> readFromCache(qk));
 		
@@ -194,7 +194,7 @@ class IndexScan {
 	
 	private FStream<Record> readFromCache(String quadKey) {
 		String geomColName = m_ds.getGeometryColumn();
-		FStream<Record> matcheds = FStream.of(m_cache.get(m_dsId, quadKey))
+		FStream<Record> matcheds = FStream.from(m_cache.get(m_dsId, quadKey))
 											.filter(r -> {
 												Geometry geom = r.getGeometry(geomColName);
 												return m_pkey.intersects(geom);
@@ -213,14 +213,14 @@ class IndexScan {
 		return matcheds;
 	}
 	
-	private AsyncExecution<Void> forkClusterPrefetcher() {
-		FStream<AsyncExecution<?>> strm = FStream.from(this::getNextNonCachedQuadKey)
+	private StartableExecution<Void> forkClusterPrefetcher() {
+		FStream<StartableExecution<?>> strm = FStream.from(this::getNextNonCachedQuadKey)
 												.map(Prefetcher::new);
 		return AsyncExecutions.sequential(strm);
 	}
 	
 	private FOption<String> getNextNonCachedQuadKey() {
-		List<String> keys = FStream.of(m_matches.values())
+		List<String> keys = FStream.from(m_matches.values())
 									.map(m -> m.m_info.getQuadKey())
 									.filter(qkey -> !m_cache.existsAtDisk(m_dsId, qkey))
 									.max((k1,k2) -> k1.length() - k2.length());
@@ -253,7 +253,7 @@ class IndexScan {
 	
 	private List<Tuple2<SpatialClusterInfo,Integer>> guessRelevants() {
 		List<SpatialClusterInfo> infos = m_ds.querySpatialClusterInfo(m_range);
-		return FStream.of(infos)
+		return FStream.from(infos)
 						.map(info -> Tuple.of(info, guessCount(info)))
 						.filter(t -> t._2 > 0)
 						.toList();

@@ -66,12 +66,12 @@ public class GSPUtils {
 		}
 		else if ( filter instanceof And ) {
 			List<Filter> filters = ((And)filter).getChildren();
-			FOption<BBOX> bbox = FStream.of(filters)
+			FOption<BBOX> bbox = FStream.from(filters)
 										.castSafely(BBOX.class)
 										.next();
 			if ( bbox.isPresent() ) {
 				FOption<BoundingBox> bounds = bbox.map(BBOX::getBounds);
-				filter = FILTER_FACT.and(FStream.of(filters)
+				filter = FILTER_FACT.and(FStream.from(filters)
 												.filter(f -> f != bbox.get())
 												.toList());
 				

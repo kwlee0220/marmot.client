@@ -167,7 +167,7 @@ public class DataSetExplorer extends JFrame {
 						DataSet data = (DataSet)usrObj;
 						setFileLabel(data);
 
-						List<Column> columns = data.getRecordSchema().getColumnAll().stream()
+						List<Column> columns = data.getRecordSchema().getColumns().stream()
 								.collect(Collectors.toList());
 						List<Record> records = data.read().stream().limit(10)
 								.collect(Collectors.toList());

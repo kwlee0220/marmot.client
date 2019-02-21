@@ -138,7 +138,7 @@ public class PBDataSetServiceProxy {
 	}
 
 	public List<DataSet> getDataSetAll() {
-		return FStream.of(m_dsBlockingStub.getDataSetInfoAll(PBUtils.VOID))
+		return FStream.from(m_dsBlockingStub.getDataSetInfoAll(PBUtils.VOID))
 						.map(this::toDataSet)
 						.cast(DataSet.class)
 						.toList();
@@ -280,7 +280,7 @@ public class PBDataSetServiceProxy {
 	}
 
 	public List<String> getDirAll() {
-		return FStream.of(m_dsBlockingStub.getDirAll(PBUtils.VOID))
+		return FStream.from(m_dsBlockingStub.getDirAll(PBUtils.VOID))
 						.map(StringResponse::getValue)
 						.toList();
 	}
