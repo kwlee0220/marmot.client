@@ -108,7 +108,7 @@ class FullScan implements LoggerSettable {
 		}
 		if ( ratio < 1 ) {
 			builder = builder.sample(ratio);
-			builder = m_sampleCount.map(builder, (b,c) -> b.take(c));
+			builder = m_sampleCount.transform(builder, (b,c) -> b.take(c));
 		}
 		Plan plan = builder.build();
 		
