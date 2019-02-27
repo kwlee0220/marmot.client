@@ -63,7 +63,7 @@ public class ViewDataSet {
 						.transformCrs(gcInfo.name(), gcInfo.srid(), tarSrid)
 						.build();
 		MarmotRuntime marmot = ds.getMarmotRuntime();
-		return GeoToolsUtils.toFeatureCollection(ds.getId(), marmot, plan,
+		return SimpleFeatures.toFeatureCollection(ds.getId(), marmot, plan,
 												ds.getGeometryColumnInfo().srid());
 	}
 	
@@ -77,12 +77,12 @@ public class ViewDataSet {
 						.transformCrs(gcInfo.name(), gcInfo.srid(), tarSrid)
 						.build();
 		MarmotRuntime marmot = ds.getMarmotRuntime();
-		return GeoToolsUtils.toFeatureCollection(ds.getId(), marmot, plan,
+		return SimpleFeatures.toFeatureCollection(ds.getId(), marmot, plan,
 												ds.getGeometryColumnInfo().srid());
 	}
 	
 	private static SimpleFeatureCollection read(DataSet ds) {
-		return GeoToolsUtils.toFeatureCollection(ds.getId(), ds);
+		return SimpleFeatures.toFeatureCollection(ds.getId(), ds);
 	}
 	
 	private static SimpleFeatureCollection sample(DataSet ds, long count) {
@@ -92,7 +92,7 @@ public class ViewDataSet {
 						.sample(ratio)
 						.build();
 		MarmotRuntime marmot = ds.getMarmotRuntime();
-		return GeoToolsUtils.toFeatureCollection(ds.getId(), marmot, plan,
+		return SimpleFeatures.toFeatureCollection(ds.getId(), marmot, plan,
 												ds.getGeometryColumnInfo().srid());
 	}
 }

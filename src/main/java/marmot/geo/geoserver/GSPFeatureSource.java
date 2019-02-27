@@ -27,8 +27,8 @@ import marmot.PlanBuilder;
 import marmot.RecordSet;
 import marmot.geo.CRSUtils;
 import marmot.geo.GeoClientUtils;
-import marmot.geo.geotools.GeoToolsUtils;
 import marmot.geo.geotools.MarmotFeatureIterator;
+import marmot.geo.geotools.SimpleFeatures;
 import marmot.optor.AggregateFunction;
 import marmot.optor.geo.SpatialRelation;
 import utils.Throwables;
@@ -41,6 +41,7 @@ import utils.func.FOption;
  */
 public class GSPFeatureSource extends ContentFeatureSource {
 	private static final Logger s_logger = LoggerFactory.getLogger(GSPFeatureSource.class);
+	
 	private final MarmotRuntime m_marmot;
 	private final GSPDataSetInfo m_dsInfo;
 	private final String m_dsId;
@@ -143,7 +144,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 
 	@Override
 	protected SimpleFeatureType buildFeatureType() throws IOException {
-		return GeoToolsUtils.toSimpleFeatureType(getEntry().getTypeName(), m_gcInfo.srid(),
+		return SimpleFeatures.toSimpleFeatureType(getEntry().getTypeName(), m_gcInfo.srid(),
 												m_dsInfo.getRecordSchema());
 	}
 	
