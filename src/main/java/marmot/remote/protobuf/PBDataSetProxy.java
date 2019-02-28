@@ -157,6 +157,11 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
+	public void deleteSpatialCluster() {
+		m_service.deleteSpatialCluster(getId());
+	}
+
+	@Override
 	public List<SpatialClusterInfo> querySpatialClusterInfo(Envelope bounds) {
 		return m_service.querySpatialClusterInfo(getId(), bounds);
 	}

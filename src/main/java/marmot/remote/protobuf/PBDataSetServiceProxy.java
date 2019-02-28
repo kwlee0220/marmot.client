@@ -241,6 +241,10 @@ public class PBDataSetServiceProxy {
 		return handle(m_dsBlockingStub.clusterDataSet(req));
 	}
 
+	public void deleteSpatialCluster(String id) {
+		PBUtils.handle(m_dsBlockingStub.deleteSpatialCluster(PBUtils.toStringProto(id)));
+	}
+
 	public List<SpatialClusterInfo> querySpatialClusterInfo(String dsId, Envelope bounds) {
 		QuerySpatialClusterInfoRequest req = QuerySpatialClusterInfoRequest.newBuilder()
 													.setDatasetId(dsId)
