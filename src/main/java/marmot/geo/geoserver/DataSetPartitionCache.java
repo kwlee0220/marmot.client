@@ -35,6 +35,7 @@ import utils.UnitUtils;
 import utils.fostore.FileObjectExistsException;
 import utils.fostore.FileObjectHandler;
 import utils.fostore.FileObjectStore;
+import utils.func.FOption;
 import utils.io.IOUtils;
 
 /**
@@ -89,8 +90,8 @@ public class DataSetPartitionCache {
 	}
 	public static class Builder {
 		private File m_storeDir;
-		private Option<Long> m_maxCacheSize = Option.none();
-		private Option<Tuple2<Long,TimeUnit>> m_timeout = Option.none();
+		private FOption<Long> m_maxCacheSize = FOption.empty();
+		private FOption<Tuple2<Long,TimeUnit>> m_timeout = FOption.empty();
 		
 		public DataSetPartitionCache build(MarmotRuntime marmot) {
 			FileObjectStore<PartitionKey,InputStream> diskCache
@@ -98,11 +99,11 @@ public class DataSetPartitionCache {
 			
 			CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
 																.softValues();
-			m_maxCacheSize.forEach(nbytes -> {
+			m_maxCacheSize.ifPresent(nbytes -> {
 				builder.maximumWeight(nbytes);
 				builder.weigher(new PartitionWeigher());
 			});
-			m_timeout.forEach(t -> builder.expireAfterAccess(t._1, t._2));
+			m_timeout.ifPresent(t -> builder.expireAfterAccess(t._1, t._2));
 			builder.removalListener(noti -> {
 				s_logger.debug("partition is evicted: key={}", noti.getKey());
 			});
@@ -121,12 +122,12 @@ public class DataSetPartitionCache {
 		public Builder maxSize(long nbytes) {
 			Preconditions.checkArgument(nbytes > 0, "maximum InMemoryParitionCache size");
 			
-			m_maxCacheSize = Option.some(nbytes);
+			m_maxCacheSize = FOption.of(nbytes);
 			return this;
 		}
 		
 		public Builder timeout(long timeout, TimeUnit unit) {
-			m_timeout = Option.some(Tuple.of(timeout, unit));
+			m_timeout = FOption.of(Tuple.of(timeout, unit));
 			return this;
 		}
 	}

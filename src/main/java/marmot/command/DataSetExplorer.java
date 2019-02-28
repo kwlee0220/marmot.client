@@ -56,7 +56,6 @@ import org.apache.log4j.LogManager;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
-import io.vavr.control.Option;
 import marmot.Column;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
@@ -70,6 +69,7 @@ import marmot.rset.RecordSets;
 import utils.CommandLine;
 import utils.CommandLineException;
 import utils.CommandLineParser;
+import utils.func.FOption;
 
 /**
  * 
@@ -688,18 +688,18 @@ public class DataSetExplorer extends JFrame {
 
 	private static class SimpleSubscriber implements Observer<Long> {
 		private final File m_shpFile;
-		private final Option<Long> m_total;
+		private final FOption<Long> m_total;
 		private long m_count;
 		
 		public SimpleSubscriber(File shpFile, long total) {
 			m_shpFile = shpFile;
-			m_total = Option.some(total);
+			m_total = FOption.of(total);
 			m_count = -1;
 		}
 		
 		public SimpleSubscriber(File shpFile) {
 			m_shpFile = shpFile;
-			m_total = Option.none();
+			m_total = FOption.empty();
 			m_count = -1;
 		}
 		
