@@ -214,7 +214,7 @@ class IndexScan {
 	}
 	
 	private StartableExecution<Void> forkClusterPrefetcher() {
-		FStream<StartableExecution<?>> strm = FStream.from(this::getNextNonCachedQuadKey)
+		FStream<StartableExecution<?>> strm = getNextNonCachedQuadKey().stream()
 												.map(Prefetcher::new);
 		return AsyncExecutions.sequential(strm);
 	}
