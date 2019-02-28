@@ -37,7 +37,7 @@ public class RemoteExportAsGeoJsonMain extends ExportAsGeoJsonCommand {
 			}
 		}
 		catch ( Exception e ) {
-			System.err.println(e);
+			System.err.printf("failed: %s%n%n", e);
 			commandLine.usage(System.out, Ansi.OFF);
 		}
 	}

@@ -34,7 +34,7 @@ public class RemoteRunPlanMain extends RunPlanCommand {
 			}
 		}
 		catch ( Exception e ) {
-			System.err.println(e);
+			System.err.printf("failed: %s%n%n", e);
 			commandLine.usage(System.out, Ansi.OFF);
 		}
 	}

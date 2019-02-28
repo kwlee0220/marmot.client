@@ -36,7 +36,7 @@ public class RemoteViewDataSetMain {
 			marmot.disconnect();
 		}
 		catch ( Exception e ) {
-			System.out.println("" + e);
+			System.err.printf("failed: %s%n%n", e);
 			parser.exitWithUsage(-1);
 		}
 	}

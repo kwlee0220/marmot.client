@@ -27,13 +27,20 @@ public class RemotePrintSchemaMain implements Runnable {
 		
 		RemotePrintSchemaMain cmd = new RemotePrintSchemaMain();
 		CommandLine commandLine = new CommandLine(cmd);
-		commandLine.parse(args);
 		
-		if ( commandLine.isUsageHelpRequested() ) {
-			commandLine.usage(System.out, Ansi.OFF);
+		try {
+			commandLine.parse(args);
+			
+			if ( commandLine.isUsageHelpRequested() ) {
+				commandLine.usage(System.out, Ansi.OFF);
+			}
+			else {
+				cmd.run();
+			}
 		}
-		else {
-			cmd.run();
+		catch ( Exception e ) {
+			System.err.printf("failed: %s%n%n", e);
+			commandLine.usage(System.out, Ansi.OFF);
 		}
 	}
 

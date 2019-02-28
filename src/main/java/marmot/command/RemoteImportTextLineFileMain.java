@@ -18,7 +18,7 @@ import utils.func.FOption;
  * @author Kang-Woo Lee (ETRI)
  */
 public class RemoteImportTextLineFileMain {
-	private static final String META_FILE_NAME = "_meta.json";
+//	private static final String META_FILE_NAME = "_meta.json";
 	
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();

@@ -36,7 +36,7 @@ public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
 				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
 			}
 			catch ( Exception e ) {
-				System.err.println(e);
+				System.err.printf("failed: %s%n%n", e);
 				commandLine.usage(System.out, Ansi.OFF);
 			}
 		}
