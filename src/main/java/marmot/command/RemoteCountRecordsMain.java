@@ -56,7 +56,7 @@ public class RemoteCountRecordsMain implements Runnable {
 								.aggregate(AggregateFunction.COUNT())
 								.build();
 			try ( RecordSet result = marmot.executeToRecordSet(plan) ) {
-				long count = result.fstream().mapToLong(r -> r.getLong(0)).next().get();
+				long count = result.stream().mapToLong(r -> r.getLong(0)).next().get();
 				System.out.println(count);
 			}
 		}
