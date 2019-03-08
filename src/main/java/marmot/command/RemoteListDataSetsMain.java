@@ -3,7 +3,6 @@ package marmot.command;
 import java.util.List;
 
 import marmot.DataSet;
-import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -73,8 +72,7 @@ public class RemoteListDataSetsMain implements Runnable {
 					if ( ds.hasGeometryColumn() ) {
 						System.out.printf(" %s", ds.getGeometryColumnInfo());
 						
-						SpatialIndexInfo idxInfo = ds.getDefaultSpatialIndexInfoOrNull();
-						if ( idxInfo != null ) {
+						if ( ds.isSpatiallyClustered() ) {
 							System.out.printf("(clustered)");
 						}
 					}

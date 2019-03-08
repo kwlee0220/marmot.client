@@ -65,7 +65,7 @@ public class RemotePrintSchemaMain implements Runnable {
 				System.out.println("SRID     : " + info.getGeometryColumnInfo().srid());
 			}
 			System.out.println("HDFS PATH: " + info.getHdfsPath());
-			SpatialIndexInfo idxInfo = info.getDefaultSpatialIndexInfoOrNull();
+			SpatialIndexInfo idxInfo = info.getDefaultSpatialIndexInfo().getOrNull();
 			System.out.printf("SPATIAL INDEX: %s%n", (idxInfo != null)
 														? idxInfo.getHdfsFilePath() : "none");
 			System.out.println("COLUMNS  :");

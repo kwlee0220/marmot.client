@@ -72,7 +72,7 @@ class RangeQuery {
 			}
 			
 			// 대상 DataSet에 인덱스가 걸려있지 않는 경우에는 full scan 방식을 사용한다.
-			if ( m_ds.getDefaultSpatialIndexInfoOrNull() == null ) {
+			if ( !m_ds.isSpatiallyClustered() ) {
 				s_logger.info("no spatial index, use full scan: id={}", m_dsId);
 
 				return FullScan.on(m_ds)

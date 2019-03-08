@@ -55,7 +55,7 @@ class GSPDataSetInfo {
 	}
 	
 	boolean hasSpatialIndex() {
-		return m_ds.getDefaultSpatialIndexInfoOrNull() != null;
+		return m_ds.isSpatiallyClustered();
 	}
 	
 	long getRecordCount() {
@@ -82,8 +82,8 @@ class GSPDataSetInfo {
 			m_bounds = m_ds.getBounds();
 		}
 		else if ( m_ds.getType() == DataSetType.TEXT ) {
-			SpatialIndexInfo idxInfo = m_ds.getDefaultSpatialIndexInfoOrNull();
-			if ( idxInfo != null ) {
+			if ( m_ds.hasGeometryColumn() ) {
+				SpatialIndexInfo idxInfo = m_ds.getDefaultSpatialIndexInfo().get();
 				m_bounds = idxInfo.getDataBounds();
 				m_count = idxInfo.getRecordCount();
 			}

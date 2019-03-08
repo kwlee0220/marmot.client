@@ -164,14 +164,19 @@ class IndexScan {
 	private RecordSet runAtServer() {
 		String ratioStr = String.format("%.2f%%", m_sampleRatio*100);
 		s_logger.info("use a normal index-scan: ds_id={}, ratio={}", m_dsId, ratioStr);
+
+		String planName = String.format("index_scan(ratio=%s)", ratioStr);
 		
 		// 샘플 수가 정의되지 않거나, 대상 데이터세트의 레코드 갯수가 샘플 수보다 작은 경우
 		// 데이터세트 전체를 반환한다. 성능을 위해 query() 연산 활용함.
 		if ( m_sampleRatio >= 1 ) {
-			return m_ds.queryRange(m_range, FOption.empty());
+			Plan plan = m_marmot.planBuilder(planName)
+								.query(m_dsId, INTERSECTS, m_range)
+								.take(m_sampleCount.get())
+								.build();
+			return m_marmot.executeLocally(plan);
 		}
 		else {
-			String planName = String.format("index_scan(ratio=%s)", ratioStr);
 			Plan plan = m_marmot.planBuilder(planName)
 								.query(m_dsId, INTERSECTS, m_range)
 								.sample(m_sampleRatio)
