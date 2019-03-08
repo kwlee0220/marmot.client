@@ -56,20 +56,27 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		
 		RemoteCopyDataSetMain cmd = new RemoteCopyDataSetMain();
 		CommandLine commandLine = new CommandLine(cmd);
-		commandLine.parse(args);
 		
-		if ( commandLine.isUsageHelpRequested() ) {
-			commandLine.usage(System.out, Ansi.OFF);
-		}
-		else {
-			try {
-				Plan plan = cmd.buildPlan("copy_dataset");
-				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
-			}
-			catch ( Exception e ) {
-				System.err.printf("failed: %s%n%n", e);
+		try {
+			commandLine.parse(args);
+			
+			if ( commandLine.isUsageHelpRequested() ) {
 				commandLine.usage(System.out, Ansi.OFF);
 			}
+			else {
+				try {
+					Plan plan = cmd.buildPlan("copy_dataset");
+					cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+				}
+				catch ( Exception e ) {
+					System.err.printf("failed: %s%n%n", e);
+					commandLine.usage(System.out, Ansi.OFF);
+				}
+			}
+		}
+		catch ( Exception e ) {
+			System.err.printf("failed: %s%n%n", e);
+			commandLine.usage(System.out, Ansi.OFF);
 		}
 	}
 	
