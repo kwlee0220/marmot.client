@@ -171,11 +171,16 @@ class DataSetTree extends JTree {
 			public Void doInBackground() {
 				node.removeAllChildren();
 				
-				for ( String dir : m_marmot.getSubDirAll(path, false) ) {
-					publish(dir);
+				try {
+					for ( String dir : m_marmot.getSubDirAll(path, false) ) {
+						publish(dir);
+					}
+					for ( DataSet ds: m_marmot.getDataSetAllInDir(path, false) ) {
+						publish(ds);
+					}
 				}
-				for ( DataSet ds: m_marmot.getDataSetAllInDir(path, false) ) {
-					publish(ds);
+				catch ( Exception e ) {
+					e.printStackTrace();
 				}
 				
 				return null;

@@ -96,7 +96,7 @@ public class DataSetExplorer extends JFrame {
 	public DataSetExplorer(MarmotRuntime marmot) {
 		m_marmot = marmot;
 		
-		setMinimumSize(new Dimension(1500, 690));
+		setMinimumSize(new Dimension(1500, 695));
 		setLocationByPlatform(true);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -120,16 +120,19 @@ public class DataSetExplorer extends JFrame {
 
 		m_dsTable = new DataSetTableModel(m_marmot);
 		channel.subscribe(sel -> {
-			if ( sel.isDataSetSelection() ) {
-				DataSet ds = sel.m_dataset.getUnchecked();
-				
-				m_dsInfoPanel.update(ds);
-				m_dsTable.set(ds);
+			try {
+				if ( sel.isDataSetSelection() ) {
+					DataSet ds = sel.m_dataset.getUnchecked();
+					
+					m_dsInfoPanel.update(ds);
+					m_dsTable.update(ds);
+				}
+				else {
+					m_dsInfoPanel.update(sel.m_dir.getUnchecked());
+					m_dsTable.clear();
+				}
 			}
-			else {
-				m_dsInfoPanel.update(sel.m_dir.getUnchecked());
-				m_dsTable.clear();
-			}
+			catch ( Exception ignored ) { }
 		});
 		
 		JTable table = new JTable();

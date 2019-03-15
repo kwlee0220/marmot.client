@@ -48,7 +48,7 @@ class DataSetTableModel extends AbstractTableModel {
 		return m_records.get(rowIndex).get(columnIndex);
 	}
 	
-	void set(DataSet ds) {
+	void update(DataSet ds) {
 		PlanBuilder builder = m_marmot.planBuilder("list a dataset")
 									.load(ds.getId());
 		if ( ds.hasGeometryColumn() ) {
