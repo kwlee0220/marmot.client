@@ -132,7 +132,9 @@ public class DataSetExplorer extends JFrame {
 					m_dsTable.clear();
 				}
 			}
-			catch ( Exception ignored ) { }
+			catch ( Exception ignored ) {
+				System.out.println(ignored);
+			}
 		});
 		
 		JTable table = new JTable();
