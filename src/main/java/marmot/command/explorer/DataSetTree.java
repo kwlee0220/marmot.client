@@ -11,7 +11,6 @@ import java.awt.event.MouseListener;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 
 import javax.swing.Icon;
 import javax.swing.JCheckBox;
@@ -47,7 +46,6 @@ import marmot.RecordSet;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ShapefileParameters;
 import marmot.rset.RecordSets;
-import utils.async.AbstractThreadedExecution;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -131,8 +129,7 @@ class DataSetTree extends JTree {
 	private void initInSwingThread() {
 		TreeModel model = new DefaultTreeModel(m_root);
 
-		List<String> subDir = m_marmot.getSubDirAll("/", false);
-		for ( String dir : subDir ) {
+		for ( String dir: listSubDirs("/") ) {
 			m_root.add(new DefaultMutableTreeNode(dir));
 		}
 
@@ -172,12 +169,13 @@ class DataSetTree extends JTree {
 				node.removeAllChildren();
 				
 				try {
-					for ( String dir : m_marmot.getSubDirAll(path, false) ) {
+					for ( String dir: listSubDirs(path) ) {
 						publish(dir);
 					}
-					for ( DataSet ds: m_marmot.getDataSetAllInDir(path, false) ) {
-						publish(ds);
-					}
+					
+					FStream.from(m_marmot.getDataSetAllInDir(path, false))
+							.sort((p1,p2) -> p1.getId().compareTo(p2.getId()))
+							.forEach(this::publish);
 				}
 				catch ( Exception e ) {
 					e.printStackTrace();
@@ -269,10 +267,12 @@ class DataSetTree extends JTree {
 				// JOptionPane.showMessageDialog(null, "Delete Item " +
 				// getParentPath(node));
 			}
+			
 			SwingUtilities.invokeLater(() -> {
 				TreeNode parent = node.getParent();
 				if ( parent instanceof DefaultMutableTreeNode ) {
-					setSelectionPath(new TreePath(((DefaultMutableTreeNode)parent).getPath()));
+					m_subject.onNext(new Selection((DefaultMutableTreeNode)parent));
+//					setSelectionPath(new TreePath(((DefaultMutableTreeNode)parent).getPath()));
 				}
 			});
 		}
@@ -462,6 +462,16 @@ class DataSetTree extends JTree {
 			}
 			System.out.println("Save as file: " + fileToSave.getAbsolutePath());
 		}
+	}
+	
+	private List<String> listSubDirs(String path) {
+		List<String> subDirs = m_marmot.getSubDirAll(path, false);
+		subDirs.sort((s1,s2) -> s1.compareTo(s2));
+		if ( subDirs.remove("tmp") ) {
+			subDirs.add("tmp");
+		}
+		
+		return subDirs;
 	}
 
 	private static class SimpleSubscriber implements Observer<Long> {
