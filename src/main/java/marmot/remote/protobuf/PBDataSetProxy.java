@@ -6,14 +6,17 @@ import java.util.Objects;
 
 import com.vividsolutions.jts.geom.Envelope;
 
+import marmot.ClusterNotFoundException;
 import marmot.DataSet;
 import marmot.DataSetType;
 import marmot.GeometryColumnInfo;
 import marmot.GeometryColumnNotExistsException;
+import marmot.InsufficientThumbnailException;
 import marmot.Plan;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.SpatialClusterInfo;
+import marmot.ThumbnailNotFoundException;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
@@ -159,6 +162,27 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public InputStream readRawSpatialCluster(String quadKey) {
 		return m_service.readRawSpatialCluster(getId(), quadKey);
+	}
+
+	@Override
+	public boolean hasThumbnail() {
+		return m_service.hasThumbnail(getId());
+	}
+
+	@Override
+	public RecordSet readThumbnail(Envelope bounds, int count)
+		throws ThumbnailNotFoundException, InsufficientThumbnailException {
+		return m_service.readThumbnail(getId(), bounds, count);
+	}
+
+	@Override
+	public void createThumbnail(int sampleCount) throws ClusterNotFoundException {
+		m_service.createThumbnail(getId(), sampleCount);
+	}
+
+	@Override
+	public boolean deleteThumbnail() {
+		return m_service.deleteThumbnail(getId());
 	}
 	
 	@Override

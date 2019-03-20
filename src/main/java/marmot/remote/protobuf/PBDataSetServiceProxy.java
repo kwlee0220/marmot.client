@@ -30,9 +30,11 @@ import marmot.proto.LongProto;
 import marmot.proto.StringProto;
 import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
+import marmot.proto.service.BoolResponse;
 import marmot.proto.service.ClusterDataSetRequest;
 import marmot.proto.service.CreateDataSetRequest;
 import marmot.proto.service.CreateKafkaTopicRequest;
+import marmot.proto.service.CreateThumbnailRequest;
 import marmot.proto.service.DataSetInfoResponse;
 import marmot.proto.service.DataSetOptionsProto;
 import marmot.proto.service.DataSetServiceGrpc;
@@ -48,6 +50,7 @@ import marmot.proto.service.MoveDirRequest;
 import marmot.proto.service.QueryRangeRequest;
 import marmot.proto.service.QuerySpatialClusterInfoRequest;
 import marmot.proto.service.ReadRawSpatialClusterRequest;
+import marmot.proto.service.ReadThumbnailRequest;
 import marmot.proto.service.SpatialClusterInfoProto;
 import marmot.proto.service.SpatialClusterInfoResponse;
 import marmot.proto.service.SpatialIndexInfoResponse;
@@ -332,6 +335,38 @@ public class PBDataSetServiceProxy {
 															.setForce(force)
 															.build();
 		m_dsBlockingStub.createKafkaTopic(req);
+	}
+	
+	public boolean hasThumbnail(String dsId) {
+		BoolResponse resp = m_dsBlockingStub.hasThumbnail(PBUtils.toStringProto(dsId));
+		return PBUtils.handle(resp);
+	}
+	
+	public void createThumbnail(String dsId, int sampleCount) {
+		CreateThumbnailRequest req = CreateThumbnailRequest.newBuilder()
+															.setId(dsId)
+															.setCount(sampleCount)
+															.build();
+		m_dsBlockingStub.createThumbnail(req);
+	}
+	
+	public boolean deleteThumbnail(String dsId) {
+		BoolResponse resp = m_dsBlockingStub.deleteThumbnail(PBUtils.toStringProto(dsId));
+		return PBUtils.handle(resp);
+	}
+	
+	public RecordSet readThumbnail(String dsId, Envelope range, int count) {
+		ReadThumbnailRequest req = ReadThumbnailRequest.newBuilder()
+														.setId(dsId)
+														.setRange(PBUtils.toProto(range))
+														.setCount(count)
+														.build();
+
+		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
+		StreamObserver<DownChunkResponse> channel = m_dsStub.readThumbnail(downloader);
+		InputStream is = downloader.start(req.toByteString(), channel);
+
+		return PBInputStreamRecordSet.from(is);
 	}
 	
 	PBDataSetProxy toDataSet(DataSetInfoResponse resp) {

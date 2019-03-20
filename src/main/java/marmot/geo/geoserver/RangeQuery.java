@@ -1,5 +1,6 @@
 package marmot.geo.geoserver;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import com.google.common.base.Preconditions;
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.DataSet;
+import marmot.Record;
 import marmot.RecordSet;
 import utils.Throwables;
 import utils.func.FOption;
@@ -64,21 +66,27 @@ class RangeQuery {
 			// 질의 영역이 DataSet 전체 영역보다 더 넓은 경우는 인덱스를 사용하는 방법보다
 			// 그냥 full scan 방식을 사용한다.
 			if ( m_range.contains(m_ds.getBounds()) ) {
-				s_logger.info("too large range, use full scan: id={}", m_dsId);
-				
-				return FullScan.on(m_ds)
-								.sampleCount(m_sampleCount)
-								.run();
+				if ( m_sampleCount.isPresent() && m_ds.hasThumbnail() ) {
+					s_logger.info("too large range, use thumbnail scan: id={}", m_dsId);
+					return ThumbnailScan.scan(m_ds, m_range, m_sampleCount.get()).get();
+				}
+				else {
+					s_logger.info("too large range, use full scan: id={}, nsamples={}",
+									m_dsId, m_sampleCount);
+					return FullScan.on(m_ds)
+									.sampleCount(m_sampleCount)
+									.run();
+				}
 			}
 			
 			// 대상 DataSet에 인덱스가 걸려있지 않는 경우에는 full scan 방식을 사용한다.
 			if ( !m_ds.isSpatiallyClustered() ) {
-				s_logger.info("no spatial index, use full scan: id={}", m_dsId);
-
-				return FullScan.on(m_ds)
-								.range(m_range)
-								.sampleCount(m_sampleCount)
-								.run();
+				s_logger.info("no spatial index, try to use mixed(thumbnail/full) scan: id={}", m_dsId);
+				return m_sampleCount.flatMap(cnt -> ThumbnailScan.scan(m_ds, m_range, cnt))
+									.getOrElse(() -> FullScan.on(m_ds)
+															.range(m_range)
+															.sampleCount(m_sampleCount)
+															.run());
 			}
 
 			// 질의 영역과 겹치는 quad-key들과, 해당 결과 레코드의 수를 추정한다.
