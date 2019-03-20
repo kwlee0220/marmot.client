@@ -20,13 +20,13 @@ import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSet;
 import marmot.geo.GeoClientUtils;
-import marmot.support.AdaptableSamplingStream;
 import marmot.support.RangedClusterEstimate;
 import utils.StopWatch;
 import utils.async.AbstractThreadedExecution;
 import utils.async.StartableExecution;
 import utils.async.op.AsyncExecutions;
 import utils.func.FOption;
+import utils.stream.AdaptableSamplingStream;
 import utils.stream.FStream;
 
 
