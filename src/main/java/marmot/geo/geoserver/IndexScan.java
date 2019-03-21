@@ -195,8 +195,6 @@ class IndexScan {
 		if ( m_sampleRatio < 1 ) {
 			// quadKey에 해당하는 파티션에 샘플링할 레코드 수를 계산하고
 			// 이 수만큼의 레코드만 추출하도록 연산을 추가한다.
-			// 추정치가 정확하지 않기 때문에, 계산된 레코드 수보다
-			// 약간 큰 수(계산된 값의 1.05배)를 사용한다.
 			long total = m_est.getRelevantRecordCount(quadKey);
 			matcheds = new AdaptableSamplingStream<>(matcheds, total, m_sampleRatio);
 		}
@@ -205,7 +203,7 @@ class IndexScan {
 	}
 	
 	private StartableExecution<Void> forkClusterPrefetcher() {
-		FStream<StartableExecution<?>> strm = getNextNonCachedQuadKey().stream()
+		FStream<StartableExecution<?>> strm = getNextNonCachedQuadKey().fstream()
 												.map(Prefetcher::new);
 		return AsyncExecutions.sequential(strm);
 	}
