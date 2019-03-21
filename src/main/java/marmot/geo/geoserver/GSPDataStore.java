@@ -52,11 +52,7 @@ public class GSPDataStore extends ContentDataStore {
 						"Too small memory cache size: " + UnitUtils.toByteSizeString(cacheSize));
 		
 		m_marmot = marmot;
-		m_cache = DataSetPartitionCache.builder()
-										.fileStoreDir(cacheDir)
-										.maxSize(cacheSize)
-										.timeout(evicMinutes, MINUTES)
-										.build(marmot);
+		m_cache = new DataSetPartitionCache(marmot, cacheDir);
 		
 		m_dsCache = CacheBuilder.newBuilder()
 								.expireAfterAccess(60, MINUTES)

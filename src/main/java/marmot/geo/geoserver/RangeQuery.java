@@ -1,6 +1,5 @@
 package marmot.geo.geoserver;
 
-import java.util.List;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -10,7 +9,6 @@ import com.google.common.base.Preconditions;
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.DataSet;
-import marmot.Record;
 import marmot.RecordSet;
 import utils.Throwables;
 import utils.func.FOption;
@@ -81,19 +79,25 @@ class RangeQuery {
 			
 			// 대상 DataSet에 인덱스가 걸려있지 않는 경우에는 full scan 방식을 사용한다.
 			if ( !m_ds.isSpatiallyClustered() ) {
-				s_logger.info("no spatial index, try to use mixed(thumbnail/full) scan: id={}", m_dsId);
-				return m_sampleCount.flatMap(cnt -> ThumbnailScan.scan(m_ds, m_range, cnt))
-									.getOrElse(() -> FullScan.on(m_ds)
-															.range(m_range)
-															.sampleCount(m_sampleCount)
-															.run());
+				if ( m_ds.hasThumbnail() ) {
+					s_logger.info("no spatial index, try to use mixed(thumbnail/full) scan: id={}", m_dsId);
+					return m_sampleCount.flatMap(cnt -> ThumbnailScan.scan(m_ds, m_range, cnt))
+										.getOrElse(() -> FullScan.on(m_ds)
+																.range(m_range)
+																.sampleCount(m_sampleCount)
+																.run());
+				}
+				else {
+					return FullScan.on(m_ds).range(m_range).sampleCount(m_sampleCount).run();
+				}
 			}
-
-			// 질의 영역과 겹치는 quad-key들과, 해당 결과 레코드의 수를 추정한다.
-			return IndexScan.on(m_ds, m_range, m_cache)
-							.sampleCount(m_sampleCount)
-							.usePrefetch(m_usePrefetch)
-							.run();
+			else {
+				// 질의 영역과 겹치는 quad-key들과, 해당 결과 레코드의 수를 추정한다.
+				return IndexScan.on(m_ds, m_range, m_cache)
+								.sampleCount(m_sampleCount)
+								.usePrefetch(m_usePrefetch)
+								.run();
+			}
 		}
 		catch ( Throwable e ) {
 			throw Throwables.toRuntimeException(Throwables.unwrapThrowable(e));

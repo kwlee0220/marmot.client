@@ -2,7 +2,7 @@ package marmot.geo.geoserver;
 
 import static marmot.optor.geo.SpatialRelation.INTERSECTS;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,6 +14,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 
+import io.vavr.control.Try;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -26,7 +27,6 @@ import utils.async.AbstractThreadedExecution;
 import utils.async.StartableExecution;
 import utils.async.op.AsyncExecutions;
 import utils.func.FOption;
-import utils.stream.AdaptableSamplingStream;
 import utils.stream.FStream;
 
 
@@ -36,11 +36,10 @@ import utils.stream.FStream;
  */
 class IndexScan {
 	private static final Logger s_logger = LoggerFactory.getLogger(IndexScan.class);
-	
-	private static final int MAX_CACHE_SIZE = 10;
-	private static final int MAX_DISK_IO = 7;
-	private static final int MAX_NETWORK_IO = 4;
-	private static final int TOO_MUCH_CLUSTERS = 12;
+
+	private static final int CACHE_COST = 1;
+	private static final int NETWORK_COST = 2;
+	private static final int MAX_COST = 20;
 	
 	private final MarmotRuntime m_marmot;
 	private final DataSet m_ds;
@@ -94,11 +93,16 @@ class IndexScan {
 		if ( fullRatio > 0.7 ) {
 			s_logger.info("too large for index-scan, use mixed-scan: id={}", m_dsId);
 			
-			return m_sampleCount.flatMap(cnt -> ThumbnailScan.scan(m_ds, m_range, cnt))
-								.getOrElse(() -> FullScan.on(m_ds)
-														.range(m_range)
-														.sampleRatio(m_sampleRatio)
-														.run());
+			if ( m_ds.hasThumbnail() ) {
+				return m_sampleCount.flatMap(cnt -> ThumbnailScan.scan(m_ds, m_range, cnt))
+									.getOrElse(() -> FullScan.on(m_ds)
+															.range(m_range)
+															.sampleRatio(m_sampleRatio)
+															.run());
+			}
+			else {
+				return FullScan.on(m_ds).range(m_range).sampleRatio(m_sampleRatio).run();
+			}
 		}
 		
 		//
@@ -108,21 +112,17 @@ class IndexScan {
 		// quad-key들 중에서 캐슁되지 않은 cluster들의 갯수를 구한다.
 		int nclusters = m_est.getRelevantClusterCount();
 		List<String> cachedKeys = FStream.from(m_est.getRelevantQuadKeys())
-										.filter(qkey -> m_cache.existsAtDisk(m_dsId, qkey))
+										.filter(qkey -> m_cache.exists(m_dsId, qkey))
 										.toList();
-		List<String> memCachedKeys = FStream.from(cachedKeys)
-											.filter(qkey -> m_cache.existsAtMemory(m_dsId, qkey))
-											.toList();
-		int nonCachedCount = nclusters - cachedKeys.size();
-		int diskIOCount = cachedKeys.size() - memCachedKeys.size();
+		int remoteIoCount = nclusters - cachedKeys.size();
+		int cost = (cachedKeys.size()*CACHE_COST) + (remoteIoCount * NETWORK_COST);
 
 		String ratioStr = String.format("%.02f%%", m_sampleRatio*100);
-		s_logger.info("status: ds_id={}, cache={}:{}:{} guess_count={}, ratio={}",
-						m_dsId, memCachedKeys.size(), diskIOCount, nonCachedCount,
+		s_logger.info("status: ds_id={}, clusters={}/{}, cost={}, guess_count={}, ratio={}",
+						m_dsId, cachedKeys.size(), nclusters, cost,
 						m_est.getTotalMatchCount(), ratioStr);
 		
-		if ( nclusters > MAX_CACHE_SIZE || diskIOCount > MAX_DISK_IO
-			|| nonCachedCount > MAX_NETWORK_IO ) {
+		if ( cost > MAX_COST ) {
 			if ( m_usePrefetch ) {
 				StartableExecution<RecordSet> fg = AsyncExecutions.from(() -> runAtServer(nclusters));
 				StartableExecution<?> bg = forkClusterPrefetcher();
@@ -141,8 +141,7 @@ class IndexScan {
 	}
 	
 	private RecordSet runAtServer(int nclusters) {
-		if ( m_ds.hasThumbnail() && m_sampleCount.isPresent()
-			&& nclusters >= TOO_MUCH_CLUSTERS ) {
+		if ( m_ds.hasThumbnail() && m_sampleCount.isPresent() ) {
 			s_logger.info("try to use thumbnail-scan: ds_id={}, nclusters={}",
 							m_dsId, nclusters);
 			FOption<RecordSet> orset = ThumbnailScan.scan(m_ds, m_range, m_sampleCount.get());
@@ -180,14 +179,16 @@ class IndexScan {
 		s_logger.info("query on caches: ds_id={}, ratio={}", m_dsId, ratioStr);
 		
 		FStream<Record> recStream = FStream.from(m_est.getRelevantQuadKeys())
-											.flatMap(qk -> readFromCache(qk));
+											.flatMap(qk -> Try.of(() -> readFromCache(qk))
+															.getOrElse(FStream.empty()));
 		
 		return RecordSet.from(m_ds.getRecordSchema(), recStream);
 	}
 	
-	private FStream<Record> readFromCache(String quadKey) {
+	private FStream<Record> readFromCache(String quadKey) throws IOException {
 		String geomColName = m_ds.getGeometryColumn();
-		FStream<Record> matcheds = FStream.from(m_cache.get(m_dsId, quadKey))
+		FStream<Record> matcheds = m_cache.get(m_dsId, quadKey)
+											.stream()
 											.filter(r -> {
 												Geometry geom = r.getGeometry(geomColName);
 												return m_pkey.intersects(geom);
@@ -195,8 +196,10 @@ class IndexScan {
 		if ( m_sampleRatio < 1 ) {
 			// quadKey에 해당하는 파티션에 샘플링할 레코드 수를 계산하고
 			// 이 수만큼의 레코드만 추출하도록 연산을 추가한다.
-			long total = m_est.getRelevantRecordCount(quadKey);
-			matcheds = new AdaptableSamplingStream<>(matcheds, total, m_sampleRatio);
+			int count = m_est.getRelevantRecordCount(quadKey);
+			matcheds = matcheds.take(count);
+//			long total = m_est.getRelevantRecordCount(quadKey);
+//			matcheds = new AdaptableSamplingStream<>(matcheds, total, m_sampleRatio);
 		}
 		
 		return matcheds;
@@ -210,7 +213,7 @@ class IndexScan {
 	
 	private FOption<String> getNextNonCachedQuadKey() {
 		List<String> keys = FStream.from(m_est.getRelevantQuadKeys())
-									.filter(qkey -> !m_cache.existsAtDisk(m_dsId, qkey))
+									.filter(qkey -> !m_cache.exists(m_dsId, qkey))
 									.max((k1,k2) -> k1.length() - k2.length());
 		return keys.isEmpty() ? FOption.empty() : FOption.of(keys.get(0));
 	}
@@ -225,8 +228,7 @@ class IndexScan {
 		@Override
 		protected Void executeWork() throws Exception {
 			StopWatch watch = StopWatch.start();
-			InputStream cluster = m_ds.readRawSpatialCluster(m_quadKey);
-			m_cache.put(m_dsId, m_quadKey, cluster);
+			m_cache.put(m_dsId, m_quadKey, m_ds.readSpatialCluster(m_quadKey));
 			
 			s_logger.debug("prefetched: ds={}, quadkey={}, elapsed={}",
 							m_dsId, m_quadKey, watch.stopAndGetElpasedTimeString());
