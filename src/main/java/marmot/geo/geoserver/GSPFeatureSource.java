@@ -51,8 +51,10 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	private final CoordinateReferenceSystem m_crs;
 	private FOption<Long> m_sampleCount = FOption.empty();
 	private volatile boolean m_usePrefetch = false;
+	private final int m_maxLocalCacheCost;
 	
-	GSPFeatureSource(ContentEntry entry, GSPDataSetInfo info, DataSetPartitionCache cache) {
+	GSPFeatureSource(ContentEntry entry, GSPDataSetInfo info, DataSetPartitionCache cache,
+					int maxLocalCacheCost) {
 		super(entry, Query.ALL);
 		
 		m_marmot = info.getMarmotRuntime();
@@ -61,6 +63,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		m_gcInfo = m_dsInfo.getDataSet().getGeometryColumnInfo();
 		m_crs = CRSUtils.toCRS(m_gcInfo.srid());
 		m_cache = cache;
+		m_maxLocalCacheCost = maxLocalCacheCost;
 
 		m_mbr = Lazy.of(() -> {
 			Envelope bounds = m_dsInfo.getBounds();
@@ -79,7 +82,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	}
 	
 	public RecordSet query(Envelope range) {
-		return RangeQuery.on(m_dsInfo.getDataSet(), range, m_cache)
+		return RangeQuery.on(m_dsInfo.getDataSet(), range, m_cache, m_maxLocalCacheCost)
 						.sampleCount(m_sampleCount)
 						.usePrefetch(m_usePrefetch)
 						.run();

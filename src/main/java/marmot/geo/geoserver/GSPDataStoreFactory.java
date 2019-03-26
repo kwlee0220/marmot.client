@@ -39,9 +39,11 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 														"Disk cache directory", true,
 														getDefaultDiskCacheDir().getAbsolutePath());
 	private static final Param MARMOT_SAMPLE_COUNT = new Param("Sample count", Integer.class,
-																"Sample count", false, 100000);
+																"Sample count", false, 50000);
 	private static final Param USE_PREFETCH = new Param("Enable background prefetch", Boolean.class,
 														"Enable background prefetch", false, false);
+	private static final Param MAX_LOCAL_CACHE_COST = new Param("Max. local cache cost", Integer.class,
+														"Max. local cache cost (1~)", false, 20);
 	
 	public GSPDataStoreFactory() {
 	}
@@ -67,6 +69,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			GSPDataStoreFactory.DISK_CACHE_DIR,
 			GSPDataStoreFactory.MARMOT_SAMPLE_COUNT,
 			GSPDataStoreFactory.USE_PREFETCH,
+			GSPDataStoreFactory.MAX_LOCAL_CACHE_COST,
 		};
 	}
 
@@ -109,7 +112,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 
 		Integer sampleCount = (Integer)MARMOT_SAMPLE_COUNT.lookUp(params);
 		if ( sampleCount != null ) {
-			store.sampleCount(sampleCount);
+			store.setSampleCount(sampleCount);
 		}
 
 		String[] prefixes = new String[0];
@@ -121,6 +124,11 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		
 		boolean usePrefetch = (Boolean)USE_PREFETCH.lookUp(params);
 		store.usePrefetch(usePrefetch);
+		
+		Integer maxCost = (Integer)MAX_LOCAL_CACHE_COST.lookUp(params);
+		if ( maxCost != null ) {
+			store.setMaxLocalCacheCost(maxCost);
+		}
 		
 		s_logger.info("create MarmotDataStore: cache[size={}, dir={}], sample_count={}, "
 					+ "prefetch={}", cacheSizeStr, cacheDir, sampleCount, usePrefetch);

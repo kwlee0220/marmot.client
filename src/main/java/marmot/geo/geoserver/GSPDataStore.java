@@ -29,6 +29,7 @@ import utils.UnitUtils;
 import utils.func.FOption;
 import utils.stream.FStream;
 
+
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
@@ -36,6 +37,7 @@ import utils.stream.FStream;
 public class GSPDataStore extends ContentDataStore {
 	static final Logger s_logger = LoggerFactory.getLogger(GSPDataStore.class);
 	private static final String WORKSPACE_URI = "http://marmot.etri.re.kr";
+	private static final int DEF_MAX_LOCAL_CACHE_COST = 20;
 	
 	private final PBMarmotClient m_marmot;
 	private final LoadingCache<String, GSPDataSetInfo> m_dsCache;
@@ -43,6 +45,7 @@ public class GSPDataStore extends ContentDataStore {
 	private FOption<Long> m_sampleCount = FOption.empty();
 	private volatile boolean m_usePrefetch = false;
 	private String[] m_prefixes = new String[0];
+	private FOption<Integer> m_maxLocalCacheCost = FOption.empty();
 	
 	public GSPDataStore(PBMarmotClient marmot, long cacheSize, int evicMinutes, File cacheDir) {
 		Objects.requireNonNull(marmot, "MarmotRuntime");
@@ -64,7 +67,6 @@ public class GSPDataStore extends ContentDataStore {
 										return new GSPDataSetInfo(ds);
 									}
 								});
-		
 		setNamespaceURI(WORKSPACE_URI);
 	}
 	
@@ -76,8 +78,13 @@ public class GSPDataStore extends ContentDataStore {
 		return m_sampleCount;
 	}
 	
-	public GSPDataStore sampleCount(long count) {
+	public GSPDataStore setSampleCount(long count) {
 		m_sampleCount = FOption.of(count);
+		return this;
+	}
+	
+	public GSPDataStore setMaxLocalCacheCost(int cost) {
+		m_maxLocalCacheCost = FOption.of(cost);
 		return this;
 	}
 	
@@ -102,7 +109,8 @@ public class GSPDataStore extends ContentDataStore {
 		String dsId = GSPUtils.toDataSetId(entry.getTypeName());
 		
 		GSPDataSetInfo dsInfo = m_dsCache.getUnchecked(dsId);
-		return new GSPFeatureSource(entry, dsInfo, m_cache)
+		return new GSPFeatureSource(entry, dsInfo, m_cache,
+									m_maxLocalCacheCost.getOrElse(DEF_MAX_LOCAL_CACHE_COST))
 					.setSampleCount(m_sampleCount)
 					.usePrefetch(m_usePrefetch);
 	}

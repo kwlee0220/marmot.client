@@ -24,14 +24,17 @@ class RangeQuery {
 	private final DataSet m_ds;
 	private final Envelope m_range;
 	private FOption<Long> m_sampleCount = FOption.empty();
+	private final int m_maxLocalCacheCost;
 	private final DataSetPartitionCache m_cache;
 	private volatile boolean m_usePrefetch = false;
 	
-	public static RangeQuery on(DataSet ds, Envelope range, DataSetPartitionCache cache) {
-		return new RangeQuery(ds, range, cache);
+	public static RangeQuery on(DataSet ds, Envelope range, DataSetPartitionCache cache,
+								int maxLocalCacheCost) {
+		return new RangeQuery(ds, range, cache, maxLocalCacheCost);
 	}
 	
-	private RangeQuery(DataSet ds, Envelope range, DataSetPartitionCache cache) {
+	private RangeQuery(DataSet ds, Envelope range, DataSetPartitionCache cache,
+						int maxLocalCacheCost) {
 		Objects.requireNonNull(ds, "DataSet");
 		Objects.requireNonNull(range, "query range");
 		Objects.requireNonNull(cache, "DataSetPartitionCache");
@@ -40,6 +43,7 @@ class RangeQuery {
 		m_dsId = ds.getId();
 		m_range = range;
 		m_cache = cache;
+		m_maxLocalCacheCost = maxLocalCacheCost;
 	}
 	
 	public RangeQuery sampleCount(long count) {
@@ -93,7 +97,7 @@ class RangeQuery {
 			}
 			else {
 				// 질의 영역과 겹치는 quad-key들과, 해당 결과 레코드의 수를 추정한다.
-				return IndexScan.on(m_ds, m_range, m_cache)
+				return IndexScan.on(m_ds, m_range, m_cache, m_maxLocalCacheCost)
 								.sampleCount(m_sampleCount)
 								.usePrefetch(m_usePrefetch)
 								.run();

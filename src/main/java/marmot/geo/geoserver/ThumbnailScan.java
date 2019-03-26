@@ -44,7 +44,7 @@ public class ThumbnailScan implements LoggerSettable {
 		m_range = range;
 		m_sampleCount = (int)sampleCount;
 		
-		m_logger = LoggerFactory.getLogger(FullScan.class);
+		m_logger = LoggerFactory.getLogger(ThumbnailScan.class);
 	}
 
 	@Override

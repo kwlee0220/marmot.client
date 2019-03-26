@@ -44,6 +44,7 @@ import marmot.proto.service.DataSetTypeProto;
 import marmot.proto.service.DirectoryTraverseRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.ExecutePlanRequest;
+import marmot.proto.service.FloatResponse;
 import marmot.proto.service.LongResponse;
 import marmot.proto.service.MoveDataSetRequest;
 import marmot.proto.service.MoveDirRequest;
@@ -334,7 +335,7 @@ public class PBDataSetServiceProxy {
 															.setTopic(topic)
 															.setForce(force)
 															.build();
-		m_dsBlockingStub.createKafkaTopic(req);
+		PBUtils.handle(m_dsBlockingStub.createKafkaTopic(req));
 	}
 	
 	public boolean hasThumbnail(String dsId) {
@@ -347,7 +348,7 @@ public class PBDataSetServiceProxy {
 															.setId(dsId)
 															.setCount(sampleCount)
 															.build();
-		m_dsBlockingStub.createThumbnail(req);
+		PBUtils.handle(m_dsBlockingStub.createThumbnail(req));
 	}
 	
 	public boolean deleteThumbnail(String dsId) {
@@ -367,6 +368,11 @@ public class PBDataSetServiceProxy {
 		InputStream is = downloader.start(req.toByteString(), channel);
 
 		return PBInputStreamRecordSet.from(is);
+	}
+	
+	public float getThumbnailRatio(String dsId) {
+		FloatResponse resp = m_dsBlockingStub.getThumbnailRatio(PBUtils.toStringProto(dsId));
+		return PBUtils.handle(resp);
 	}
 	
 	PBDataSetProxy toDataSet(DataSetInfoResponse resp) {

@@ -184,6 +184,11 @@ public class PBDataSetProxy implements DataSet {
 	public boolean deleteThumbnail() {
 		return m_service.deleteThumbnail(getId());
 	}
+
+	@Override
+	public float getThumbnailRatio() throws ThumbnailNotFoundException {
+		return m_service.getThumbnailRatio(getId());
+	}
 	
 	@Override
 	public String toString() {
