@@ -76,6 +76,10 @@ public class DataSetPartitionCache {
 		writeIntoCache(new PartitionKey(dsId, quadKey), rset);
 	}
 	
+	public void remove(String dsId, String quadKey) {
+		m_cache.remove(new PartitionKey(dsId, quadKey));
+	}
+	
 	private File writeIntoCache(PartitionKey key, RecordSet rset)
 		throws FileObjectExistsException, IOException {
 		rset = RecordSet.from(rset.getRecordSchema(), rset.stream().shuffle());

@@ -58,10 +58,6 @@ public class ThumbnailScan implements LoggerSettable {
 	}
 
 	public RecordSet run() {
-		String msg = String.format("thumbnail-scan: dataset=%s, nsamples=%d",
-									m_ds, m_sampleCount);
-		getLogger().info(msg);
-		
 		return m_ds.readThumbnail(m_range, m_sampleCount);
 	}
 }

@@ -5,6 +5,7 @@ import static marmot.optor.geo.SpatialRelation.INTERSECTS;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ import marmot.geo.GeoClientUtils;
 import marmot.support.RangedClusterEstimate;
 import utils.StopWatch;
 import utils.async.AbstractThreadedExecution;
+import utils.async.CancellableWork;
 import utils.async.StartableExecution;
 import utils.async.op.AsyncExecutions;
 import utils.func.FOption;
@@ -119,15 +121,13 @@ class IndexScan {
 										.toList();
 		int remoteIoCount = nclusters - cachedKeys.size();
 		int cost = (cachedKeys.size()*CACHE_COST) + (remoteIoCount * NETWORK_COST);
-
-		String ratioStr = String.format("%.02f%%", m_sampleRatio*100);
-		s_logger.info("status: ds_id={}, clusters={}/{}, cost={}/{}, guess_count={}, ratio={}",
-						m_dsId, cachedKeys.size(), nclusters, cost, m_maxLocalCacheCost,
-						m_est.getTotalMatchCount(), ratioStr);
 		
+		String msg = String.format("ds_id=%s, clusters=%d/%d, cost=%d/%d, guess_count=%d, ratio=%.3f",
+									m_dsId, cachedKeys.size(), nclusters, cost, m_maxLocalCacheCost,
+									m_est.getTotalMatchCount(), m_sampleRatio);
 		if ( cost > m_maxLocalCacheCost ) {
 			if ( m_usePrefetch ) {
-				StartableExecution<RecordSet> fg = AsyncExecutions.from(() -> runAtServer(nclusters));
+				StartableExecution<RecordSet> fg = AsyncExecutions.from(() -> runAtServer(nclusters, msg));
 				StartableExecution<?> bg = forkClusterPrefetcher();
 				StartableExecution<RecordSet> exec = AsyncExecutions.backgrounded(fg, bg);
 				exec.start();
@@ -135,20 +135,21 @@ class IndexScan {
 				return exec.getUnchecked();
 			}
 			else {
-				return runAtServer(nclusters);
+				return runAtServer(nclusters, msg);
 			}
 		}
 		else {
-			return runOnLocalCache();
+			return runOnLocalCache(msg);
 		}
 	}
 	
-	private RecordSet runAtServer(int nclusters) {
+	private RecordSet runAtServer(int nclusters, String logMsg) {
 		if ( m_ds.hasThumbnail() && m_sampleCount.isPresent() ) {
-			boolean insufficient = FStream.from(m_est.getMatchingClusterKeys())
-										.exists(qk -> !m_est.isThumbnailEnough(qk, m_ds.getThumbnailRatio(), m_sampleRatio));
+			boolean insufficient = m_ds.getThumbnailRatio() < m_sampleRatio;
 			if ( !insufficient ) {
-				s_logger.info("use thumbnail-scan: ds_id={}, nclusters={}", m_dsId, nclusters);
+				String tailMsg = String.format(", thumbnail=%.3f, sampling=%.3f",
+												m_ds.getThumbnailRatio(), m_sampleRatio);
+				s_logger.info("use thumbnail: {}{}", logMsg, tailMsg);
 				FOption<RecordSet> orset = ThumbnailScan.scan(m_ds, m_range, m_sampleCount.get());
 				if ( orset.isPresent() ) {
 					return orset.get();
@@ -156,13 +157,11 @@ class IndexScan {
 			}
 		}
 		
-		String ratioStr = String.format("%.2f%%", m_sampleRatio*100);
-		s_logger.info("use a normal index-scan: ds_id={}, ratio={}", m_dsId, ratioStr);
-
-		String planName = String.format("index_scan(ratio=%s)", ratioStr);
+		s_logger.info("use index-scan: {}", logMsg);
 		
 		// 샘플 수가 정의되지 않거나, 대상 데이터세트의 레코드 갯수가 샘플 수보다 작은 경우
 		// 데이터세트 전체를 반환한다. 성능을 위해 query() 연산 활용함.
+		String planName = String.format("index_scan(ratio=%.3f)", m_sampleRatio);
 		if ( m_sampleRatio >= 1 ) {
 			Plan plan = m_marmot.planBuilder(planName)
 								.query(m_dsId, INTERSECTS, m_range)
@@ -180,14 +179,12 @@ class IndexScan {
 		}
 	}
 	
-	private RecordSet runOnLocalCache() {
-		String ratioStr = String.format("%.2f%%", m_sampleRatio*100);
-		s_logger.info("query on caches: ds_id={}, ratio={}", m_dsId, ratioStr);
+	private RecordSet runOnLocalCache(String logMsg) {
+		s_logger.info("use local-cache: {}", logMsg);
 		
 //		FStream<Record> recStream = FStream.from(m_est.getRelevantQuadKeys())
 //											.flatMap(qk -> Try.of(() -> readFromCache(qk))
 //															.getOrElse(FStream.empty()));
-
 		FStream<Record> recStream = FStream.from(m_est.getMatchingClusterKeys())
 											.flatMapParallel(qk -> Try.of(() -> readFromCache(qk))
 															.getOrElse(FStream.empty()), 3);
@@ -217,19 +214,17 @@ class IndexScan {
 	}
 	
 	private StartableExecution<Void> forkClusterPrefetcher() {
-		FStream<StartableExecution<?>> strm = getNextNonCachedQuadKey().fstream()
-												.map(Prefetcher::new);
+		FStream<StartableExecution<?>> strm
+								= FStream.from(m_est.getMatchingClusterKeys())
+										.filter(qkey -> !m_cache.exists(m_dsId, qkey))
+										.takeTopK(5, (k1,k2) -> k2.length() - k1.length())
+//										.sort((k1,k2) -> k2.length() - k1.length())
+										.map(Prefetcher::new);
 		return AsyncExecutions.sequential(strm);
 	}
 	
-	private FOption<String> getNextNonCachedQuadKey() {
-		List<String> keys = FStream.from(m_est.getMatchingClusterKeys())
-									.filter(qkey -> !m_cache.exists(m_dsId, qkey))
-									.max((k1,k2) -> k1.length() - k2.length());
-		return keys.isEmpty() ? FOption.empty() : FOption.of(keys.get(0));
-	}
-	
-	private class Prefetcher extends AbstractThreadedExecution<Void> {
+	private class Prefetcher extends AbstractThreadedExecution<Void>
+							implements CancellableWork {
 		private final String m_quadKey;
 		
 		Prefetcher(String quadKey) {
@@ -239,11 +234,24 @@ class IndexScan {
 		@Override
 		protected Void executeWork() throws Exception {
 			StopWatch watch = StopWatch.start();
-			m_cache.put(m_dsId, m_quadKey, m_ds.readSpatialCluster(m_quadKey));
-			
-			s_logger.debug("prefetched: ds={}, quadkey={}, elapsed={}",
-							m_dsId, m_quadKey, watch.stopAndGetElpasedTimeString());
+			try {
+				m_cache.put(m_dsId, m_quadKey, m_ds.readSpatialCluster(m_quadKey));
+				
+				s_logger.debug("prefetched: ds={}, quadkey={}, elapsed={}",
+								m_dsId, m_quadKey, watch.stopAndGetElpasedTimeString());
+			}
+			catch ( Exception e ) {
+				m_cache.remove(m_dsId, m_quadKey);
+				s_logger.warn("fails to prefetch: ds=" + m_dsId + ", quadkey=" + m_quadKey);
+			}
 			return null;
+		}
+
+		@Override
+		public boolean cancelWork() {
+			CompletableFuture.runAsync(() -> Try.run(() -> waitForDone()));
+			
+			return true;
 		}
 		
 		@Override
