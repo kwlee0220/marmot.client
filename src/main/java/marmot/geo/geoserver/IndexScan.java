@@ -242,7 +242,8 @@ class IndexScan {
 			}
 			catch ( Exception e ) {
 				m_cache.remove(m_dsId, m_quadKey);
-				s_logger.warn("fails to prefetch: ds=" + m_dsId + ", quadkey=" + m_quadKey);
+				s_logger.warn("fails to prefetch: ds=" + m_dsId + ", quadkey=" + m_quadKey
+								+ ", cause=" + e);
 			}
 			return null;
 		}

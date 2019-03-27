@@ -5,7 +5,6 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
 import org.geotools.data.Transaction;
 import org.geotools.data.simple.SimpleFeatureSource;
@@ -17,7 +16,6 @@ import org.opengis.feature.type.Name;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -25,7 +23,7 @@ import com.google.common.cache.LoadingCache;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.remote.protobuf.PBMarmotClient;
-import utils.UnitUtils;
+import utils.Utilities;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -47,12 +45,9 @@ public class GSPDataStore extends ContentDataStore {
 	private String[] m_prefixes = new String[0];
 	private FOption<Integer> m_maxLocalCacheCost = FOption.empty();
 	
-	public GSPDataStore(PBMarmotClient marmot, long cacheSize, int evicMinutes, File cacheDir) {
-		Objects.requireNonNull(marmot, "MarmotRuntime");
-		Objects.requireNonNull(cacheDir, "Disk cache directory");
-		Preconditions.checkArgument(evicMinutes > 0, "Eviction time");
-		Preconditions.checkArgument(cacheSize >= 64*1024*1024,
-						"Too small memory cache size: " + UnitUtils.toByteSizeString(cacheSize));
+	public GSPDataStore(PBMarmotClient marmot, File cacheDir) {
+		Utilities.checkNotNullArgument(marmot, "MarmotRuntime is null");
+		Utilities.checkNotNullArgument(cacheDir, "Disk cache directory is null");
 		
 		m_marmot = marmot;
 		m_cache = new DataSetPartitionCache(marmot, cacheDir);

@@ -16,7 +16,6 @@ import com.google.common.io.Files;
 
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CSV;
-import utils.UnitUtils;
 
 /**
  * 
@@ -31,10 +30,6 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 														"Marmot server port", true, 12985);
 	private static final Param DATASET_PREFIXES = new Param("Marmot dataset prefixes", String.class,
 														"Marmot dataset prefixes", false);
-	private static final Param MEMORY_CACHE_SIZE = new Param("Memory cache size", String.class,
-														"Memory cache size", true, "512mb");
-	private static final Param EVICTION_TIMEOUT = new Param("Memory cache eviction time (in minute)",
-														Integer.class, "minutes", true, 10);
 	private static final Param DISK_CACHE_DIR = new Param("Disk cache directory", String.class,
 														"Disk cache directory", true,
 														getDefaultDiskCacheDir().getAbsolutePath());
@@ -64,8 +59,6 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			GSPDataStoreFactory.MARMOT_HOST,
 			GSPDataStoreFactory.MARMOT_PORT,
 			GSPDataStoreFactory.DATASET_PREFIXES,
-			GSPDataStoreFactory.MEMORY_CACHE_SIZE,
-			GSPDataStoreFactory.EVICTION_TIMEOUT,
 			GSPDataStoreFactory.DISK_CACHE_DIR,
 			GSPDataStoreFactory.MARMOT_SAMPLE_COUNT,
 			GSPDataStoreFactory.USE_PREFETCH,
@@ -99,16 +92,11 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		String host = (String)MARMOT_HOST.lookUp(params);
 		int port = (int)MARMOT_PORT.lookUp(params);
 		
-		String cacheSizeStr = (String)MEMORY_CACHE_SIZE.lookUp(params);
-		int cacheSize = (int)UnitUtils.parseByteSize(cacheSizeStr);
-		
-		int timeout = (int)EVICTION_TIMEOUT.lookUp(params);
-		
 		File parentDir = Files.createTempDir().getParentFile();
 		File cacheDir = new File(parentDir, "marmot_geoserver_cache");
 		
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-		GSPDataStore store = new GSPDataStore(marmot, cacheSize, timeout, cacheDir);
+		GSPDataStore store = new GSPDataStore(marmot, cacheDir);
 
 		Integer sampleCount = (Integer)MARMOT_SAMPLE_COUNT.lookUp(params);
 		if ( sampleCount != null ) {
@@ -130,8 +118,8 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			store.setMaxLocalCacheCost(maxCost);
 		}
 		
-		s_logger.info("create MarmotDataStore: cache[size={}, dir={}], sample_count={}, "
-					+ "prefetch={}", cacheSizeStr, cacheDir, sampleCount, usePrefetch);
+		s_logger.info("create MarmotDataStore: cache[dir={}], sample_count={}, "
+					+ "prefetch={}", cacheDir, sampleCount, usePrefetch);
 		
 		return store;
 	}
