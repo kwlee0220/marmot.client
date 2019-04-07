@@ -1,7 +1,6 @@
 package marmot.command;
 
 import marmot.Plan;
-import marmot.RecordSet;
 import marmot.optor.AggregateFunction;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine;
@@ -55,10 +54,7 @@ public class RemoteCountRecordsMain implements Runnable {
 								.load(m_dsId)
 								.aggregate(AggregateFunction.COUNT())
 								.build();
-			try ( RecordSet result = marmot.executeToRecordSet(plan) ) {
-				long count = result.stream().mapToLong(r -> r.getLong(0)).next().get();
-				System.out.println(count);
-			}
+			System.out.println(marmot.executeToLong(plan).get());
 		}
 		catch ( Exception e ) {
 			System.err.println(e);

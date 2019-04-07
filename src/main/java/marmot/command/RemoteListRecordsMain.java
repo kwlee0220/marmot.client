@@ -46,7 +46,7 @@ public class RemoteListRecordsMain implements Runnable {
 	@Option(names={"-delim"}, paramLabel="character", description="csv delimiter (default: ',')")
 	private String m_delim = ",";
 
-	@Option(names={"-geom"}, description="display geometry columns")
+	@Option(names={"-g", "-geom"}, description="display geometry columns")
 	private boolean m_displayGeom;
 
 	public static final void main(String... args) throws Exception {

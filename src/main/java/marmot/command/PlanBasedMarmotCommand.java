@@ -29,6 +29,8 @@ import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
 import marmot.optor.geo.SpatialRelation;
 import marmot.plan.SpatialJoinOption;
+import marmot.proto.optor.OperatorProto;
+import marmot.proto.optor.StoreIntoDataSetProto;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import utils.CSV;
@@ -65,15 +67,49 @@ abstract class PlanBasedMarmotCommand {
 	abstract protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder)
 		throws Exception;
 	
+	public void run(String planName, String outputDsId) throws Exception {
+		m_marmot = m_connector.connect();
+		
+		Plan plan = buildPlan(m_marmot, planName);
+		if ( !m_storeParams.getAppend() ) {
+			List<DataSetOption> optList = Lists.newArrayList();
+			
+			m_storeParams.getGeometryColumnInfo()
+						.ifPresent(gcInfo -> optList.add(DataSetOption.GEOMETRY(gcInfo)));
+			
+			if ( m_storeParams.getForce() ) {
+				optList.add(DataSetOption.FORCE);
+			}
+			
+			m_storeParams.getBlockSize()
+						.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
+			m_storeParams.getCompress()
+						.filter(f -> f)
+						.ifPresent(f -> optList.add(DataSetOption.COMPRESS));
+			
+			String fromPlanDsId = getStoreTargetDataSetId(plan).getOrNull();
+			if ( outputDsId == null && fromPlanDsId == null ) {
+				throw new IllegalArgumentException("result dataset id is messing");
+			}
+			else if ( outputDsId == null ) {
+				outputDsId = fromPlanDsId;
+			}
+
+			m_marmot.createDataSet(outputDsId, plan, Iterables.toArray(optList, DataSetOption.class));
+		}
+		else {
+			plan = adjustPlanForStore(outputDsId, plan);
+			m_marmot.execute(plan);
+		}
+	}
+	
 	protected void setGeometryColumnInfo(GeometryColumnInfo gcInfo) {
 		m_gcInfo = gcInfo;
 	}
 
-	protected Plan buildPlan(String planName) throws Exception {
-		m_marmot = m_connector.connect();
-		
-		PlanBuilder builder = m_marmot.planBuilder(planName);
-		builder = addLoad(m_marmot, builder);
+	protected Plan buildPlan(MarmotRuntime marmot, String planName) throws Exception {
+		PlanBuilder builder = marmot.planBuilder(planName);
+		builder = addLoad(marmot, builder);
 		builder = appendOperators(builder);
 		
 		return builder.build();
@@ -474,5 +510,38 @@ abstract class PlanBasedMarmotCommand {
 		@Option(names={"-join_output_cols"}, paramLabel="cols",
 				description={"join output columns"})
 		String m_joinOutCols;
+	}
+	
+	private static FOption<String> getStoreTargetDataSetId(Plan plan) {
+		OperatorProto last = plan.getLastOperator()
+								.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
+		switch ( last.getOperatorCase() ) {
+			case STORE_INTO_DATASET:
+				return FOption.of(last.getStoreIntoDataset().getId());
+			default:
+				return FOption.empty();
+		}
+	}
+	
+	private static Plan adjustPlanForStore(String dsId, Plan plan) {
+		OperatorProto last = plan.getLastOperator()
+								.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
+		switch ( last.getOperatorCase() ) {
+			case STORE_INTO_DATASET:
+			case STORE_AS_CSV:
+			case STORE_INTO_JDBC_TABLE:
+			case STORE_AND_RELOAD:
+			case STORE_AS_HEAPFILE:
+				return plan;
+			default:
+				StoreIntoDataSetProto store = StoreIntoDataSetProto.newBuilder()
+																	.setId(dsId)
+																	.build();
+				OperatorProto op = OperatorProto.newBuilder().setStoreIntoDataset(store).build();
+				return Plan.fromProto(plan.toProto()
+											.toBuilder()
+											.addOperators(op)
+											.build());
+		}
 	}
 }

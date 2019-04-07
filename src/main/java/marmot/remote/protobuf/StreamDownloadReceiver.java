@@ -2,7 +2,6 @@ package marmot.remote.protobuf;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
 
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +13,7 @@ import marmot.proto.service.DownChunkResponse;
 import marmot.protobuf.ChunkInputStream;
 import marmot.protobuf.PBUtils;
 import utils.Throwables;
+import utils.Utilities;
 import utils.async.EventDrivenExecution;
 
 
@@ -36,8 +36,8 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 	}
 
 	InputStream start(ByteString req, StreamObserver<DownChunkResponse> channel) {
-		Objects.requireNonNull(req, "download-stream-consumer request");
-		Objects.requireNonNull(channel, "download-stream channel");
+		Utilities.checkNotNullArgument(req, "download-stream-consumer request");
+		Utilities.checkNotNullArgument(channel, "download-stream channel");
 
 		m_channel = channel;
 		m_channel.onNext(DownChunkResponse.newBuilder().setHeader(req).build());
@@ -47,7 +47,7 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 	}
 
 	InputStream start(StreamObserver<DownChunkResponse> channel) {
-		Objects.requireNonNull(channel, "download-stream channel");
+		Utilities.checkNotNullArgument(channel, "download-stream channel");
 
 		m_channel = channel;
 		notifyStarted();

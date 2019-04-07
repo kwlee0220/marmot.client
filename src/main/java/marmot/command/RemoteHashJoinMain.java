@@ -1,7 +1,6 @@
 package marmot.command;
 
 import marmot.MarmotRuntime;
-import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
@@ -32,8 +31,7 @@ public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
 		}
 		else {
 			try {
-				Plan plan = cmd.buildPlan("hash_join");
-				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+				cmd.run("hash_join", cmd.m_params.m_outputDsId);
 			}
 			catch ( Exception e ) {
 				System.err.printf("failed: %s%n%n", e);

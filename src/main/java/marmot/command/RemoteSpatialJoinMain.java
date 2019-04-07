@@ -6,7 +6,6 @@ import com.vividsolutions.jts.io.ParseException;
 
 import marmot.DataSet;
 import marmot.MarmotRuntime;
-import marmot.Plan;
 import marmot.PlanBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -36,8 +35,7 @@ public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
 		}
 		else {
 			try {
-				Plan plan = cmd.buildPlan("load_spatial_join");
-				cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+				cmd.run("load_spatial_join", cmd.m_params.m_outputDsId);
 			}
 			catch ( Exception e ) {
 				System.err.printf("failed: %s%n%n", e);

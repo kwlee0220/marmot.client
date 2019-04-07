@@ -12,7 +12,6 @@ import com.vividsolutions.jts.io.ParseException;
 
 import marmot.DataSet;
 import marmot.MarmotRuntime;
-import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.geo.GeoClientUtils;
 import marmot.type.MapTile;
@@ -23,9 +22,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.CSV;
-import utils.CSV;
 import utils.io.IOUtils;
-import utils.stream.FStream;
 
 
 /**
@@ -65,8 +62,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			}
 			else {
 				try {
-					Plan plan = cmd.buildPlan("copy_dataset");
-					cmd.createDataSet(cmd.m_params.m_outputDsId, plan);
+					cmd.run("copy_dataset", cmd.m_params.m_outputDsId);
 				}
 				catch ( Exception e ) {
 					System.err.printf("failed: %s%n%n", e);

@@ -3,6 +3,7 @@ package marmot.remote.protobuf;
 import java.io.InputStream;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.LoggerFactory;
 
@@ -28,8 +29,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 									implements StreamObserver<UpChunkResponse> {
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
-	// KWLEE
-	private static final int MAX_RESULT_TIMEOUT = 5;	// 5s
+	private static final int TIMEOUT = 5;		// 5s
 	
 	private final InputStream m_stream;
 	private StreamObserver<UpChunkRequest> m_channel = null;
@@ -60,41 +60,30 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 		Preconditions.checkState(m_channel != null, "Upload stream channel has not been set");
 		
 		try {
-			m_channel.onNext(UpChunkRequest.newBuilder().setHeader(getHeader()).build());
+			m_channel.onNext(HEADER());
 			
 			int chunkCount = 0;
 			while ( isRunning() ) {
-				try {
-					LimitedInputStream chunkedStream = new LimitedInputStream(m_stream, m_chunkSize);
-					ByteString chunk = ByteString.readFrom(chunkedStream);
-					if ( chunk.isEmpty() ) {
-						// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기하고
-						// End-of-Stream 메시지를 보낸다.
-						if ( m_guard.get(()->m_sync) < chunkCount ) {
-							sync(chunkCount, chunkCount);
-						}
-						m_channel.onNext(UpChunkRequest.newBuilder()
-														.setEos(PBUtils.VOID)
-														.build());
-						getLogger().debug("sent END_OF_STREAM");
-						
-						// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
-						// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
-						return m_guard.awaitUntilAndGet(this::isUploadCompletedInGuard, () -> m_result,
-														MAX_RESULT_TIMEOUT, TimeUnit.SECONDS);
+				LimitedInputStream chunkedStream = new LimitedInputStream(m_stream, m_chunkSize);
+				ByteString chunk = ByteString.readFrom(chunkedStream);
+				if ( chunk.isEmpty() ) {
+					// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기하고
+					// End-of-Stream 메시지를 보낸다.
+					if ( m_guard.get(()->m_sync) < chunkCount ) {
+						sync(chunkCount, chunkCount);
 					}
-					m_channel.onNext(UpChunkRequest.newBuilder().setChunk(chunk).build());
-					++chunkCount;
+					m_channel.onNext(EOS);
+					getLogger().debug("sent END_OF_STREAM");
 					
-					getLogger().trace("sent CHUNK[idx={}, size={}]", chunkCount, chunk.size());
+					// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
+					// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
+					return m_guard.awaitUntilAndGet(() -> m_result != null, () -> m_result,
+													TIMEOUT, TimeUnit.SECONDS);
 				}
-				catch ( Exception e ) {
-					Throwable cause = Throwables.unwrapThrowable(e);
-					m_channel.onNext(UpChunkRequest.newBuilder()
-													.setError(PBUtils.toErrorProto(cause))
-													.build());
-					throw e;
-				}
+				
+				m_channel.onNext(UpChunkRequest.newBuilder().setChunk(chunk).build());
+				++chunkCount;
+				getLogger().trace("sent CHUNK[idx={}, size={}]", chunkCount, chunk.size());
 				
 				if ( (chunkCount % SYNC_INTERVAL) == 0 ) {
 					sync(chunkCount, chunkCount - SYNC_INTERVAL);
@@ -103,8 +92,10 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 			
 			return m_guard.get(() -> m_result);
 		}
-		catch ( Throwable e ) {
-			e.printStackTrace();
+		catch ( Exception e ) {
+			Throwable cause = Throwables.unwrapThrowable(e);
+			m_channel.onNext(ERROR("" + cause));
+			
 			throw e;
 		}
 		finally {
@@ -118,9 +109,8 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 	public void onNext(UpChunkResponse resp) {
 		switch ( resp.getEitherCase() ) {
 			case SYNC_BACK:
-				if ( getLogger().isDebugEnabled() ) {
-					getLogger().debug("received SYNC_BACK[{}]", resp.getSyncBack());
-				}
+				getLogger().debug("received SYNC_BACK[{}]", resp.getSyncBack());
+				
 				m_guard.run(() -> m_sync = resp.getSyncBack(), true);
 				break;
 			case RESULT:
@@ -128,7 +118,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 				// 모든 chunk를 다보내고 result가 도착해야만 uploader를 종료시킬 수 있음.
 				ByteString result = resp.getResult();
 				m_guard.run(() -> m_result = result, true);
-				getLogger().debug("received RESULT[size={}]", result.size());
+				getLogger().debug("received RESULT: {}", result);
 				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
@@ -154,18 +144,30 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 		m_guard.run(() -> m_serverClosed = true, true);
 	}
 	
-	private boolean isUploadCompletedInGuard() {
-		return m_result != null && m_serverClosed;
+	private int sync(int sync, int expectedSyncBack)
+		throws InterruptedException, TimeoutException {
+		m_channel.onNext(SYNC(sync));
+		getLogger().debug("sent SYNC[{}] & wait for SYNC[{}]", sync, expectedSyncBack);
+
+		return m_guard.awaitUntilAndGet(() -> m_sync >= sync, () -> m_sync,
+										TIMEOUT, TimeUnit.SECONDS);
 	}
 	
-	private int sync(int sync, int expectedSyncBack) throws InterruptedException {
-		m_channel.onNext(UpChunkRequest.newBuilder()
-										.setSync(sync)
-										.build());
-		if ( getLogger().isDebugEnabled() ) {
-			getLogger().debug("sent SYNC[{}] & wait for SYNC[{}]", sync, expectedSyncBack);
-		}
-
-		return m_guard.awaitUntilAndGet(() -> m_sync >= sync, () -> m_sync);
+	private UpChunkRequest HEADER() throws Exception {
+		return UpChunkRequest.newBuilder().setHeader(getHeader()).build();
 	}
+	
+	private UpChunkRequest ERROR(String msg) {
+		PBRemoteException cause = new PBRemoteException(msg); 
+		return UpChunkRequest.newBuilder()
+							.setError(PBUtils.toErrorProto(cause))
+							.build();
+	}
+	
+	private UpChunkRequest SYNC(int sync) {
+		return UpChunkRequest.newBuilder().setSync(sync).build();
+	}
+	private static final UpChunkRequest EOS = UpChunkRequest.newBuilder()
+															.setEos(PBUtils.VOID)
+															.build();
 }

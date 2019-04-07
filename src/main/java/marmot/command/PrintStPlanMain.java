@@ -6,8 +6,8 @@ import java.nio.charset.Charset;
 
 import marmot.plan.STScriptPlanLoader;
 import picocli.CommandLine;
-import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 import utils.io.IOUtils;
@@ -52,7 +52,7 @@ public class PrintStPlanMain implements Runnable {
 					script = IOUtils.toString(is, Charset.defaultCharset());
 				}
 			}
-			String planJson = STScriptPlanLoader.toJson(script);
+			String planJson = STScriptPlanLoader.parseToPlanJson(script);
 			System.out.println(planJson);
 		}
 		catch ( Exception e ) {
