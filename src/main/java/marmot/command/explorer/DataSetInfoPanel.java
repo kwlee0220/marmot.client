@@ -26,6 +26,7 @@ class DataSetInfoPanel extends JPanel {
 	private final JLabel m_count;
 	private final JLabel m_size;
 	private final JLabel m_hdfsPath;
+	private final JLabel m_blockSize;
 	
 	DataSetInfoPanel() {
 		GridBagLayout layout = new GridBagLayout();
@@ -36,13 +37,14 @@ class DataSetInfoPanel extends JPanel {
 				Double.MIN_VALUE };
 		setLayout(layout);
 		
-		m_id = addRow("Id", 0);
-		m_type = addRow("Type", 1);
-		m_geomCol = addRow("Geometry", 2);
-		m_srid = addRow("SRID", 3);
-		m_count = addRow("Count", 4);
-		m_size = addRow("Size", 5);
-		m_hdfsPath = addRow("HDFS Path", 6);
+		m_id = addRow("Id:", 0);
+		m_type = addRow("Type:", 1);
+		m_geomCol = addRow("Geometry:", 2);
+		m_srid = addRow("SRID:", 3);
+		m_count = addRow("Count:", 4);
+		m_size = addRow("Size:", 5);
+		m_hdfsPath = addRow("HDFS Path:", 6);
+		m_blockSize = addRow("Block-size:", 7);
 	}
 
 	void update(DataSet ds) {
@@ -66,6 +68,7 @@ class DataSetInfoPanel extends JPanel {
 		m_count.setText(String.format("%,d", ds.getRecordCount()));
 		m_size.setText(UnitUtils.toByteSizeString(ds.length()));
 		m_hdfsPath.setText(ds.getHdfsPath());
+		m_blockSize.setText(UnitUtils.toByteSizeString(ds.getBlockSize()));
 	}
 
 	void update(String dirPath) {
@@ -76,6 +79,7 @@ class DataSetInfoPanel extends JPanel {
 		m_count.setText("");
 		m_size.setText("");
 		m_hdfsPath.setText("");
+		m_blockSize.setText("");
 	}
 
 	void clear() {
@@ -86,6 +90,7 @@ class DataSetInfoPanel extends JPanel {
 		m_count.setText("");
 		m_size.setText("");
 		m_hdfsPath.setText("");
+		m_blockSize.setText("");
 	}
 	
 	private JLabel addRow(String title, int row) {
