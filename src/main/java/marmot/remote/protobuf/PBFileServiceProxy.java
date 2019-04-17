@@ -13,6 +13,7 @@ import io.grpc.stub.CallStreamObserver;
 import marmot.proto.service.CopyToHdfsFileRequest;
 import marmot.proto.service.CopyToHdfsFileRequest.HeaderProto;
 import marmot.proto.service.FileServiceGrpc;
+import marmot.proto.service.FileServiceGrpc.FileServiceBlockingStub;
 import marmot.proto.service.FileServiceGrpc.FileServiceStub;
 import marmot.proto.service.VoidResponse;
 import marmot.protobuf.PBUtils;
@@ -32,10 +33,23 @@ public class PBFileServiceProxy {
 	
 //	private final PBMarmotClient m_marmot;
 	private final FileServiceStub m_stub;
+	private final FileServiceBlockingStub m_blockingStub;
 
 	PBFileServiceProxy(PBMarmotClient marmot, ManagedChannel channel) {
 //		m_marmot = marmot;
+		m_blockingStub = FileServiceGrpc.newBlockingStub(channel);
 		m_stub = FileServiceGrpc.newStub(channel);
+	}
+
+	public void deleteHdfsFile(String path) throws IOException {
+		try {
+			VoidResponse resp = m_blockingStub.deleteHdfsFile(PBUtils.toStringProto(path));
+			PBUtils.handle(resp);
+		}
+		catch ( Exception e ) {
+			Throwables.throwIfInstanceOf(Throwables.unwrapThrowable(e), IOException.class);
+			throw Throwables.toRuntimeException(e);
+		}
 	}
 
 	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, FOption<Long> blockSize)

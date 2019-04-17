@@ -78,6 +78,11 @@ public class PBMarmotClient implements MarmotRuntime {
 		m_fileService.copyToHdfsFile(path, blocks, blockSize);
 	}
 
+	@Override
+	public void deleteHdfsFile(String path) throws IOException {
+		m_fileService.deleteHdfsFile(path);
+	}
+
 	/////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////
 	//	DataSet relateds
