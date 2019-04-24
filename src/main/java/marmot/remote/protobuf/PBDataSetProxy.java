@@ -6,7 +6,6 @@ import java.util.Objects;
 
 import com.vividsolutions.jts.geom.Envelope;
 
-import marmot.ClusterNotFoundException;
 import marmot.DataSet;
 import marmot.DataSetType;
 import marmot.GeometryColumnInfo;
@@ -176,7 +175,7 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public void createThumbnail(int sampleCount) throws ClusterNotFoundException {
+	public void createThumbnail(int sampleCount) throws IndexNotFoundException {
 		m_service.createThumbnail(getId(), sampleCount);
 	}
 
