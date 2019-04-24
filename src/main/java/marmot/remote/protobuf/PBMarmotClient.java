@@ -38,7 +38,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	
 	public static PBMarmotClient connect(String host, int port) throws IOException {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
-													.usePlaintext(true)
+													.usePlaintext()
 													.build();
 		
 		return new PBMarmotClient(channel);
