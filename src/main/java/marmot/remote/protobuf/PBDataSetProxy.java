@@ -20,6 +20,7 @@ import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
+import marmot.rset.PBInputStreamRecordSet;
 import utils.func.FOption;
 
 /**
@@ -159,8 +160,9 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public InputStream readRawSpatialCluster(String quadKey) {
-		return m_service.readRawSpatialCluster(getId(), quadKey);
+	public RecordSet readSpatialCluster(String quadKey) {
+		InputStream is = m_service.readRawSpatialCluster(getId(), quadKey);
+		return PBInputStreamRecordSet.from(is);
 	}
 
 	@Override
