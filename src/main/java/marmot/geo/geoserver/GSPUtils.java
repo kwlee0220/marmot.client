@@ -1,7 +1,6 @@
 package marmot.geo.geoserver;
 
 import java.util.List;
-import java.util.Objects;
 
 import org.geotools.data.Query;
 import org.geotools.factory.CommonFactoryFinder;
@@ -14,6 +13,7 @@ import org.opengis.geometry.BoundingBox;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import utils.Utilities;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -58,7 +58,7 @@ public class GSPUtils {
 	private static final FilterFactory2 FILTER_FACT
 					= CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 	private static Tuple2<FOption<BoundingBox>,FOption<Filter>> parseCql(Filter filter) {
-		Objects.requireNonNull(filter);
+		Utilities.checkNotNullArgument(filter, "filter is null");
 
 		if ( filter instanceof BBOX ) {
 			BoundingBox bbox = ((BBOX)filter).getBounds();

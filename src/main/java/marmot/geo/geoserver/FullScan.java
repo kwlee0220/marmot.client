@@ -2,9 +2,7 @@ package marmot.geo.geoserver;
 
 import static marmot.DataSetOption.FORCE;
 import static marmot.DataSetOption.GEOMETRY;
-import static marmot.optor.geo.SpatialRelation.INTERSECTS;
 
-import java.util.Objects;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -25,6 +23,7 @@ import marmot.RecordSet;
 import marmot.geo.GeoClientUtils;
 import marmot.rset.RecordSets;
 import utils.LoggerSettable;
+import utils.Utilities;
 import utils.func.FOption;
 
 
@@ -46,7 +45,7 @@ class FullScan implements LoggerSettable {
 	}
 	
 	private FullScan(DataSet ds) {
-		Objects.requireNonNull(ds, "DataSet");
+		Utilities.checkNotNullArgument(ds, "DataSet");
 		
 		m_marmot = ds.getMarmotRuntime();
 		m_ds = ds;
@@ -101,7 +100,7 @@ class FullScan implements LoggerSettable {
 		}
 		else if ( m_range != null ) {
 			Geometry key = GeoClientUtils.toPolygon(m_range);
-			builder = builder.query(dsId, INTERSECTS, key);
+			builder = builder.query(dsId, key);
 		}
 		else {
 			builder = builder.load(dsId);
@@ -145,7 +144,7 @@ class FullScan implements LoggerSettable {
 			
 			Plan plan;
 			plan = m_marmot.planBuilder("scan range")
-							.query(m_ds.getId(), INTERSECTS, key)
+							.query(m_ds.getId(), key)
 							.build();
 			DataSet result = m_marmot.createDataSet(rangedDsId, plan, GEOMETRY(gcInfo), FORCE);
 			m_rangedDs = FOption.of(result);

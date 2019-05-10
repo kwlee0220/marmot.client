@@ -68,7 +68,7 @@ public class TagGeometry {
 											outputGeomCol, outputGeomCol);
 		Plan plan = marmot.planBuilder("tag_geometry")
 								.load(dsId)
-								.join(joinCol, refDsId, refCol, outputCols, opts)
+								.hashJoin(joinCol, refDsId, refCol, outputCols, opts)
 								.store(outDs)
 								.build();
 		

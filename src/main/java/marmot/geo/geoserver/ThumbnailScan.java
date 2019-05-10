@@ -1,7 +1,5 @@
 package marmot.geo.geoserver;
 
-import java.util.Objects;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +9,7 @@ import marmot.DataSet;
 import marmot.InsufficientThumbnailException;
 import marmot.RecordSet;
 import utils.LoggerSettable;
+import utils.Utilities;
 import utils.func.FOption;
 
 /**
@@ -38,7 +37,7 @@ public class ThumbnailScan implements LoggerSettable {
 	}
 	
 	private ThumbnailScan(DataSet ds, Envelope range, long sampleCount) {
-		Objects.requireNonNull(ds, "DataSet");
+		Utilities.checkNotNullArgument(ds, "DataSet");
 		
 		m_ds = ds;
 		m_range = range;

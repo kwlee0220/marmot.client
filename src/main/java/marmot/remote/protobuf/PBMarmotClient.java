@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -22,6 +21,7 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import utils.Utilities;
 import utils.func.FOption;
 
 /**
@@ -104,14 +104,14 @@ public class PBMarmotClient implements MarmotRuntime {
 	
 	@Override
 	public DataSet getDataSet(String dsId) {
-		Objects.requireNonNull(dsId, "dataset id is null");
+		Utilities.checkNotNullArgument(dsId, "dataset id is null");
 		
 		return m_dsService.getDataSet(dsId);
 	}
 
 	@Override
 	public DataSet getDataSetOrNull(String dsId) {
-		Objects.requireNonNull(dsId, "dataset id is null");
+		Utilities.checkNotNullArgument(dsId, "dataset id is null");
 		
 		return m_dsService.getDataSetOrNull(dsId);
 	}
@@ -123,7 +123,7 @@ public class PBMarmotClient implements MarmotRuntime {
 
 	@Override
 	public List<DataSet> getDataSetAllInDir(String folder, boolean recursive) {
-		Objects.requireNonNull(folder, "dataset folder is null");
+		Utilities.checkNotNullArgument(folder, "dataset folder is null");
 		
 		return m_dsService.getDataSetAllInDir(folder, recursive);
 	}

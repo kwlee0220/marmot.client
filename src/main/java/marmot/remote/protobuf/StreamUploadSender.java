@@ -1,7 +1,6 @@
 package marmot.remote.protobuf;
 
 import java.io.InputStream;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -18,6 +17,7 @@ import marmot.protobuf.PBUtils;
 import net.jcip.annotations.GuardedBy;
 import utils.Guard;
 import utils.Throwables;
+import utils.Utilities;
 import utils.async.AbstractThreadedExecution;
 import utils.io.IOUtils;
 
@@ -43,14 +43,14 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 	abstract protected ByteString getHeader() throws Exception;
 	
 	protected StreamUploadSender(InputStream stream) {
-		Objects.requireNonNull(stream, "Stream to upload");
+		Utilities.checkNotNullArgument(stream, "Stream to upload");
 		
 		m_stream = stream;
 		setLogger(LoggerFactory.getLogger(StreamUploadSender.class));
 	}
 	
 	void setChannel(StreamObserver<UpChunkRequest> channel) {
-		Objects.requireNonNull(channel, "Upload stream channel");
+		Utilities.checkNotNullArgument(channel, "Upload stream channel");
 
 		m_channel = channel;
 	}

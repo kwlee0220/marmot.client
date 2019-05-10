@@ -1,7 +1,5 @@
 package marmot.command;
 
-import static marmot.optor.geo.SpatialRelation.INTERSECTS;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -86,13 +84,13 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		
 		if ( m_params.m_rangeWkt != null ) {
 			Geometry key = GeoClientUtils.fromWKT(m_params.m_rangeWkt);
-			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, key);
 		}
 		else if ( m_params.m_rangePath != null ) {
 			File wktFile = new File(m_params.m_rangePath);
 			String wkt = IOUtils.toString(wktFile);
 			Geometry key = GeoClientUtils.fromWKT(wkt);
-			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, key);
 		}
 		else if ( m_params.m_rangeRect != null ) {
 			double[] coords = CSV.parseCsv(m_params.m_rangeRect)
@@ -101,12 +99,12 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			Envelope range = new Envelope(new Coordinate(coords[0], coords[1]),
 											new Coordinate(coords[2], coords[3]));
 			Geometry key = GeoClientUtils.toPolygon(range);
-			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, key);
 		}
 		else if ( m_params.m_rangeQuadKey != null ) {
 			Envelope range = MapTile.fromQuadKey(m_params.m_rangeQuadKey).getBounds();
 			Geometry key = GeoClientUtils.toPolygon(range);
-			return builder.query(m_params.m_inputDsId, INTERSECTS, key);
+			return builder.query(m_params.m_inputDsId, key);
 		}
 		else {
 			return builder.load(m_params.m_inputDsId);

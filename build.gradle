@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'nebula-aggregate-javadocs'	// gradle aggregateJavadocs
  
 group = 'etri'
 version = '5.12.02'
@@ -15,6 +16,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+		classpath 'com.netflix.nebula:gradle-aggregate-javadocs-plugin:2.2.+'
 	}
 }
 

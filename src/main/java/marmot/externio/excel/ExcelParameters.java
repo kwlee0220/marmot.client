@@ -1,13 +1,12 @@
 package marmot.externio.excel;
 
 import java.util.List;
-import java.util.Objects;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import picocli.CommandLine.Option;
 import utils.CSV;
-import utils.CSV;
+import utils.Utilities;
 import utils.func.FOption;
 
 /**
@@ -47,7 +46,7 @@ public class ExcelParameters {
 
 	@Option(names={"-point_col"}, paramLabel="point_columns", description="X,Y fields for point")
 	public ExcelParameters pointColumn(String pointCols) {
-		Objects.requireNonNull(pointCols, "Point columns are null");
+		Utilities.checkNotNullArgument(pointCols, "Point columns are null");
 		
 		m_pointCols = FOption.ofNullable(pointCols);
 		return this;

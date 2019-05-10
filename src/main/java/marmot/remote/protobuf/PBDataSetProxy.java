@@ -2,7 +2,6 @@ package marmot.remote.protobuf;
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Objects;
 
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -21,6 +20,7 @@ import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.rset.PBInputStreamRecordSet;
+import utils.Utilities;
 import utils.func.FOption;
 
 /**
@@ -125,7 +125,7 @@ public class PBDataSetProxy implements DataSet {
 
 	@Override
 	public long append(RecordSet rset) {
-		Objects.requireNonNull(rset, "RecordSet is null");
+		Utilities.checkNotNullArgument(rset, "RecordSet is null");
 		
 		long count = m_service.appendRecordSet(getId(), rset, FOption.empty());
 		m_info = m_service.getDataSet(getId()).m_info;
@@ -135,8 +135,8 @@ public class PBDataSetProxy implements DataSet {
 
 	@Override
 	public long append(RecordSet rset, Plan plan) {
-		Objects.requireNonNull(rset, "RecordSet is null");
-		Objects.requireNonNull(plan, "Plan is null");
+		Utilities.checkNotNullArgument(rset, "RecordSet is null");
+		Utilities.checkNotNullArgument(plan, "Plan is null");
 		
 		long count = m_service.appendRecordSet(getId(), rset, FOption.of(plan));
 		m_info = m_service.getDataSet(getId()).m_info;

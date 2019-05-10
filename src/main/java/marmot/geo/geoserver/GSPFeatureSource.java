@@ -30,7 +30,6 @@ import marmot.geo.GeoClientUtils;
 import marmot.geo.geotools.MarmotFeatureIterator;
 import marmot.geo.geotools.SimpleFeatures;
 import marmot.optor.AggregateFunction;
-import marmot.optor.geo.SpatialRelation;
 import utils.Throwables;
 import utils.func.FOption;
 
@@ -156,7 +155,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		
 		if ( bbox != null ) {
 			Geometry key = GeoClientUtils.toPolygon(bbox);
-			builder.query(m_dsId, SpatialRelation.INTERSECTS, key);
+			builder.query(m_dsId, key);
 		}
 		else {
 			builder.load(m_dsId);

@@ -3,7 +3,6 @@ package marmot.externio.excel;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import marmot.RecordSchema;
 import marmot.RecordSetException;
 import marmot.rset.ConcatedRecordSet;
+import utils.Utilities;
 import utils.io.FileUtils;
 import utils.stream.FStream;
 
@@ -29,7 +29,7 @@ public class MultiFileExcelRecordSet extends ConcatedRecordSet {
 	private final RecordSchema m_schema;
 	
 	public MultiFileExcelRecordSet(File start, ExcelParameters params) {
-		Objects.requireNonNull(params);
+		Utilities.checkNotNullArgument(params, "params is null");
 		
 		m_start = start;
 		setLogger(s_logger);

@@ -22,6 +22,7 @@ import marmot.MarmotRuntime;
 import marmot.RecordSet;
 import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
+import utils.Utilities;
 import utils.fostore.FileObjectExistsException;
 import utils.fostore.FileObjectHandler;
 import utils.fostore.FileObjectStore;
@@ -110,8 +111,8 @@ public class DataSetPartitionCache {
 		private final String m_quadKey;
 		
 		PartitionKey(String dsId, String quadKey) {
-			Objects.requireNonNull(dsId, "DataSet id");
-			Objects.requireNonNull(quadKey, "quad-key");
+			Utilities.checkNotNullArgument(dsId, "DataSet id");
+			Utilities.checkNotNullArgument(quadKey, "quad-key");
 			
 			m_dsId = dsId;
 			m_quadKey = quadKey;
@@ -152,15 +153,15 @@ public class DataSetPartitionCache {
 
 		@Override
 		public InputStream readFileObject(File file) throws IOException {
-			Objects.requireNonNull(file, "FileStore file");
+			Utilities.checkNotNullArgument(file, "FileStore file");
 			
 			return new FileInputStream(file);
 		}
 
 		@Override
 		public void writeFileObject(InputStream is, File file) throws IOException {
-			Objects.requireNonNull(is, "InputStream");
-			Objects.requireNonNull(file, "FileStore file");
+			Utilities.checkNotNullArgument(is, "InputStream");
+			Utilities.checkNotNullArgument(file, "FileStore file");
 			
 			IOUtils.toFile(is, file);
 		}

@@ -280,7 +280,7 @@ abstract class PlanBasedMarmotCommand {
 			JoinOptions opts = new JoinOptions().joinType(joinType);
 			
 			if ( m_opParams.m_joinOutCols != null ) {
-				return builder.join(joinCols, paramDsId, paramJoinCols,
+				return builder.hashJoin(joinCols, paramDsId, paramJoinCols,
 									m_opParams.m_joinOutCols, opts);
 			}
 			else {

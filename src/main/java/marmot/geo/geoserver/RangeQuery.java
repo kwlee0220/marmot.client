@@ -1,7 +1,5 @@
 package marmot.geo.geoserver;
 
-import java.util.Objects;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +9,7 @@ import com.vividsolutions.jts.geom.Envelope;
 import marmot.DataSet;
 import marmot.RecordSet;
 import utils.Throwables;
+import utils.Utilities;
 import utils.func.FOption;
 
 /**
@@ -35,9 +34,9 @@ class RangeQuery {
 	
 	private RangeQuery(DataSet ds, Envelope range, DataSetPartitionCache cache,
 						int maxLocalCacheCost) {
-		Objects.requireNonNull(ds, "DataSet");
-		Objects.requireNonNull(range, "query range");
-		Objects.requireNonNull(cache, "DataSetPartitionCache");
+		Utilities.checkNotNullArgument(ds, "DataSet");
+		Utilities.checkNotNullArgument(range, "query range");
+		Utilities.checkNotNullArgument(cache, "DataSetPartitionCache");
 		
 		m_ds = ds;
 		m_dsId = ds.getId();

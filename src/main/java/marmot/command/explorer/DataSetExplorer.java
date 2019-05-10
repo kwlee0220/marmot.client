@@ -92,6 +92,8 @@ public class DataSetExplorer extends JFrame {
 
 	/**
 	 * Create the frame.
+	 * 
+	 * @param marmot	{@link MarmotRuntime} 객체.
 	 */
 	public DataSetExplorer(MarmotRuntime marmot) {
 		m_marmot = marmot;

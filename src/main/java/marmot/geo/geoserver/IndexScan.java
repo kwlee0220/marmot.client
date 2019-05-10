@@ -1,10 +1,7 @@
 package marmot.geo.geoserver;
 
-import static marmot.optor.geo.SpatialRelation.INTERSECTS;
-
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -24,6 +21,7 @@ import marmot.RecordSet;
 import marmot.geo.GeoClientUtils;
 import marmot.support.RangedClusterEstimate;
 import utils.StopWatch;
+import utils.Utilities;
 import utils.async.AbstractThreadedExecution;
 import utils.async.CancellableWork;
 import utils.async.StartableExecution;
@@ -61,8 +59,8 @@ class IndexScan {
 	
 	private IndexScan(DataSet ds, Envelope range, DataSetPartitionCache cache,
 						int maxLocalCacheCost) {
-		Objects.requireNonNull(ds, "DataSet");
-		Objects.requireNonNull(range, "query ranage");
+		Utilities.checkNotNullArgument(ds, "DataSet");
+		Utilities.checkNotNullArgument(range, "query ranage");
 		
 		m_marmot = ds.getMarmotRuntime();
 		m_ds = ds;
@@ -164,14 +162,14 @@ class IndexScan {
 		String planName = String.format("index_scan(ratio=%.3f)", m_sampleRatio);
 		if ( m_sampleRatio >= 1 ) {
 			Plan plan = m_marmot.planBuilder(planName)
-								.query(m_dsId, INTERSECTS, m_range)
+								.query(m_dsId, m_range)
 								.take(m_sampleCount.get())
 								.build();
 			return m_marmot.executeLocally(plan);
 		}
 		else {
 			Plan plan = m_marmot.planBuilder(planName)
-								.query(m_dsId, INTERSECTS, m_range)
+								.query(m_dsId, m_range)
 								.sample(m_sampleRatio)
 								.take(m_sampleCount.get())
 								.build();
