@@ -26,9 +26,9 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	
 	protected abstract FOption<Plan> loadMetaPlan();
 	
-	public static ImportExcel from(File file, ExcelParameters csvParams,
+	public static ImportExcel from(File file, ExcelParameters excelParams,
 									ImportParameters importParams) {
-		return new ImportExcelFileIntoDataSet(file, csvParams, importParams);
+		return new ImportExcelFileIntoDataSet(file, excelParams, importParams);
 	}
 	
 	public static ImportExcel from(InputStream is, ExcelParameters csvParams,
@@ -73,7 +73,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	}
 
 	private FOption<Plan> getToPointPlan() {
-		if ( !m_excelParams.pointColumn().isPresent()
+		if ( !m_excelParams.pointColumns().isPresent()
 			|| !m_params.getGeometryColumnInfo().isPresent() ) {
 			return FOption.empty();
 		}
@@ -81,15 +81,15 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		PlanBuilder builder = new PlanBuilder("import_csv");
 		
 		GeometryColumnInfo info = m_params.getGeometryColumnInfo().get();
-		Tuple2<String,String> ptCols = m_excelParams.pointColumn().get();
+		Tuple2<String,String> ptCols = m_excelParams.pointColumns().get();
 		builder = builder.toPoint(ptCols._1, ptCols._2, info.name());
 		
 		String prjExpr = String.format("%s,*-{%s,%s,%s}", info.name(), info.name(),
 															ptCols._1, ptCols._2);
 		builder = builder.project(prjExpr);
 			
-		if ( m_excelParams.excelSrid().isPresent() ) {
-			String srcSrid = m_excelParams.excelSrid().get();
+		if ( m_excelParams.srid().isPresent() ) {
+			String srcSrid = m_excelParams.srid().get();
 			if ( !srcSrid.equals(info.srid()) ) {
 				builder = builder.transformCrs(info.name(), srcSrid, info.srid());
 			}

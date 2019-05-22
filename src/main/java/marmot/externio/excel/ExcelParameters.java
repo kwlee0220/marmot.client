@@ -45,14 +45,14 @@ public class ExcelParameters {
 	}
 
 	@Option(names={"-point_col"}, paramLabel="point_columns", description="X,Y fields for point")
-	public ExcelParameters pointColumn(String pointCols) {
+	public ExcelParameters pointColumns(String pointCols) {
 		Utilities.checkNotNullArgument(pointCols, "Point columns are null");
 		
 		m_pointCols = FOption.ofNullable(pointCols);
 		return this;
 	}
 	
-	public FOption<Tuple2<String,String>> pointColumn() {
+	public FOption<Tuple2<String,String>> pointColumns() {
 		return m_pointCols.map(cols -> {
 			List<String> parts = CSV.parseCsv(cols, ',', '\\').toList();
 			return Tuple.of(parts.get(0), parts.get(1));
@@ -60,19 +60,19 @@ public class ExcelParameters {
 	}
 
 	@Option(names={"-excel_srid"}, paramLabel="srid", description="EPSG code for input Excel file")
-	public ExcelParameters excelSrid(String srid) {
+	public ExcelParameters srid(String srid) {
 		m_excelSrid = FOption.ofNullable(srid);
 		return this;
 	}
 	
-	public FOption<String> excelSrid() {
+	public FOption<String> srid() {
 		return m_excelSrid;
 	}
 	
 	@Override
 	public String toString() {
 		String headerFirst = m_headerFirst ? ", header" : "";
-		String ptStr = pointColumn().map(xy -> String.format(", POINT(%s,%s)", xy._1, xy._2))
+		String ptStr = pointColumns().map(xy -> String.format(", POINT(%s,%s)", xy._1, xy._2))
 									.getOrElse("");
 		String srcSrid = m_excelSrid.map(s -> String.format(", csv_srid=%s", s))
 									.getOrElse("");

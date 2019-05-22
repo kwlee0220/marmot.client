@@ -7,6 +7,7 @@ import com.vividsolutions.jts.io.ParseException;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
+import marmot.plan.SpatialJoinOptions;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
@@ -57,7 +58,8 @@ public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
 												m_params.m_outCols);
 		}
 		else {
-			return builder.loadSpatialIndexJoin(m_params.m_leftDsId, m_params.m_rightDsId);
+			return builder.loadSpatialIndexJoin(m_params.m_leftDsId, m_params.m_rightDsId,
+												SpatialJoinOptions.create());
 		}
 	}
 	

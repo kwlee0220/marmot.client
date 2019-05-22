@@ -28,7 +28,7 @@ import marmot.optor.AggregateFunction;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
 import marmot.optor.geo.SpatialRelation;
-import marmot.plan.SpatialJoinOption;
+import marmot.plan.SpatialJoinOptions;
 import marmot.proto.optor.OperatorProto;
 import marmot.proto.optor.StoreIntoDataSetProto;
 import picocli.CommandLine.Mixin;
@@ -83,7 +83,7 @@ abstract class PlanBasedMarmotCommand {
 			
 			m_storeParams.getBlockSize()
 						.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
-			m_storeParams.getCompress()
+			m_storeParams.getCompression()
 						.filter(f -> f)
 						.ifPresent(f -> optList.add(DataSetOption.COMPRESS));
 			
@@ -133,7 +133,7 @@ abstract class PlanBasedMarmotCommand {
 			m_storeParams.getBlockSize()
 						.map(DataSetOption::BLOCK_SIZE)
 						.ifPresent(optList::add);
-			m_storeParams.getCompress()
+			m_storeParams.getCompression()
 						.ifPresent(flag -> optList.add(DataSetOption.COMPRESS));
 			
 			DataSetOption[] opts = Iterables.toArray(optList, DataSetOption.class);
@@ -232,22 +232,12 @@ abstract class PlanBasedMarmotCommand {
 		String outCols = m_opParams.m_joinOutCols;
 		String joinType = FOption.ofNullable(m_opParams.m_joinType).getOrElse("inner");
 		
-		SpatialJoinOption[] opts = parseSpatialJoinOption();
+		SpatialJoinOptions opts = parseSpatialJoinOptions();
 		switch ( joinType ) {
 			case "inner":
-				if ( outCols != null ) {
-					return builder.spatialJoin(joinCols, paramDsId, outCols, opts);
-				}
-				else {
-					return builder.spatialJoin(joinCols, paramDsId, opts);
-				}
+				return builder.spatialJoin(joinCols, paramDsId, opts);
 			case "left_outer":
-				if ( outCols != null ) {
-					return builder.spatialOuterJoin(joinCols, paramDsId, outCols, opts);
-				}
-				else {
-					return builder.spatialOuterJoin(joinCols, paramDsId, opts);
-				}
+				return builder.spatialOuterJoin(joinCols, paramDsId, opts);
 			case "semi":
 				return builder.spatialSemiJoin(joinCols, paramDsId, opts);
 			case "aggregate":
@@ -317,7 +307,12 @@ abstract class PlanBasedMarmotCommand {
 		}
 	}
 	
-	private SpatialJoinOption[] parseSpatialJoinOption() {
+	private SpatialJoinOptions parseSpatialJoinOptions() {
+		SpatialJoinOptions opts = SpatialJoinOptions.create();
+		if ( m_opParams.m_joinOutCols != null ) {
+			opts.outputColumns(m_opParams.m_joinOutCols);
+		}
+		
 		SpatialRelation rel = FOption.ofNullable(m_opParams.m_joinExpr)
 									.map(String::toLowerCase)
 									.map(SpatialRelation::parse)
@@ -325,10 +320,13 @@ abstract class PlanBasedMarmotCommand {
 		switch ( rel.getCode() ) {
 			case CODE_INTERSECTS:
 			case CODE_WITHIN_DISTANCE:
-				return new SpatialJoinOption[] {SpatialJoinOption.JOIN_EXPR(rel)};
+				opts.joinExpr(rel);
+				break;
 			default:
 				throw new IllegalArgumentException("unknown spatial_join_expression: " + rel);
 		}
+		
+		return opts;
 	}
 	
 	private AggregateFunction[] parseAggregate() {
