@@ -3,6 +3,8 @@ package marmot.command;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
 import io.vavr.control.Option;
@@ -88,5 +90,9 @@ public class MarmotClientCommands {
 									.getOrElse("log4j.properties");
 		PropertyConfigurator.configure(configFileName);
 //		LogManager.getRootLogger().setLevel(Level.OFF);
+	}
+	
+	public static void disableLog4j() {
+		LogManager.getRootLogger().setLevel(Level.OFF);
 	}
 }
