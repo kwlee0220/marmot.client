@@ -1,7 +1,5 @@
 package marmot.command;
 
-import static marmot.DataSetOption.FORCE;
-import static marmot.DataSetOption.GEOMETRY;
 import static marmot.optor.AggregateFunction.AVG;
 import static marmot.optor.AggregateFunction.CONVEX_HULL;
 import static marmot.optor.AggregateFunction.COUNT;
@@ -17,13 +15,11 @@ import java.util.List;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.PlanBuilder.GroupByPlanBuilder;
-import marmot.RecordSchema;
 import marmot.optor.AggregateFunction;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
@@ -72,21 +68,6 @@ abstract class PlanBasedMarmotCommand {
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( !m_storeParams.getAppend() ) {
-			List<DataSetOption> optList = Lists.newArrayList();
-			
-			m_storeParams.getGeometryColumnInfo()
-						.ifPresent(gcInfo -> optList.add(DataSetOption.GEOMETRY(gcInfo)));
-			
-			if ( m_storeParams.getForce() ) {
-				optList.add(DataSetOption.FORCE);
-			}
-			
-			m_storeParams.getBlockSize()
-						.ifPresent(blkSz -> optList.add(DataSetOption.BLOCK_SIZE(blkSz)));
-			m_storeParams.getCompression()
-						.filter(f -> f)
-						.ifPresent(f -> optList.add(DataSetOption.COMPRESS));
-			
 			String fromPlanDsId = getStoreTargetDataSetId(plan).getOrNull();
 			if ( outputDsId == null && fromPlanDsId == null ) {
 				throw new IllegalArgumentException("result dataset id is messing");
@@ -94,8 +75,8 @@ abstract class PlanBasedMarmotCommand {
 			else if ( outputDsId == null ) {
 				outputDsId = fromPlanDsId;
 			}
-
-			m_marmot.createDataSet(outputDsId, plan, Iterables.toArray(optList, DataSetOption.class));
+			
+			m_marmot.createDataSet(outputDsId, plan, m_storeParams.toOptions());
 		}
 		else {
 			plan = adjustPlanForStore(outputDsId, plan);
@@ -117,27 +98,7 @@ abstract class PlanBasedMarmotCommand {
 	
 	protected void createDataSet(String outDsId, Plan plan) throws Exception {
 		if ( !m_storeParams.getAppend() ) {
-			List<DataSetOption> optList = Lists.newArrayList();
-			
-			if ( m_gcInfo != null ) {
-				RecordSchema outSchema = m_marmot.getOutputRecordSchema(plan);
-				if ( outSchema.existsColumn(m_gcInfo.name()) ) {
-					optList.add(GEOMETRY(m_gcInfo));
-				}
-			}
-			
-			if ( m_storeParams.getForce() ) {
-				optList.add(FORCE);
-			}
-			
-			m_storeParams.getBlockSize()
-						.map(DataSetOption::BLOCK_SIZE)
-						.ifPresent(optList::add);
-			m_storeParams.getCompression()
-						.ifPresent(flag -> optList.add(DataSetOption.COMPRESS));
-			
-			DataSetOption[] opts = Iterables.toArray(optList, DataSetOption.class);
-			m_marmot.createDataSet(outDsId, plan, opts);
+			m_marmot.createDataSet(outDsId, plan, m_storeParams.toOptions());
 		}
 		else {
 			m_marmot.execute(plan);

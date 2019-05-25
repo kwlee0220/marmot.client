@@ -8,9 +8,9 @@ import org.apache.log4j.PropertyConfigurator;
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.DataSet;
-import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
+import marmot.StoreDataSetOptions;
 import marmot.command.MarmotClientCommands;
 import marmot.geo.GeoClientUtils;
 import marmot.optor.AggregateFunction;
@@ -97,7 +97,7 @@ public class SquareGridAnalysis {
 			Plan plan;
 			plan = marmot.planBuilder(planName)
 						.load(input)
-						.assignSquareGridCell("the_geom", new SquareGrid(bounds, cellSize))
+						.assignGridCell("the_geom", new SquareGrid(bounds, cellSize), false)
 						.intersection("the_geom", "cell_geom", "__overlap")
 						.expand("__ratio:double",
 								"__ratio = (ST_Area(__overlap) /  ST_Area(the_geom))")
@@ -111,8 +111,8 @@ public class SquareGridAnalysis {
 						.build();
 			GeometryColumnInfo gcInfo = new GeometryColumnInfo("the_geom",
 															ds.getGeometryColumnInfo().srid());
-			DataSet result = marmot.createDataSet(output, plan, DataSetOption.GEOMETRY(gcInfo),
-													DataSetOption.FORCE);
+			DataSet result = marmot.createDataSet(output, plan,
+								StoreDataSetOptions.create().geometryColumnInfo(gcInfo).force(true));
 			System.out.println("elapsed time: " + watch.stopAndGetElpasedTimeString());
 //			DataSet result = marmot.getDataSet("tmp/anyang/grid_gas");
 			

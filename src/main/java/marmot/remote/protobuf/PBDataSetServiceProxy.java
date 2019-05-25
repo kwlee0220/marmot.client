@@ -2,7 +2,6 @@ package marmot.remote.protobuf;
 
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -15,7 +14,6 @@ import io.grpc.stub.StreamObserver;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
-import marmot.DataSetOption;
 import marmot.DataSetType;
 import marmot.ExecutePlanOption;
 import marmot.GeometryColumnInfo;
@@ -23,6 +21,7 @@ import marmot.Plan;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.SpatialClusterInfo;
+import marmot.StoreDataSetOptions;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
@@ -36,7 +35,6 @@ import marmot.proto.service.CreateDataSetRequest;
 import marmot.proto.service.CreateKafkaTopicRequest;
 import marmot.proto.service.CreateThumbnailRequest;
 import marmot.proto.service.DataSetInfoResponse;
-import marmot.proto.service.DataSetOptionsProto;
 import marmot.proto.service.DataSetServiceGrpc;
 import marmot.proto.service.DataSetServiceGrpc.DataSetServiceBlockingStub;
 import marmot.proto.service.DataSetServiceGrpc.DataSetServiceStub;
@@ -84,33 +82,25 @@ public class PBDataSetServiceProxy {
 		return m_marmot;
 	}
 	
-	public DataSet createDataSet(String dsId, RecordSchema schema, DataSetOption... opts)
+	public DataSet createDataSet(String dsId, RecordSchema schema, StoreDataSetOptions opts)
 			throws DataSetExistsException {
-		CreateDataSetRequest.Builder builder = CreateDataSetRequest.newBuilder()
-																.setId(dsId)
-																.setRecordSchema(schema.toProto());
-		if ( opts.length > 0 ) {
-			DataSetOptionsProto optsProto = DataSetOption.toProto(Arrays.asList(opts));
-			builder.setOptions(optsProto);
-		}
-		CreateDataSetRequest req = builder.build();
-		
-		return toDataSet(m_dsBlockingStub.createDataSet(req));
+		CreateDataSetRequest proto  = CreateDataSetRequest.newBuilder()
+															.setId(dsId)
+															.setRecordSchema(schema.toProto())
+															.setOptions(opts.toProto())
+															.build();
+		return toDataSet(m_dsBlockingStub.createDataSet(proto));
 	}
 	
 	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOption[] execOpts,
-								DataSetOption... opts) throws DataSetExistsException {
+								StoreDataSetOptions opts) throws DataSetExistsException {
 		ExecutePlanRequest execPlan = PBPlanExecutionServiceProxy.toExecutePlanRequest(plan, execOpts);
-		CreateDataSetRequest.Builder builder = CreateDataSetRequest.newBuilder()
+		CreateDataSetRequest proto = CreateDataSetRequest.newBuilder()
 														.setId(dsId)
-														.setPlanExec(execPlan);
-		if ( opts.length > 0 ) {
-			DataSetOptionsProto optsProto = DataSetOption.toProto(Arrays.asList(opts));
-			builder.setOptions(optsProto);
-		}
-		CreateDataSetRequest req = builder.build();
-		
-		return toDataSet(m_dsBlockingStub.createDataSet(req));
+														.setPlanExec(execPlan)
+														.setOptions(opts.toProto())
+														.build();
+		return toDataSet(m_dsBlockingStub.createDataSet(proto));
 	}
 
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,

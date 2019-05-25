@@ -4,9 +4,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
 import marmot.DataSet;
-import marmot.DataSetOption;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
+import marmot.StoreDataSetOptions;
 import marmot.command.MarmotClientCommands;
 import marmot.optor.JoinOptions;
 import marmot.remote.protobuf.PBMarmotClient;
@@ -73,6 +73,6 @@ public class TagGeometry {
 								.build();
 		
 		gcInfo = new GeometryColumnInfo(outputGeomCol, gcInfo.srid());
-		marmot.createDataSet(outDs, plan, DataSetOption.GEOMETRY(gcInfo), DataSetOption.FORCE);
+		marmot.createDataSet(outDs, plan, StoreDataSetOptions.create().geometryColumnInfo(gcInfo).force(true));
 	}
 }

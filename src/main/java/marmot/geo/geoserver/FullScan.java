@@ -1,8 +1,5 @@
 package marmot.geo.geoserver;
 
-import static marmot.DataSetOption.FORCE;
-import static marmot.DataSetOption.GEOMETRY;
-
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -20,6 +17,7 @@ import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.RecordSet;
+import marmot.StoreDataSetOptions;
 import marmot.geo.GeoClientUtils;
 import marmot.rset.RecordSets;
 import utils.LoggerSettable;
@@ -146,7 +144,8 @@ class FullScan implements LoggerSettable {
 			plan = m_marmot.planBuilder("scan range")
 							.query(m_ds.getId(), key)
 							.build();
-			DataSet result = m_marmot.createDataSet(rangedDsId, plan, GEOMETRY(gcInfo), FORCE);
+			DataSet result = m_marmot.createDataSet(rangedDsId, plan,
+									StoreDataSetOptions.create().geometryColumnInfo(gcInfo).force(true));
 			m_rangedDs = FOption.of(result);
 			return (double)count / result.getRecordCount();
 		}
