@@ -111,6 +111,17 @@ publishing {
 	}
 }
 
+ext.distDir = "${System.env.HOME}/etc/marmot/marmot.client.dist"
+task distributeBinary(type:Copy) {
+	dependsOn assemble
+	into "${distDir}"
+	from ("${projectDir}") {
+		include 'bin/**'
+		include 'log4j.properties'
+	}
+	from "${buildDir}/libs/${archivesBaseName}-${version}-javadoc.jar"
+}
+
 apply plugin: 'eclipse'
 eclipse {
 	classpath {
