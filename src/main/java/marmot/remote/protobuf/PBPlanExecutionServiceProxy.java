@@ -7,7 +7,7 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
-import marmot.ExecutePlanOption;
+import marmot.ExecutePlanOptions;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSchema;
@@ -65,7 +65,7 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 	
-	public void execute(Plan plan, ExecutePlanOption... opts) {
+	public void execute(Plan plan, ExecutePlanOptions opts) {
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
 		PBUtils.handle(m_blockingStub.execute(req));
 	}
@@ -104,7 +104,7 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 
-	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
+	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOptions opts) {
 		RecordSchema outSchema = getOutputRecordSchema(plan, FOption.empty());
 
 		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
@@ -175,14 +175,14 @@ public class PBPlanExecutionServiceProxy {
 	public void executeModule(String id) {
 		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
 	}
-	
-	static ExecutePlanRequest toExecutePlanRequest(Plan plan, ExecutePlanOption... opts) {
-		ExecutePlanRequest.Builder builder = ExecutePlanRequest.newBuilder()
-																.setPlan(plan.toProto());
-		if ( opts.length > 0 ) {
-			builder.setOptions(ExecutePlanOption.toProto(opts));
-		}
-		
-		return builder.build();
+
+	static ExecutePlanRequest toExecutePlanRequest(Plan plan) {
+		return toExecutePlanRequest(plan, ExecutePlanOptions.create());
+	}
+	static ExecutePlanRequest toExecutePlanRequest(Plan plan, ExecutePlanOptions opts) {
+		return ExecutePlanRequest.newBuilder()
+								.setPlan(plan.toProto())
+								.setOptions(opts.toProto())
+								.build();
 	}
 }

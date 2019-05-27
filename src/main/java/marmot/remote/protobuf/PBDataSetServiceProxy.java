@@ -15,7 +15,7 @@ import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
 import marmot.DataSetType;
-import marmot.ExecutePlanOption;
+import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
 import marmot.RecordSchema;
@@ -92,7 +92,7 @@ public class PBDataSetServiceProxy {
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));
 	}
 	
-	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOption[] execOpts,
+	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts,
 								StoreDataSetOptions opts) throws DataSetExistsException {
 		ExecutePlanRequest execPlan = PBPlanExecutionServiceProxy.toExecutePlanRequest(plan, execOpts);
 		CreateDataSetRequest proto = CreateDataSetRequest.newBuilder()

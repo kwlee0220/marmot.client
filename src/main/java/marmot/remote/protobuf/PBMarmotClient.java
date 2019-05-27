@@ -12,7 +12,7 @@ import io.grpc.ServerBuilder;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetType;
-import marmot.ExecutePlanOption;
+import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -96,7 +96,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 	
 	@Override
-	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOption[] execOpts,
+	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts,
 									StoreDataSetOptions opts)
 		throws DataSetExistsException {
 		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
@@ -199,7 +199,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 	
 	@Override
-	public void execute(Plan plan, ExecutePlanOption... opts) {
+	public void execute(Plan plan, ExecutePlanOptions opts) {
 		m_pexecService.execute(plan, opts);
 	}
 
@@ -214,12 +214,12 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOption... opts) {
+	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOptions opts) {
 		return m_pexecService.executeToRecord(plan, opts);
 	}
 
 	@Override
-	public RecordSet executeToRecordSet(Plan plan, ExecutePlanOption... opts) {
+	public RecordSet executeToRecordSet(Plan plan, ExecutePlanOptions opts) {
 		return m_pexecService.executeToRecordSet(plan);
 	}
 
