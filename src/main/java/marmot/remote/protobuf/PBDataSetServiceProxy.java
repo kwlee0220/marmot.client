@@ -27,6 +27,7 @@ import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.proto.LongProto;
 import marmot.proto.StringProto;
+import marmot.proto.service.AppendIntoDataSetRequest;
 import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.BoolResponse;
@@ -101,6 +102,16 @@ public class PBDataSetServiceProxy {
 														.setOptions(opts.toProto())
 														.build();
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));
+	}
+	
+	public DataSet appendIntoDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts)
+		throws DataSetNotFoundException {
+		ExecutePlanRequest execPlan = PBPlanExecutionServiceProxy.toExecutePlanRequest(plan, execOpts);
+		AppendIntoDataSetRequest proto = AppendIntoDataSetRequest.newBuilder()
+																.setId(dsId)
+																.setPlanExec(execPlan)
+																.build();
+		return toDataSet(m_dsBlockingStub.appendIntoDataSet(proto));
 	}
 
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,

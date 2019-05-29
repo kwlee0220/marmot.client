@@ -11,6 +11,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
+import marmot.DataSetNotFoundException;
 import marmot.DataSetType;
 import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
@@ -100,6 +101,12 @@ public class PBMarmotClient implements MarmotRuntime {
 									StoreDataSetOptions opts)
 		throws DataSetExistsException {
 		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
+	}
+	
+	@Override
+	public DataSet appendIntoDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts)
+		throws DataSetNotFoundException {
+		return m_dsService.appendIntoDataSet(dsId, plan, execOpts);
 	}
 	
 	@Override
