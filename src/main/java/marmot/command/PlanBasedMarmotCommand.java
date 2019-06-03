@@ -4,7 +4,7 @@ import static marmot.optor.AggregateFunction.AVG;
 import static marmot.optor.AggregateFunction.CONVEX_HULL;
 import static marmot.optor.AggregateFunction.COUNT;
 import static marmot.optor.AggregateFunction.ENVELOPE;
-import static marmot.optor.AggregateFunction.GEOM_UNION;
+import static marmot.optor.AggregateFunction.UNION_GEOM;
 import static marmot.optor.AggregateFunction.MAX;
 import static marmot.optor.AggregateFunction.MIN;
 import static marmot.optor.AggregateFunction.STDDEV;
@@ -19,11 +19,11 @@ import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
-import marmot.PlanBuilder.GroupByPlanBuilder;
 import marmot.optor.AggregateFunction;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
 import marmot.optor.geo.SpatialRelation;
+import marmot.plan.Group;
 import marmot.plan.SpatialJoinOptions;
 import marmot.proto.optor.OperatorProto;
 import marmot.proto.optor.StoreIntoDataSetProto;
@@ -247,18 +247,17 @@ abstract class PlanBasedMarmotCommand {
 		AggregateFunction[] aggrs = parseAggregate();
 
 		if ( m_opParams.m_groupBy != null ) {
-			List<String> parts = CSV.parseCsv(m_opParams.m_groupBy, ':', '\\').toList();
-			
-			GroupByPlanBuilder grpBuilder = builder.groupBy(parts.get(0));
-			if ( parts.size() > 1 ) {
-				grpBuilder = grpBuilder.withTags(parts.get(1));
-			}
-			
 			if ( aggrs == null ) {
 				throw new IllegalArgumentException("no aggregation for GroupBy");
 			}
 
-			return grpBuilder.aggregate(aggrs);
+			List<String> parts = CSV.parseCsv(m_opParams.m_groupBy, ':', '\\').toList();
+			Group group = Group.ofKeys(parts.get(0));
+			if ( parts.size() > 1 ) {
+				group.tags(parts.get(1));
+			}
+
+			return builder.aggregateByGroup(group, aggrs);
 		}
 		else if ( aggrs != null ) {
 			return builder.aggregate(aggrs);
@@ -362,7 +361,7 @@ abstract class PlanBasedMarmotCommand {
 					break;
 				case "GEOM_UNION":
 					if ( aggrSpec.size() == 2 ) {
-						aggr = GEOM_UNION(aggrSpec.get(1));
+						aggr = UNION_GEOM(aggrSpec.get(1));
 					}
 					else {
 						throw new IllegalArgumentException("GEOM_UNION: target column is not specified");

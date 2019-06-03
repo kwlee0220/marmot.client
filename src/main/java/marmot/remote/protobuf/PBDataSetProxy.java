@@ -109,6 +109,11 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
+	public DataSet updateGeometryColumnInfo(FOption<GeometryColumnInfo> gcInfo) {
+		return m_service.updateGeometryColumnInfo(getId(), gcInfo);
+	}
+
+	@Override
 	public long length() {
 		return m_service.getDataSetLength(getId());
 	}

@@ -15,6 +15,7 @@ import marmot.command.MarmotClientCommands;
 import marmot.geo.GeoClientUtils;
 import marmot.optor.AggregateFunction;
 import marmot.optor.geo.SquareGrid;
+import marmot.plan.Group;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CSV;
 import utils.CommandLine;
@@ -102,9 +103,7 @@ public class SquareGridAnalysis {
 						.expand("__ratio:double",
 								"__ratio = (ST_Area(__overlap) /  ST_Area(the_geom))")
 						.update(updateExpr)
-						.groupBy("cell_id")
-							.withTags("cell_geom,cell_pos")
-							.aggregate(aggrs)
+						.aggregateByGroup(Group.ofKeys("cell_id").withTags("cell_geom,cell_pos"), aggrs)
 						.expand("x:long,y:long", "x = cell_pos.getX(); y = cell_pos.getY()")
 						.project("cell_geom as the_geom, x, y, *-{cell_geom,x,y,cell_id,cell_pos}")
 						.store(output)

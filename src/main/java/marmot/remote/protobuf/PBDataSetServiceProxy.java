@@ -56,6 +56,7 @@ import marmot.proto.service.SpatialClusterInfoResponse;
 import marmot.proto.service.SpatialIndexInfoResponse;
 import marmot.proto.service.StringResponse;
 import marmot.proto.service.UpChunkRequest;
+import marmot.proto.service.UpdateGeometryColumnInfoRequest;
 import marmot.proto.service.VoidResponse;
 import marmot.protobuf.PBUtils;
 import marmot.rset.PBInputStreamRecordSet;
@@ -158,6 +159,18 @@ public class PBDataSetServiceProxy {
 						.map(this::toDataSet)
 						.cast(DataSet.class)
 						.toList();
+	}
+	
+	public DataSet updateGeometryColumnInfo(String dsId, FOption<GeometryColumnInfo> info) {
+		UpdateGeometryColumnInfoRequest.Builder builder
+												= UpdateGeometryColumnInfoRequest.newBuilder()
+																				.setId(dsId);
+		info.map(GeometryColumnInfo::toProto)
+			.ifPresent(builder::setGcInfo);
+		UpdateGeometryColumnInfoRequest req = builder.build();
+		
+		DataSetInfoResponse resp = m_dsBlockingStub.updateGeometryColumnInfo(req);
+		return toDataSet(resp);		
 	}
 	
 	public SpatialIndexInfo getDefaultSpatialIndexInfoOrNull(String dsId) {
