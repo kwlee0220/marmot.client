@@ -1,6 +1,7 @@
 package marmot.remote.protobuf;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 
 import org.slf4j.Logger;
@@ -10,14 +11,19 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.CallStreamObserver;
+import io.grpc.stub.StreamObserver;
+import marmot.RecordSet;
+import marmot.io.MarmotFileNotFoundException;
 import marmot.proto.service.CopyToHdfsFileRequest;
 import marmot.proto.service.CopyToHdfsFileRequest.HeaderProto;
+import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.FileServiceGrpc;
 import marmot.proto.service.FileServiceGrpc.FileServiceBlockingStub;
 import marmot.proto.service.FileServiceGrpc.FileServiceStub;
 import marmot.proto.service.VoidResponse;
 import marmot.protobuf.PBUtils;
 import marmot.protobuf.SingleValueObserver;
+import marmot.rset.PBInputStreamRecordSet;
 import utils.StopWatch;
 import utils.Throwables;
 import utils.UnitUtils;
@@ -39,6 +45,16 @@ public class PBFileServiceProxy {
 //		m_marmot = marmot;
 		m_blockingStub = FileServiceGrpc.newBlockingStub(channel);
 		m_stub = FileServiceGrpc.newStub(channel);
+	}
+	
+	public RecordSet readMarmotFile(String path) throws MarmotFileNotFoundException {
+		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
+
+		// start download by sending 'stream-download' request
+		StreamObserver<DownChunkResponse> channel = m_stub.readMarmotFile(downloader);
+		InputStream is = downloader.start(PBUtils.toStringProto(path).toByteString(), channel);
+		
+		return PBInputStreamRecordSet.from(is);
 	}
 
 	public void deleteHdfsFile(String path) throws IOException {

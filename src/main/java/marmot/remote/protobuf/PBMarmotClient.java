@@ -9,12 +9,12 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import marmot.BindDataSetOptions;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
 import marmot.DataSetType;
 import marmot.ExecutePlanOptions;
-import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
@@ -22,6 +22,7 @@ import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.StoreDataSetOptions;
+import marmot.io.MarmotFileNotFoundException;
 import utils.Utilities;
 import utils.func.FOption;
 
@@ -71,6 +72,11 @@ public class PBMarmotClient implements MarmotRuntime {
 	
 	public PBPlanExecutionServiceProxy getPlanExecutionService() {
 		return m_pexecService;
+	}
+
+	@Override
+	public RecordSet readMarmotFile(String path) throws MarmotFileNotFoundException {
+		return m_fileService.readMarmotFile(path);
 	}
 
 	@Override
@@ -141,14 +147,9 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type) {
-		return m_dsService.bindExternalDataSet(dsId, srcPath, type, FOption.empty());
-	}
-
-	@Override
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
-										GeometryColumnInfo geomColInfo) {
-		return m_dsService.bindExternalDataSet(dsId, srcPath, type, FOption.of(geomColInfo));
+										BindDataSetOptions opts) {
+		return m_dsService.bindExternalDataSet(dsId, srcPath, type, opts);
 	}
 
 	@Override

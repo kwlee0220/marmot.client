@@ -11,6 +11,7 @@ import com.vividsolutions.jts.geom.Envelope;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
+import marmot.BindDataSetOptions;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
@@ -116,13 +117,13 @@ public class PBDataSetServiceProxy {
 	}
 
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
-										FOption<GeometryColumnInfo> geomColInfo) {
+										BindDataSetOptions opts) {
 		DataSetTypeProto dsTypeProto = DataSetTypeProto.valueOf(type.id());
 		BindDataSetRequest.Builder builder = BindDataSetRequest.newBuilder()
 													.setDataset(dsId)
 													.setFilePath(srcPath)
-													.setType(dsTypeProto);
-		geomColInfo.ifPresent(info -> builder.setGeometryInfo(info.toProto()));
+													.setType(dsTypeProto)
+													.setOptions(opts.toProto());
 		BindDataSetRequest req = builder.build();
 		
 		return toDataSet(m_dsBlockingStub.bindDataSet(req));

@@ -48,7 +48,7 @@ public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
 			opts = opts.workerCount(m_params.m_nworkers);
 		}
 		
-		return builder.loadHashJoinFile(m_params.m_leftDsId, m_params.m_leftCols,
+		return builder.loadHashJoin(m_params.m_leftDsId, m_params.m_leftCols,
 									m_params.m_rightDsId, m_params.m_rightCols,
 									m_params.m_outputCols, opts);
 	}
