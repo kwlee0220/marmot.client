@@ -3,6 +3,7 @@ package marmot.geo.geoserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,6 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometry;
 import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 
-import io.vavr.control.Try;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -27,6 +27,7 @@ import utils.async.CancellableWork;
 import utils.async.StartableExecution;
 import utils.async.op.AsyncExecutions;
 import utils.func.FOption;
+import utils.func.Try;
 import utils.stream.FStream;
 
 
@@ -180,12 +181,10 @@ class IndexScan {
 	private RecordSet runOnLocalCache(String logMsg) {
 		s_logger.info("use local-cache: {}", logMsg);
 		
-//		FStream<Record> recStream = FStream.from(m_est.getRelevantQuadKeys())
-//											.flatMap(qk -> Try.of(() -> readFromCache(qk))
-//															.getOrElse(FStream.empty()));
+		Function<String,FStream<Record>> loader = Try.lift((String qk) -> readFromCache(qk))
+														.andThen(d -> d.getOrElse(FStream.empty()));
 		FStream<Record> recStream = FStream.from(m_est.getMatchingClusterKeys())
-											.flatMapParallel(qk -> Try.of(() -> readFromCache(qk))
-															.getOrElse(FStream.empty()), 3);
+											.flatMapParallel(loader, 3);
 		
 		return RecordSet.from(m_ds.getRecordSchema(), recStream);
 	}

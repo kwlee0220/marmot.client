@@ -4,11 +4,11 @@ import static marmot.optor.AggregateFunction.AVG;
 import static marmot.optor.AggregateFunction.CONVEX_HULL;
 import static marmot.optor.AggregateFunction.COUNT;
 import static marmot.optor.AggregateFunction.ENVELOPE;
-import static marmot.optor.AggregateFunction.UNION_GEOM;
 import static marmot.optor.AggregateFunction.MAX;
 import static marmot.optor.AggregateFunction.MIN;
 import static marmot.optor.AggregateFunction.STDDEV;
 import static marmot.optor.AggregateFunction.SUM;
+import static marmot.optor.AggregateFunction.UNION_GEOM;
 
 import java.util.List;
 
@@ -268,9 +268,9 @@ abstract class PlanBasedMarmotCommand {
 	}
 	
 	private SpatialJoinOptions parseSpatialJoinOptions() {
-		SpatialJoinOptions opts = SpatialJoinOptions.create();
+		SpatialJoinOptions opts = SpatialJoinOptions.EMPTY;
 		if ( m_opParams.m_joinOutCols != null ) {
-			opts.outputColumns(m_opParams.m_joinOutCols);
+			opts = opts.outputColumns(m_opParams.m_joinOutCols);
 		}
 		
 		SpatialRelation rel = FOption.ofNullable(m_opParams.m_joinExpr)
@@ -280,7 +280,7 @@ abstract class PlanBasedMarmotCommand {
 		switch ( rel.getCode() ) {
 			case CODE_INTERSECTS:
 			case CODE_WITHIN_DISTANCE:
-				opts.joinExpr(rel);
+				opts = opts.joinExpr(rel);
 				break;
 			default:
 				throw new IllegalArgumentException("unknown spatial_join_expression: " + rel);

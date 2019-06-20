@@ -59,7 +59,7 @@ public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
 		}
 		else {
 			return builder.loadSpatialIndexJoin(m_params.m_leftDsId, m_params.m_rightDsId,
-												SpatialJoinOptions.create());
+												SpatialJoinOptions.EMPTY);
 		}
 	}
 	

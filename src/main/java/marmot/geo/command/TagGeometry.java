@@ -52,7 +52,7 @@ public class TagGeometry {
 		// 원격 MarmotServer에 접속.
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 		
-		JoinOptions opts = new JoinOptions().workerCount(nworkers);
+		JoinOptions opts = JoinOptions.INNER_JOIN(nworkers);
 
 		DataSet ds = marmot.getDataSet(refDsId);
 		if ( !ds.hasGeometryColumn() ) {
