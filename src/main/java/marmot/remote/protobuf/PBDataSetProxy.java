@@ -69,7 +69,7 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public GeometryColumnInfo getGeometryColumnInfo() {
 		return m_info.getGeometryColumnInfo()
-					.getOrElseThrow(() -> new GeometryColumnNotExistsException());
+					.getOrElseThrow(GeometryColumnNotExistsException::new);
 	}
 
 	@Override
