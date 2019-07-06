@@ -31,7 +31,8 @@ public class RemoteListRecordsMain implements Runnable {
 	@Parameters(paramLabel="id", description={"id to display"})
 	private String m_id;
 
-	@Option(names={"-t"}, paramLabel="type", description="target type")
+	@Option(names={"-t"}, paramLabel="type",
+			description="target type: dataset (default), file, thumbnail")
 	private String m_type = "dataset";
 
 	@Option(names={"-project"}, paramLabel="column_list", description="selected columns (optional)")

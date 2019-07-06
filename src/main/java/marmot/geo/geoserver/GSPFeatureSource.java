@@ -20,6 +20,7 @@ import com.vividsolutions.jts.geom.Geometry;
 
 import io.vavr.Lazy;
 import io.vavr.Tuple2;
+import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -29,6 +30,7 @@ import marmot.geo.CRSUtils;
 import marmot.geo.GeoClientUtils;
 import marmot.geo.geotools.MarmotFeatureIterator;
 import marmot.geo.geotools.SimpleFeatures;
+import marmot.geo.query.GeoDataStore;
 import marmot.optor.AggregateFunction;
 import utils.Throwables;
 import utils.func.FOption;
@@ -42,49 +44,31 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	private static final Logger s_logger = LoggerFactory.getLogger(GSPFeatureSource.class);
 	
 	private final MarmotRuntime m_marmot;
-	private final GSPDataSetInfo m_dsInfo;
+	private final GeoDataStore m_store;
 	private final String m_dsId;
-	private final DataSetPartitionCache m_cache;
+	private final DataSet m_ds;
 	private final GeometryColumnInfo m_gcInfo;
-	private final Lazy<ReferencedEnvelope> m_mbr;
 	private final CoordinateReferenceSystem m_crs;
-	private FOption<Long> m_sampleCount = FOption.empty();
-	private volatile boolean m_usePrefetch = false;
-	private final int m_maxLocalCacheCost;
+	private final Lazy<ReferencedEnvelope> m_mbr;
 	
-	GSPFeatureSource(ContentEntry entry, GSPDataSetInfo info, DataSetPartitionCache cache,
-					int maxLocalCacheCost) {
+	GSPFeatureSource(ContentEntry entry, GeoDataStore store, String dsId) {
 		super(entry, Query.ALL);
 		
-		m_marmot = info.getMarmotRuntime();
-		m_dsInfo = info;
-		m_dsId = m_dsInfo.getDataSet().getId();
-		m_gcInfo = m_dsInfo.getDataSet().getGeometryColumnInfo();
-		m_crs = CRSUtils.toCRS(m_gcInfo.srid());
-		m_cache = cache;
-		m_maxLocalCacheCost = maxLocalCacheCost;
+		m_marmot = store.getMarmotRuntime();
+		m_store = store;
+		m_dsId = dsId;
+		m_ds = store.getGeoDataSet(dsId);
 
+		m_gcInfo = m_ds.getGeometryColumnInfo();
+		m_crs = CRSUtils.toCRS(m_gcInfo.srid());
 		m_mbr = Lazy.of(() -> {
-			Envelope bounds = m_dsInfo.getBounds();
+			Envelope bounds = m_ds.getBounds();
 			return new ReferencedEnvelope(bounds, m_crs);
 		});
 	}
 	
-	public GSPFeatureSource setSampleCount(FOption<Long> count) {
-		m_sampleCount = count;
-		return this;
-	}
-	
-	public GSPFeatureSource usePrefetch(boolean flag) {
-		m_usePrefetch = flag;
-		return this;
-	}
-	
 	public RecordSet query(Envelope range) {
-		return RangeQuery.on(m_dsInfo.getDataSet(), range, m_cache, m_maxLocalCacheCost)
-						.sampleCount(m_sampleCount)
-						.usePrefetch(m_usePrefetch)
-						.run();
+		return m_store.createRangeQuery(m_dsId, range).run();
 	}
 
 	@Override
@@ -118,7 +102,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		Tuple2<BoundingBox, FOption<Filter>> resolved
 										= GSPUtils.resolveQuery(m_mbr.get(), query);
 		if ( resolved._1 == null && resolved._2.isAbsent() ) {
-			return (int)m_dsInfo.getRecordCount();
+			return (int)m_ds.getRecordCount();
 		}
 		
 		Plan plan = newPlanBuilder(resolved._1, resolved._2)
@@ -147,7 +131,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected SimpleFeatureType buildFeatureType() throws IOException {
 		return SimpleFeatures.toSimpleFeatureType(getEntry().getTypeName(), m_gcInfo.srid(),
-												m_dsInfo.getRecordSchema());
+													m_ds.getRecordSchema());
 	}
 	
 	private PlanBuilder newPlanBuilder(BoundingBox bbox, FOption<Filter> filter) {

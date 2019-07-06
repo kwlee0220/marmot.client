@@ -66,18 +66,18 @@ public class RemoteClusterDataSetMain implements CheckedConsumer<MarmotRuntime> 
 
 	@Override
 	public void accept(MarmotRuntime marmot) throws Exception {
-		ClusterDataSetOptions options = new ClusterDataSetOptions();
+		ClusterDataSetOptions options = ClusterDataSetOptions.DEFAULT();
 		if ( m_fillRatio > 0 ) {
-			options.blockFillRatio(m_fillRatio);
+			options = options.blockFillRatio(m_fillRatio);
 		}
 		if ( m_sampleRatio > 0 ) {
-			options.sampleRatio(m_sampleRatio);
+			options = options.sampleRatio(m_sampleRatio);
 		}
 		if ( m_blkSize > 0 ) {
-			options.blockSize(m_blkSize);
+			options = options.blockSize(m_blkSize);
 		}
 		if ( m_nworkers > 0 ) {
-			options.workerCount(m_nworkers);
+			options = options.workerCount(m_nworkers);
 		}
 		
 		DataSet ds = marmot.getDataSet(m_dsId);

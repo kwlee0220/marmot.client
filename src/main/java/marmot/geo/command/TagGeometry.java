@@ -1,5 +1,6 @@
 package marmot.geo.command;
 
+import static marmot.StoreDataSetOptions.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
@@ -73,6 +74,6 @@ public class TagGeometry {
 								.build();
 		
 		gcInfo = new GeometryColumnInfo(outputGeomCol, gcInfo.srid());
-		marmot.createDataSet(outDs, plan, StoreDataSetOptions.create().geometryColumnInfo(gcInfo).force(true));
+		marmot.createDataSet(outDs, plan, FORCE(gcInfo));
 	}
 }

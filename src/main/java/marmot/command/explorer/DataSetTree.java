@@ -45,7 +45,6 @@ import marmot.Plan;
 import marmot.RecordSet;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ShapefileParameters;
-import marmot.rset.RecordSets;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -440,7 +439,7 @@ class DataSetTree extends JTree {
 						else {
 							rset = ds.read();
 						}
-						rset = RecordSets.autoClose(rset);
+						rset = rset.asAutoCloseable();
 
 						Charset cs = Charset.forName(charSet.getText());
 						ShapefileParameters params = ShapefileParameters.create()

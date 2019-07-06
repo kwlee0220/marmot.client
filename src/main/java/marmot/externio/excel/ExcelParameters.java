@@ -44,7 +44,7 @@ public class ExcelParameters {
 		return this;
 	}
 
-	@Option(names={"-point_col"}, paramLabel="point_columns", description="X,Y fields for point")
+	@Option(names={"-point_cols"}, paramLabel="xy-columns", description="X,Y columns for point")
 	public ExcelParameters pointColumns(String pointCols) {
 		Utilities.checkNotNullArgument(pointCols, "Point columns are null");
 		
@@ -71,10 +71,10 @@ public class ExcelParameters {
 	
 	@Override
 	public String toString() {
-		String headerFirst = m_headerFirst ? ", header" : "";
+		String headerFirst = m_headerFirst ? "HF" : "";
 		String ptStr = pointColumns().map(xy -> String.format(", POINT(%s,%s)", xy._1, xy._2))
 									.getOrElse("");
-		String srcSrid = m_excelSrid.map(s -> String.format(", csv_srid=%s", s))
+		String srcSrid = m_excelSrid.map(s -> String.format(", %s", s))
 									.getOrElse("");
 		return String.format("%s%s%s", headerFirst, ptStr, srcSrid);
 	}

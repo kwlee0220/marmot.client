@@ -228,7 +228,7 @@ abstract class PlanBasedMarmotCommand {
 										.map(s -> s + "_join")
 										.map(JoinType::fromString)
 										.getOrElse(() -> JoinType.INNER_JOIN);
-			JoinOptions opts = new JoinOptions().joinType(joinType);
+			JoinOptions opts = JoinOptions.create(joinType);
 			
 			if ( m_opParams.m_joinOutCols != null ) {
 				return builder.hashJoin(joinCols, paramDsId, paramJoinCols,

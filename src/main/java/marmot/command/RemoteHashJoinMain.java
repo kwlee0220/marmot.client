@@ -43,7 +43,7 @@ public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
 	@Override
 	protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder) {
 		JoinType joinType = JoinType.fromString(m_params.m_joinType + "_join");
-		JoinOptions opts = new JoinOptions().joinType(joinType);
+		JoinOptions opts = JoinOptions.create(joinType);
 		if ( m_params.m_nworkers > 0 ) {
 			opts = opts.workerCount(m_params.m_nworkers);
 		}

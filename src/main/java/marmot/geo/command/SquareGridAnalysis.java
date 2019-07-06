@@ -1,5 +1,6 @@
 package marmot.geo.command;
 
+import static marmot.StoreDataSetOptions.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -111,7 +112,7 @@ public class SquareGridAnalysis {
 			GeometryColumnInfo gcInfo = new GeometryColumnInfo("the_geom",
 															ds.getGeometryColumnInfo().srid());
 			DataSet result = marmot.createDataSet(output, plan,
-								StoreDataSetOptions.create().geometryColumnInfo(gcInfo).force(true));
+								FORCE(gcInfo));
 			System.out.println("elapsed time: " + watch.stopAndGetElpasedTimeString());
 //			DataSet result = marmot.getDataSet("tmp/anyang/grid_gas");
 			

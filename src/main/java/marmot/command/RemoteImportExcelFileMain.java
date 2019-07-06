@@ -27,7 +27,8 @@ public class RemoteImportExcelFileMain implements Runnable {
 	@Mixin private ImportParameters m_importParams;
 	@Mixin private UsageHelp m_help;
 
-	@Parameters(paramLabel="path", description={"path to the excel file to import"})
+	@Parameters(paramLabel="path", index="0", arity="1..1",
+				description={"path to the excel file to import"})
 	private String m_path;
 
 	public static final void main(String... args) throws Exception {

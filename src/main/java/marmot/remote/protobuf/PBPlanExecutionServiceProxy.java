@@ -1,5 +1,7 @@
 package marmot.remote.protobuf;
 
+import static marmot.ExecutePlanOptions.DEFAULT;
+
 import java.io.InputStream;
 import java.util.Map;
 
@@ -177,7 +179,7 @@ public class PBPlanExecutionServiceProxy {
 	}
 
 	static ExecutePlanRequest toExecutePlanRequest(Plan plan) {
-		return toExecutePlanRequest(plan, ExecutePlanOptions.create());
+		return toExecutePlanRequest(plan, DEFAULT);
 	}
 	static ExecutePlanRequest toExecutePlanRequest(Plan plan, ExecutePlanOptions opts) {
 		return ExecutePlanRequest.newBuilder()
