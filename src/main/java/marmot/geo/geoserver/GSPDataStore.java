@@ -28,9 +28,7 @@ import utils.stream.FStream;
 public class GSPDataStore extends ContentDataStore {
 	static final Logger s_logger = LoggerFactory.getLogger(GSPDataStore.class);
 	private static final String WORKSPACE_URI = "http://marmot.etri.re.kr";
-	private static final int DEF_MAX_LOCAL_CACHE_COST = 20;
 	
-	private final MarmotRuntime m_marmot;
 	private final GeoDataStore m_store;
 	private String[] m_prefixes = new String[0];
 	
@@ -38,13 +36,8 @@ public class GSPDataStore extends ContentDataStore {
 		Utilities.checkNotNullArgument(marmot, "MarmotRuntime is null");
 		Utilities.checkNotNullArgument(cacheDir, "Disk cache directory is null");
 		
-		m_marmot = marmot;
 		m_store = GeoDataStore.from(marmot);
 		setNamespaceURI(WORKSPACE_URI);
-	}
-	
-	public MarmotRuntime getMarmotRuntime() {
-		return m_marmot;
 	}
 	
 	public GSPDataStore setSampleCount(long count) {
@@ -81,25 +74,28 @@ public class GSPDataStore extends ContentDataStore {
 
 	@Override
 	protected List<Name> createTypeNames() throws IOException {
-		return FStream.from(m_marmot.getDataSetAll())
-						.filter(DataSet::hasGeometryColumn)
+		return FStream.from(m_store.getGeoDataSetAll())
 						.map(DataSet::getId)
-						.filter(id -> !id.startsWith("/tmp/"))
-						.filter(id -> {
-							if ( m_prefixes.length > 0 ) {
-								for ( String prefix: m_prefixes ) {
-									if ( id.startsWith(prefix) ) {
-										return true;
-									}
-								}
-								return false;
-							}
-							else {
-								return true;
-							}
-						})
+						.filter(this::filterDataSetId)
 						.map(GSPUtils::toSimpleFeatureTypeName)
 						.map(name -> (Name)new NameImpl(name))
 						.toList();
+	}
+	
+	private boolean filterDataSetId(String dsId) {
+		if ( dsId.startsWith("/tmp/") ) {
+			return false;
+		}
+		if ( m_prefixes.length > 0 ) {
+			for ( String prefix: m_prefixes ) {
+				if ( dsId.startsWith(prefix) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+		else {
+			return true;
+		}
 	}
 }
