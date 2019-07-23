@@ -92,8 +92,15 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		String host = (String)MARMOT_HOST.lookUp(params);
 		int port = (int)MARMOT_PORT.lookUp(params);
 		
-		File parentDir = Files.createTempDir().getParentFile();
-		File cacheDir = new File(parentDir, "marmot_geoserver_cache");
+		File cacheDir;
+		String cacheDirPath = (String)DISK_CACHE_DIR.lookUp(params);
+		if ( cacheDirPath == null ) {
+			File parentDir = Files.createTempDir().getParentFile();
+			cacheDir = new File(parentDir, "marmot_geoserver_cache");
+		}
+		else {
+			cacheDir = new File(cacheDirPath);
+		}
 		
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 		GSPDataStore store = new GSPDataStore(marmot, cacheDir);

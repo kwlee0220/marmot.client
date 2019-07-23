@@ -36,7 +36,7 @@ public class GSPDataStore extends ContentDataStore {
 		Utilities.checkNotNullArgument(marmot, "MarmotRuntime is null");
 		Utilities.checkNotNullArgument(cacheDir, "Disk cache directory is null");
 		
-		m_store = GeoDataStore.from(marmot);
+		m_store = GeoDataStore.from(marmot, cacheDir);
 		setNamespaceURI(WORKSPACE_URI);
 	}
 	

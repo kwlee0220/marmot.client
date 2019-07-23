@@ -118,6 +118,7 @@ task distributeBinary(type:Copy) {
 	from ("${projectDir}") {
 		include 'bin/**'
 		include 'log4j.properties'
+		include '.gitignore'
 	}
 	from "${buildDir}/libs/${archivesBaseName}-${version}-javadoc.jar"
 }
