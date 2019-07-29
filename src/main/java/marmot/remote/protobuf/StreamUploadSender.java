@@ -29,7 +29,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 									implements StreamObserver<UpChunkResponse> {
 	private static final int DEFAULT_CHUNK_SIZE = 64 * 1024;
 	private static final int SYNC_INTERVAL = 4;
-	private static final int TIMEOUT = 5;		// 5s
+	private static final int TIMEOUT = 10;		// 10s
 	
 	private final InputStream m_stream;
 	private StreamObserver<UpChunkRequest> m_channel = null;
