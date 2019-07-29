@@ -73,7 +73,9 @@ public class GeoServer {
 				return FStream.from(gson.parse(ret._3).getAsJsonObject().entrySet())
 						.flatMapIterable(v -> ((JsonObject)v.getValue()).entrySet())
 						.flatMapIterable(v -> (JsonArray)v.getValue()).cast(JsonObject.class)
-						.map(this::parseLayerElement)
+						.map(o -> o.get("name").getAsString())
+						.filter(fn -> fn.startsWith(m_storeName + ":"))
+						.map(this::parseLayerName)
 						.toList();
 			}
 			else {
@@ -220,8 +222,7 @@ public class GeoServer {
 		}
 	}
 	
-	private String parseLayerElement(JsonObject jobj) {
-		String fullName = jobj.get("name").getAsString();
+	private String parseLayerName(String fullName) {
 		String ftName = CSV.parseCsv(fullName, ':').toList().get(1);
 		return toDataSetId(ftName);
 	}
