@@ -55,6 +55,8 @@ shadowJar {
 	exclude 'META-INF/*.SF'
 	exclude 'META-INF/*.DSA'
 	exclude 'META-INF/*.RSA'
+	
+	relocate 'com.fasterxml', 'shadow.com.fasterxml'
 }
 
 

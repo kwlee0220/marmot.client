@@ -5,8 +5,10 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import com.google.gson.annotations.SerializedName;
 import com.vividsolutions.jts.geom.Envelope;
 
+import marmot.Column;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
+import marmot.RecordSchema;
 import marmot.geo.CRSUtils;
 import marmot.geo.CoordinateTransform;
 import marmot.geo.geoserver.GSPUtils;
@@ -124,4 +126,35 @@ public class GsJsonFeatureType {
 			m_crs = crs;
 		}
 	}
+	
+	private static class GsJsonAttribute {
+		@SerializedName("name") private final String m_name;
+		@SerializedName("minOccurs") private final int m_minOccurs;
+		@SerializedName("maxOccurs") private final int m_maxOccurs;
+		@SerializedName("nillable") private final boolean m_nillable;
+		@SerializedName("binding") private final String m_binding;
+		
+		private GsJsonAttribute(Column col) {
+			m_name = col.name();
+			m_minOccurs = 0;
+			m_maxOccurs = 1;
+			m_nillable = true;
+			m_binding = col.type().getInstanceClass().getName();
+		}
+	}
+	
+	private static class GsJsonAttributes {
+		@SerializedName("attribute") private GsJsonAttribute[] m_attr;
+		
+		private GsJsonAttributes(GsJsonAttribute[] attrs) {
+			m_attr = attrs;
+		}
+		
+		private static GsJsonAttributes from(RecordSchema schema) {
+			return new GsJsonAttributes(schema.streamColumns()
+												.map(GsJsonAttribute::new)
+												.toArray(GsJsonAttribute.class));
+		}
+	}
+
 }
