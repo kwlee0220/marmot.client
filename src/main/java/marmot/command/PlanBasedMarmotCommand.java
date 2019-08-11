@@ -22,7 +22,9 @@ import marmot.PlanBuilder;
 import marmot.optor.AggregateFunction;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
+import marmot.optor.StoreAsCsvOptions;
 import marmot.optor.geo.SpatialRelation;
+import marmot.optor.geo.SquareGrid;
 import marmot.plan.Group;
 import marmot.plan.SpatialJoinOptions;
 import marmot.proto.optor.OperatorProto;
@@ -30,6 +32,10 @@ import marmot.proto.optor.StoreIntoDataSetProto;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import utils.CSV;
+import utils.KeyValue;
+import utils.Size2d;
+import utils.UnitUtils;
+import utils.Utilities;
 import utils.func.FOption;
 
 
@@ -67,7 +73,13 @@ abstract class PlanBasedMarmotCommand {
 		m_marmot = m_connector.connect();
 		
 		Plan plan = buildPlan(m_marmot, planName);
-		if ( !m_storeParams.getAppend() ) {
+		if ( m_opParams.m_storeAsCsvOptions != null ) {
+			plan = plan.toBuilder()
+						.storeAsCsv(outputDsId, m_opParams.m_storeAsCsvOptions)
+						.build();
+			m_marmot.execute(plan);
+		}
+		else if ( !m_storeParams.getAppend() ) {
 			String fromPlanDsId = getStoreTargetDataSetId(plan).getOrNull();
 			if ( outputDsId == null && fromPlanDsId == null ) {
 				throw new IllegalArgumentException("result dataset id is messing");
@@ -108,6 +120,7 @@ abstract class PlanBasedMarmotCommand {
 	private PlanBuilder appendOperators(PlanBuilder builder) {
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
+		builder = addAssignGridCell(builder);
 		builder = addExpand(builder);
 		builder = addUpdate(builder);
 		builder = addFilter(builder);
@@ -125,6 +138,7 @@ abstract class PlanBasedMarmotCommand {
 		addGroupBy(builder);
 		
 		builder = addProject(builder);
+		builder = addDistinct(builder);
 		builder = addTransformCrs(builder);
 		builder = addShard(builder);
 		
@@ -150,6 +164,18 @@ abstract class PlanBasedMarmotCommand {
 			}
 
 			builder = builder.buffer(m_gcInfo.name(), m_opParams.m_bufferRadius);
+		}
+		
+		return builder;
+	}
+	
+	private PlanBuilder addAssignGridCell(PlanBuilder builder) {
+		if ( m_opParams.m_grid != null ) {
+			if ( m_gcInfo == null ) {
+				throw new IllegalArgumentException("dataset does not have default Geometry column");
+			}
+			
+			builder = builder.assignGridCell(m_gcInfo.name(), m_opParams.m_grid, false);
 		}
 		
 		return builder;
@@ -389,6 +415,14 @@ abstract class PlanBasedMarmotCommand {
 		return builder;
 	}
 	
+	private PlanBuilder addDistinct(PlanBuilder builder) {
+		if ( m_opParams.m_distinctCols != null ) {
+			builder = builder.distinct(m_opParams.m_distinctCols);
+		}
+		
+		return builder;
+	}
+	
 	private PlanBuilder addTransformCrs(PlanBuilder builder) {
 		if ( m_opParams.m_transformSrid != null ) {
 			if ( m_gcInfo == null ) {
@@ -445,6 +479,23 @@ abstract class PlanBasedMarmotCommand {
 				description={"destination SRID for transformCRS"})
 		String m_transformSrid;
 		
+		@Option(names={"-assign_gridcell"}, paramLabel="grid",
+				description={"grid-cell information"})
+		private void setSquareGrid(String gridExpr) {
+			List<String> parts = CSV.parseCsv(gridExpr, ':').toList();
+			if ( parts.size() != 2 ) {
+				throw new IllegalArgumentException("invalid square-grid info: " + gridExpr);
+			}
+			
+			Size2d cellSize = Size2d.fromString(parts.get(1));
+			m_grid = new SquareGrid(parts.get(0), cellSize);
+		}
+		SquareGrid m_grid;
+		
+		@Option(names={"-distinct"}, paramLabel="key_columns",
+				description={"distinct key columns"})
+		String m_distinctCols;
+		
 		@Option(names={"-group_by"}, paramLabel="cols:tags",
 				description={"groupping columns (and optionally tag columns)"})
 		String m_groupBy;
@@ -468,6 +519,36 @@ abstract class PlanBasedMarmotCommand {
 		@Option(names={"-join_output_cols"}, paramLabel="cols",
 				description={"join output columns"})
 		String m_joinOutCols;
+
+		@Option(names={"-store_as_csv"}, paramLabel="csv_info",
+				description={"csv options for result csv files"})
+		private void setStoreAsCsv(String expr) {
+			m_storeAsCsvOptions = StoreAsCsvOptions.DEFAULT();
+			
+			for ( KeyValue<String,String> kv: Utilities.parseKeyValues(expr) ) {
+				switch ( kv.key().toLowerCase() ) {
+					case "delim":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.delimiter(kv.value().charAt(0));
+						break;
+					case "quote":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.quote(kv.value().charAt(0));
+						break;
+					case "escape":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.escape(kv.value().charAt(0));
+						break;
+					case "charset":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.charset(kv.value());
+						break;
+					case "blocksize":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.blockSize(UnitUtils.parseByteSize(kv.value()));
+						break;
+					case "compression":
+						m_storeAsCsvOptions = m_storeAsCsvOptions.compressionCodecName(kv.value());
+						break;
+				}
+			}
+		}
+		private StoreAsCsvOptions m_storeAsCsvOptions;
 	}
 	
 	private static FOption<String> getStoreTargetDataSetId(Plan plan) {
