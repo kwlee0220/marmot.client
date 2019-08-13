@@ -1,18 +1,8 @@
 package marmot.geo.geotools;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.map.DefaultMapContext;
-import org.geotools.map.MapContext;
-import org.geotools.swt.SwtMapFrame;
-
-import marmot.DataSet;
-import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
-import marmot.Plan;
-import utils.CSV;
 import utils.CommandLine;
 
 /**
@@ -21,6 +11,8 @@ import utils.CommandLine;
  */
 public class ViewDataSet {
 	public static final void run(MarmotRuntime marmot, CommandLine cl) throws IOException {
+		throw new UnsupportedOperationException("due to imageio META-INF problems");
+/*
 		MapContext context = new DefaultMapContext();
 	    context.setTitle("Marmot DataSet Viewer");
 		
@@ -53,8 +45,10 @@ public class ViewDataSet {
 		
 	    // and show the map viewer
 	    SwtMapFrame.showMap(context);
+*/
 	}
-	
+
+/*
 	private static SimpleFeatureCollection read(DataSet ds, String tarSrid) {
 		GeometryColumnInfo gcInfo = ds.getGeometryColumnInfo();
 
@@ -95,4 +89,5 @@ public class ViewDataSet {
 		return SimpleFeatures.toFeatureCollection(ds.getId(), marmot, plan,
 												ds.getGeometryColumnInfo().srid());
 	}
+*/
 }

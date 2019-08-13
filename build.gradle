@@ -41,7 +41,7 @@ dependencies {
 	compile project(':utils')
 	compile project(':marmot.common')
 
-	compile	"org.geotools:gt-swt:${geotools_version}"
+//	compile	"org.geotools:gt-swt:${geotools_version}"
 	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
 	
 	testCompile "junit:junit:4.12"
