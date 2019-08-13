@@ -104,8 +104,8 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public boolean isCompressed() {
-		return m_info.getCompression();
+	public FOption<String> getCompressionCodecName() {
+		return m_info.getCompressionCodecName();
 	}
 
 	@Override
