@@ -68,7 +68,8 @@ public class PBFileServiceProxy {
 		}
 	}
 
-	public void copyToHdfsFile(String path, Iterator<byte[]> blocks, FOption<Long> blockSize)
+	public void copyToHdfsFile(String path, Iterator<byte[]> blocks,
+								FOption<Long> blockSize, FOption<String> codecName)
 		throws IOException {
 		StopWatch watch = StopWatch.start();
 		int nblocks = 0;
@@ -80,6 +81,7 @@ public class PBFileServiceProxy {
 			HeaderProto.Builder hbuilder = HeaderProto.newBuilder()
 													.setPath(PBUtils.toStringProto(path));
 			blockSize.ifPresent(sz -> hbuilder.setBlockSize(sz));
+			codecName.ifPresent(hbuilder::setCompressionCodecName);
 			HeaderProto header = hbuilder.build();
 			supplier.onNext(CopyToHdfsFileRequest.newBuilder().setHeader(header).build());
 
