@@ -10,7 +10,7 @@ import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.DownChunkResponse;
-import marmot.protobuf.ChunkInputStream;
+import marmot.protobuf.SuppliableInputStream;
 import marmot.protobuf.PBUtils;
 import utils.Throwables;
 import utils.Utilities;
@@ -26,11 +26,11 @@ import utils.async.EventDrivenExecution;
  */
 class StreamDownloadReceiver extends EventDrivenExecution<Void>
 							implements StreamObserver<DownChunkRequest> {
-	private final ChunkInputStream m_stream;
+	private final SuppliableInputStream m_stream;
 	private StreamObserver<DownChunkResponse> m_channel;
 	
 	StreamDownloadReceiver() {
-		m_stream = ChunkInputStream.create(4);
+		m_stream = SuppliableInputStream.create(4);
 		
 		setLogger(LoggerFactory.getLogger(StreamDownloadReceiver.class));
 	}
