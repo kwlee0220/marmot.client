@@ -1,12 +1,12 @@
 package marmot.remote.protobuf;
 
-import java.io.InputStream;
 import java.util.List;
 
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.DataSet;
 import marmot.DataSetType;
+import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
 import marmot.GeometryColumnNotExistsException;
 import marmot.InsufficientThumbnailException;
@@ -19,7 +19,6 @@ import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
-import marmot.rset.PBInputStreamRecordSet;
 import utils.Utilities;
 import utils.func.FOption;
 
@@ -150,6 +149,14 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
+	public void appendPlanResult(Plan plan, ExecutePlanOptions execOpts) {
+		Utilities.checkNotNullArgument(plan, "Plan is null");
+		Utilities.checkNotNullArgument(execOpts, "ExecutePlanOptions is null");
+		
+		m_info = m_service.appendPlanResult(getId(), plan, execOpts).m_info;
+	}
+
+	@Override
 	public SpatialIndexInfo cluster(ClusterDataSetOptions opts) {
 		return m_service.clusterDataSet(getId(), opts);
 	}
@@ -166,8 +173,7 @@ public class PBDataSetProxy implements DataSet {
 
 	@Override
 	public RecordSet readSpatialCluster(String quadKey) {
-		InputStream is = m_service.readRawSpatialCluster(getId(), quadKey);
-		return PBInputStreamRecordSet.from(is);
+		return m_service.readSpatialCluster(getId(), quadKey);
 	}
 
 	@Override

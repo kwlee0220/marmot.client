@@ -15,7 +15,6 @@ import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.proto.service.DownChunkResponse;
-import marmot.proto.service.ExecutePlanLocallyRequest;
 import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.ExecuteProcessRequest;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
@@ -31,6 +30,7 @@ import marmot.rset.PBRecordSetInputStream;
 import marmot.support.DefaultRecord;
 import utils.Throwables;
 import utils.func.FOption;
+import utils.io.Lz4Compressions;
 
 /**
  * 
@@ -68,7 +68,10 @@ public class PBPlanExecutionServiceProxy {
 	}
 	
 	public void execute(Plan plan, ExecutePlanOptions opts) {
-		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(opts.toProto())
+													.build();
 		PBUtils.handle(m_blockingStub.execute(req));
 	}
 
@@ -77,8 +80,15 @@ public class PBPlanExecutionServiceProxy {
 		StreamObserver<DownChunkResponse> channel = m_stub.executeLocally(downloader);
 
 		// start download by sending 'stream-download' request
-		ExecutePlanRequest req = toExecutePlanRequest(plan);
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(DEFAULT.toProto())
+													.setUseCompression(m_marmot.useCompression())
+													.build();
 		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -89,15 +99,21 @@ public class PBPlanExecutionServiceProxy {
 			StreamUpnDownloadClient client = new StreamUpnDownloadClient(is) {
 				@Override
 				protected ByteString getHeader() throws Exception {
-					ExecutePlanLocallyRequest req = ExecutePlanLocallyRequest.newBuilder()
-																			.setPlan(plan.toProto())
-																			.setHasInputRset(true)
-																			.build();
+					ExecutePlanRequest req
+								= ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setHasInputRset(true)
+													.setUseCompression(m_marmot.useCompression())
+													.build();
 					return req.toByteString();
 				}
 			};
 			
 			InputStream stream = client.upAndDownload(m_stub.executeLocallyWithInput(client));
+			if ( m_marmot.useCompression() ) {
+				stream = Lz4Compressions.decompress(stream);
+			}
+			
 			return PBInputStreamRecordSet.from(stream);
 		}
 		catch ( Throwable e ) {
@@ -109,8 +125,10 @@ public class PBPlanExecutionServiceProxy {
 	public FOption<Record> executeToRecord(Plan plan, ExecutePlanOptions opts) {
 		RecordSchema outSchema = getOutputRecordSchema(plan, FOption.empty());
 
-		ExecutePlanRequest req = toExecutePlanRequest(plan, opts);
-		
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(opts.toProto())
+													.build();
 		OptionalRecordResponse resp = m_blockingStub.executeToSingle(req);
 		switch ( resp.getEitherCase() ) {
 			case RECORD:
@@ -129,8 +147,15 @@ public class PBPlanExecutionServiceProxy {
 		StreamObserver<DownChunkResponse> channel = m_stub.executeToRecordSet(downloader);
 
 		// start download by sending 'stream-download' request
-		ExecutePlanRequest req = toExecutePlanRequest(plan);
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(DEFAULT.toProto())
+													.setUseCompression(m_marmot.useCompression())
+													.build();
 		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -176,15 +201,5 @@ public class PBPlanExecutionServiceProxy {
 
 	public void executeModule(String id) {
 		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
-	}
-
-	static ExecutePlanRequest toExecutePlanRequest(Plan plan) {
-		return toExecutePlanRequest(plan, DEFAULT);
-	}
-	static ExecutePlanRequest toExecutePlanRequest(Plan plan, ExecutePlanOptions opts) {
-		return ExecutePlanRequest.newBuilder()
-								.setPlan(plan.toProto())
-								.setOptions(opts.toProto())
-								.build();
 	}
 }

@@ -12,7 +12,6 @@ import io.grpc.ServerBuilder;
 import marmot.BindDataSetOptions;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
-import marmot.DataSetNotFoundException;
 import marmot.DataSetType;
 import marmot.ExecutePlanOptions;
 import marmot.MarmotRuntime;
@@ -37,17 +36,19 @@ public class PBMarmotClient implements MarmotRuntime {
 	private final PBFileServiceProxy m_fileService;
 	private final PBDataSetServiceProxy m_dsService;
 	private final PBPlanExecutionServiceProxy m_pexecService;
+	private final boolean m_useCompression;
 	
 	public static PBMarmotClient connect(String host, int port) throws IOException {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
 													.usePlaintext()
 													.build();
 		
-		return new PBMarmotClient(channel);
+		return new PBMarmotClient(channel, true);
 	}
 	
-	private PBMarmotClient(ManagedChannel channel) throws IOException {
+	private PBMarmotClient(ManagedChannel channel, boolean useCompression) throws IOException {
 		m_channel = channel;
+		m_useCompression = useCompression;
 		
 		m_fileService = new PBFileServiceProxy(this, channel);
 		m_dsService = new PBDataSetServiceProxy(this, channel);
@@ -68,6 +69,10 @@ public class PBMarmotClient implements MarmotRuntime {
 	
 	ManagedChannel getChannel() {
 		return m_channel;
+	}
+	
+	public boolean useCompression() {
+		return m_useCompression;
 	}
 	
 	public PBPlanExecutionServiceProxy getPlanExecutionService() {
@@ -108,12 +113,6 @@ public class PBMarmotClient implements MarmotRuntime {
 									StoreDataSetOptions opts)
 		throws DataSetExistsException {
 		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
-	}
-	
-	@Override
-	public DataSet appendIntoDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts)
-		throws DataSetNotFoundException {
-		return m_dsService.appendIntoDataSet(dsId, plan, execOpts);
 	}
 	
 	@Override

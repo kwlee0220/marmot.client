@@ -28,7 +28,7 @@ import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.proto.LongProto;
 import marmot.proto.StringProto;
-import marmot.proto.service.AppendIntoDataSetRequest;
+import marmot.proto.service.AppendPlanResultRequest;
 import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.BoolResponse;
@@ -50,6 +50,7 @@ import marmot.proto.service.MoveDataSetRequest;
 import marmot.proto.service.MoveDirRequest;
 import marmot.proto.service.QueryRangeRequest;
 import marmot.proto.service.QuerySpatialClusterInfoRequest;
+import marmot.proto.service.ReadDataSetRequest;
 import marmot.proto.service.ReadRawSpatialClusterRequest;
 import marmot.proto.service.ReadThumbnailRequest;
 import marmot.proto.service.SpatialClusterInfoProto;
@@ -64,6 +65,7 @@ import marmot.rset.PBInputStreamRecordSet;
 import marmot.rset.PBRecordSetInputStream;
 import utils.Throwables;
 import utils.func.FOption;
+import utils.io.Lz4Compressions;
 import utils.stream.FStream;
 
 /**
@@ -97,23 +99,16 @@ public class PBDataSetServiceProxy {
 	
 	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts,
 								StoreDataSetOptions opts) throws DataSetExistsException {
-		ExecutePlanRequest execPlan = PBPlanExecutionServiceProxy.toExecutePlanRequest(plan, execOpts);
+		ExecutePlanRequest execPlan = ExecutePlanRequest.newBuilder()
+														.setPlan(plan.toProto())
+														.setOptions(execOpts.toProto())
+														.build();
 		CreateDataSetRequest proto = CreateDataSetRequest.newBuilder()
 														.setId(dsId)
 														.setPlanExec(execPlan)
 														.setOptions(opts.toProto())
 														.build();
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));
-	}
-	
-	public DataSet appendIntoDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts)
-		throws DataSetNotFoundException {
-		ExecutePlanRequest execPlan = PBPlanExecutionServiceProxy.toExecutePlanRequest(plan, execOpts);
-		AppendIntoDataSetRequest proto = AppendIntoDataSetRequest.newBuilder()
-																.setId(dsId)
-																.setPlanExec(execPlan)
-																.build();
-		return toDataSet(m_dsBlockingStub.appendIntoDataSet(proto));
 	}
 
 	public DataSet bindExternalDataSet(String dsId, String srcPath, DataSetType type,
@@ -184,8 +179,15 @@ public class PBDataSetServiceProxy {
 
 		// start download by sending 'stream-download' request
 		StreamObserver<DownChunkResponse> channel = m_dsStub.readDataSet(downloader);
-		InputStream is = downloader.start(PBUtils.toStringProto(dsId).toByteString(), channel);
 		
+		ReadDataSetRequest req = ReadDataSetRequest.newBuilder()
+												.setId(dsId)
+												.setUseCompression(m_marmot.useCompression())
+												.build();
+		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
 		return PBInputStreamRecordSet.from(is);
 	}
 	
@@ -196,12 +198,16 @@ public class PBDataSetServiceProxy {
 		
 		QueryRangeRequest.Builder builder = QueryRangeRequest.newBuilder()
 															.setId(dsId)
-															.setRange(PBUtils.toProto(range));
+															.setRange(PBUtils.toProto(range))
+															.setUseCompression(m_marmot.useCompression());
 		filterExpr.ifPresent(builder::setFilterExpr);
 		QueryRangeRequest req = builder.build();
 
 		// start download by sending 'stream-download' request
 		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
 		
 		return PBInputStreamRecordSet.from(is);
 	}
@@ -209,11 +215,17 @@ public class PBDataSetServiceProxy {
 	public long appendRecordSet(String dsId, RecordSet rset, FOption<Plan> plan) {
 		try {
 			InputStream is = PBRecordSetInputStream.from(rset);
+			if ( m_marmot.useCompression() ) {
+				is = Lz4Compressions.compress(is);
+			}
+			
 			StreamUploadSender uploader = new StreamUploadSender(is) {
 				@Override
 				protected ByteString getHeader() throws Exception {
-					AppendRecordSetRequest.Builder builder = AppendRecordSetRequest.newBuilder()
-																					.setId(dsId);
+					AppendRecordSetRequest.Builder builder
+									= AppendRecordSetRequest.newBuilder()
+															.setId(dsId)
+															.setUseCompression(m_marmot.useCompression());
 					plan.map(Plan::toProto).ifPresent(builder::setPlan);
 					AppendRecordSetRequest req = builder.build();
 					return req.toByteString();
@@ -230,6 +242,20 @@ public class PBDataSetServiceProxy {
 			Throwable cause = Throwables.unwrapThrowable(e);
 			throw Throwables.toRuntimeException(cause);
 		}
+	}
+	
+	public PBDataSetProxy appendPlanResult(String dsId, Plan plan, ExecutePlanOptions execOpts)
+		throws DataSetNotFoundException {
+		ExecutePlanRequest execPlan = ExecutePlanRequest.newBuilder()
+														.setPlan(plan.toProto())
+														.setOptions(execOpts.toProto())
+														.build();
+		AppendPlanResultRequest req = AppendPlanResultRequest.newBuilder()
+															.setId(dsId)
+															.setPlanExec(execPlan)
+															.build();
+		DataSetInfoResponse resp = m_dsBlockingStub.appendPlanResult(req);
+		return toDataSet(resp);
 	}
 	
 	public long getDataSetLength(String id) {
@@ -290,16 +316,21 @@ public class PBDataSetServiceProxy {
 		return infoList;
 	}
 	
-	public InputStream readRawSpatialCluster(String dsId, String quadKey) {
+	public RecordSet readSpatialCluster(String dsId, String quadKey) {
 		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
 
 		// start download by sending 'stream-download' request
 		ReadRawSpatialClusterRequest.Builder builder = ReadRawSpatialClusterRequest.newBuilder()
 																.setDatasetId(dsId)
-																.setQuadKey(quadKey);
+																.setQuadKey(quadKey)
+																.setUseCompression(m_marmot.useCompression());
 		ReadRawSpatialClusterRequest req = builder.build();
 		StreamObserver<DownChunkResponse> channel = m_dsStub.readRawSpatialCluster(downloader);
-		return downloader.start(req.toByteString(), channel);
+		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
+		return PBInputStreamRecordSet.from(is);
 	}
 
 	public List<String> getDirAll() {
@@ -376,11 +407,15 @@ public class PBDataSetServiceProxy {
 														.setId(dsId)
 														.setRange(PBUtils.toProto(range))
 														.setCount(count)
+														.setUseCompression(m_marmot.useCompression())
 														.build();
 
 		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
 		StreamObserver<DownChunkResponse> channel = m_dsStub.readThumbnail(downloader);
 		InputStream is = downloader.start(req.toByteString(), channel);
+		if ( m_marmot.useCompression() ) {
+			is = Lz4Compressions.decompress(is);
+		}
 
 		return PBInputStreamRecordSet.from(is);
 	}
