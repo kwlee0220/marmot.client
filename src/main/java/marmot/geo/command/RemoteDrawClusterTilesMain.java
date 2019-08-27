@@ -8,6 +8,7 @@ import marmot.command.MarmotClientCommands;
 import marmot.command.MarmotConnector;
 import marmot.command.UsageHelp;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
+import marmot.externio.shp.ExportShapefileParameters;
 import marmot.externio.shp.ShapefileParameters;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine;
@@ -77,7 +78,7 @@ public class RemoteDrawClusterTilesMain implements CheckedConsumer<MarmotRuntime
 							.build();
 		
 		try ( RecordSet rset = marmot.executeLocally(plan) ) {
-			ShapefileParameters params = ShapefileParameters.create()
+			ExportShapefileParameters params = ExportShapefileParameters.create()
 														.charset(m_shpParams.charset());
 			ExportRecordSetAsShapefile exporter = new ExportRecordSetAsShapefile(rset, "EPSG:4326",
 																				m_output, params);
