@@ -25,7 +25,7 @@ public class RemoteDeleteSpatialClusterMain implements CheckedConsumer<MarmotRun
 	@Mixin private MarmotConnector m_connector;
 	@Mixin private UsageHelp m_help;
 
-	@Parameters(paramLabel="dataset", index="0", arity="1..1",
+	@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 				description={"dataset id to cluster"})
 	private String m_dsId;
 

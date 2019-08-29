@@ -28,10 +28,10 @@ public class RemoteListRecordsMain implements Runnable {
 	@Mixin private MarmotConnector m_connector;
 	@Mixin private UsageHelp m_help;
 	
-	@Parameters(paramLabel="id", description={"id to display"})
-	private String m_id;
+	@Parameters(paramLabel="dataset-id", description={"dataset id to display"})
+	private String m_dsId;
 
-	@Option(names={"-t"}, paramLabel="type",
+	@Option(names={"-t", "-type"}, paramLabel="type",
 			description="target type: dataset (default), file, thumbnail")
 	private String m_type = "dataset";
 
@@ -81,13 +81,13 @@ public class RemoteListRecordsMain implements Runnable {
 			PlanBuilder builder = marmot.planBuilder("list_records");
 			switch ( m_type.toLowerCase() ) {
 				case "dataset":
-					builder = builder.load(m_id);
+					builder = builder.load(m_dsId);
 					break;
 				case "thumbnail":
-					builder = builder.loadMarmotFile("database/thumbnails/" + m_id);
+					builder = builder.loadMarmotFile("database/thumbnails/" + m_dsId);
 					break;
 				case "file":
-					builder = builder.loadMarmotFile(m_id);
+					builder = builder.loadMarmotFile(m_dsId);
 					break;
 				default:
 					throw new IllegalArgumentException("invalid type: '" + m_type + "'");

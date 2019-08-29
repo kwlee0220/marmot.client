@@ -15,7 +15,6 @@ import utils.func.FOption;
  */
 public class ExcelParameters {
 	private boolean m_headerFirst = false;
-	private FOption<String> m_nullString = FOption.empty();
 	private FOption<String> m_pointCols = FOption.empty();
 	private FOption<String> m_excelSrid = FOption.empty();
 	
@@ -30,17 +29,6 @@ public class ExcelParameters {
 	@Option(names={"-header_first"}, description="consider the first line as header")
 	public ExcelParameters headerFirst(boolean flag) {
 		m_headerFirst = flag;
-		return this;
-	}
-	
-	public FOption<String> nullString() {
-		return m_nullString;
-	}
-
-	@Option(names={"-null_string"}, paramLabel="null-string",
-			description="null string for column value")
-	public ExcelParameters nullString(String nullString) {
-		m_nullString = FOption.ofNullable(nullString);
 		return this;
 	}
 
@@ -59,7 +47,7 @@ public class ExcelParameters {
 		});
 	}
 
-	@Option(names={"-excel_srid"}, paramLabel="srid", description="EPSG code for input Excel file")
+	@Option(names={"-srid"}, paramLabel="srid", description="EPSG code for input Excel file")
 	public ExcelParameters srid(String srid) {
 		m_excelSrid = FOption.ofNullable(srid);
 		return this;

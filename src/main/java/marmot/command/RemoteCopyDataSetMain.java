@@ -1,26 +1,23 @@
 package marmot.command;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
 import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
 import marmot.geo.GeoClientUtils;
-import marmot.type.MapTile;
+import marmot.plan.PredicateOptions;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import utils.CSV;
-import utils.io.IOUtils;
+import utils.Utilities;
 
 
 /**
@@ -82,29 +79,24 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			setGeometryColumnInfo(input.getGeometryColumnInfo());
 		}
 		
-		if ( m_params.m_rangeWkt != null ) {
-			Geometry key = GeoClientUtils.fromWKT(m_params.m_rangeWkt);
-			return builder.query(m_params.m_inputDsId, key);
+		PredicateOptions opts = PredicateOptions.DEFAULT;
+		String rangeExpr = m_params.m_range;
+		if ( m_params.m_exRange != null ) {
+			rangeExpr = m_params.m_exRange;
+			opts = opts.negated(true);
 		}
-		else if ( m_params.m_rangePath != null ) {
-			File wktFile = new File(m_params.m_rangePath);
-			String wkt = IOUtils.toString(wktFile);
-			Geometry key = GeoClientUtils.fromWKT(wkt);
-			return builder.query(m_params.m_inputDsId, key);
-		}
-		else if ( m_params.m_rangeRect != null ) {
-			double[] coords = CSV.parseCsv(m_params.m_rangeRect)
-									.mapToDouble(Double::parseDouble)
-									.toArray();
-			Envelope range = new Envelope(new Coordinate(coords[0], coords[1]),
-											new Coordinate(coords[2], coords[3]));
-			Geometry key = GeoClientUtils.toPolygon(range);
-			return builder.query(m_params.m_inputDsId, key);
-		}
-		else if ( m_params.m_rangeQuadKey != null ) {
-			Envelope range = MapTile.fromQuadKey(m_params.m_rangeQuadKey).getBounds();
-			Geometry key = GeoClientUtils.toPolygon(range);
-			return builder.query(m_params.m_inputDsId, key);
+		if ( rangeExpr != null ) {
+			Map<String,String> kvMap = Utilities.parseKeyValueMap(rangeExpr);
+			if ( kvMap.get("dataset") == null ) {
+				return builder.query(m_params.m_inputDsId, kvMap.get("dataset"), opts);
+			}
+			if ( kvMap.get("bounds") == null ) {
+				String boundsExpr = kvMap.get("bounds");
+				Envelope bounds = GeoClientUtils.parseEnvelope(boundsExpr).get();
+				return builder.query(m_params.m_inputDsId, bounds, opts);
+			}
+			
+			throw new IllegalArgumentException("invalid range expression: " + rangeExpr);
 		}
 		else {
 			return builder.load(m_params.m_inputDsId);
@@ -118,16 +110,10 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		@Parameters(paramLabel="output_dataset", index="1", description={"output dataset id"})
 		private String m_outputDsId;
 		
-		@Option(names={"-range_file"}, paramLabel="path", description={"file path to WKT file"})
-		String m_rangePath;
+		@Option(names={"-range"}, paramLabel="range expr", description={"target range area"})
+		String m_range;
 		
-		@Option(names={"-range_wkt"}, paramLabel="wkt", description={"key geometry in WKT"})
-		String m_rangeWkt;
-		
-		@Option(names={"-range_rect"}, paramLabel="rect", description={"rectangle coordinates"})
-		String m_rangeRect;
-		
-		@Option(names={"-range_qkey"}, paramLabel="qkey", description={"range query with quad-key"})
-		String m_rangeQuadKey;
+		@Option(names={"-ex_range"}, paramLabel="range expr", description={"target range area"})
+		String m_exRange;
 	}
 }

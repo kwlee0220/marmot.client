@@ -27,7 +27,7 @@ public class RemoteClusterDataSetMain implements CheckedConsumer<MarmotRuntime> 
 	@Mixin private MarmotConnector m_connector;
 	@Mixin private UsageHelp m_help;
 
-	@Parameters(paramLabel="dataset", index="0", arity="1..1",
+	@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 				description={"dataset id to cluster"})
 	private String m_dsId;
 	
@@ -84,7 +84,7 @@ public class RemoteClusterDataSetMain implements CheckedConsumer<MarmotRuntime> 
 		ds.cluster(options);
 	}
 
-	@Option(names="-block_size", paramLabel="nbytes", description="cluster size (eg: '64mb')")
+	@Option(names= {"-b", "-block_size"}, paramLabel="nbytes", description="cluster size (eg: '64mb')")
 	private void setBlockSize(String blkSizeStr) {
 		m_blkSize = UnitUtils.parseByteSize(blkSizeStr);
 	}

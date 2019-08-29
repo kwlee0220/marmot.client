@@ -16,6 +16,7 @@ import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
+import utils.Utilities;
 
 /**
  * 
@@ -28,8 +29,8 @@ import utils.StopWatch;
 public class RemoteImportGeoJsonMain implements CheckedRunnable {
 	@Mixin private MarmotConnector m_connector;
 	@Mixin private Params m_params;
-	@Mixin private ImportParameters m_importParams;
 	@Mixin private GeoJsonParameters m_gjsonParams;
+	@Mixin private ImportParameters m_importParams;
 	@Mixin private UsageHelp m_help;
 	
 	private static class Params {
@@ -59,6 +60,14 @@ public class RemoteImportGeoJsonMain implements CheckedRunnable {
 		}
 	}
 
+	@Parameters(paramLabel="dataset_id", index="1", arity="1..1",
+			description={"dataset id to import onto"})
+	public void setDataSetId(String id) {
+		Utilities.checkNotNullArgument(id, "dataset id is null");
+		
+		m_importParams.setDataSetId(id);
+	}
+
 	@Override
 	public void run() throws Exception {
 		PBMarmotClient marmot = m_connector.connect();
@@ -81,7 +90,6 @@ public class RemoteImportGeoJsonMain implements CheckedRunnable {
 		
 		double velo = count / watch.getElapsedInFloatingSeconds();
 		System.out.printf("imported: dataset=%s count=%d elapsed=%s, velo=%.1f/s%n",
-							m_importParams.getDataSetId(), count, watch.getElapsedMillisString(),
-							velo);
+							m_importParams.getDataSetId(), count, watch.getElapsedMillisString(), velo);
 	}
 }

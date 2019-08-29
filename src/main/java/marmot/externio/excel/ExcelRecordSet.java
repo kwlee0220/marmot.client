@@ -143,11 +143,7 @@ public class ExcelRecordSet extends AbstractRecordSet {
 	private Object readCell(Cell cell, DataType colType, int idx) {
 		switch ( cell.getCellTypeEnum() ) {
 			case STRING:
-				String colStr = cell.getStringCellValue();
-				boolean isNull = m_params.nullString()
-										.map(str -> str.equals(colStr))
-										.getOrElse(false);
-				return (isNull) ? null : DataUtils.cast(colStr, colType);
+				return DataUtils.cast(cell.getStringCellValue(), colType);
 			case NUMERIC:
 				return DataUtils.cast(cell.getNumericCellValue(), colType);
 			case BOOLEAN:

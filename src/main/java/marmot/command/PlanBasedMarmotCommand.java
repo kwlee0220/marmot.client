@@ -33,7 +33,6 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import utils.CSV;
 import utils.KeyValue;
-import utils.Size2d;
 import utils.UnitUtils;
 import utils.Utilities;
 import utils.func.FOption;
@@ -121,8 +120,9 @@ abstract class PlanBasedMarmotCommand {
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
 		builder = addAssignGridCell(builder);
-		builder = addExpand(builder);
+		builder = addDefineColumn(builder);
 		builder = addUpdate(builder);
+		builder = addExpand(builder);
 		builder = addFilter(builder);
 		
 		// 'spatial_join' 관련 인자가 있는 경우, spatial_join 연산을 추가한다.
@@ -192,6 +192,33 @@ abstract class PlanBasedMarmotCommand {
 		if ( m_opParams.m_updateExpr != null ) {
 			builder = builder.update(m_opParams.m_updateExpr);
 		}
+		return builder;
+	}
+	
+	private PlanBuilder addDefineColumn(PlanBuilder builder) {
+		if ( m_opParams.m_defineColumnExpr != null ) {
+			String colDecl = m_opParams.m_defineColumnExpr;
+			
+			int idx = m_opParams.m_defineColumnExpr.indexOf('=');
+			if ( idx >= 0 ) {
+				String initValue = m_opParams.m_defineColumnExpr.substring(idx+1).trim();
+				
+				String decl = m_opParams.m_defineColumnExpr.substring(0, idx).trim();
+				idx = decl.indexOf(' ');
+				if ( idx < 0 ) {
+					throw new IllegalArgumentException("invalid define_column expr: " + m_opParams.m_defineColumnExpr);
+				}
+				String typeName = decl.substring(0, idx).trim();
+				String colName = decl.substring(idx+1).trim();
+				colDecl = String.format("%s:%s", colName, typeName);
+				
+				builder = builder.defineColumn(colDecl, initValue);
+			}
+			else {
+				builder = builder.defineColumn(m_opParams.m_defineColumnExpr);
+			}
+		}
+		
 		return builder;
 	}
 	
@@ -273,17 +300,16 @@ abstract class PlanBasedMarmotCommand {
 		AggregateFunction[] aggrs = parseAggregate();
 
 		if ( m_opParams.m_groupBy != null ) {
-			if ( aggrs == null ) {
-				throw new IllegalArgumentException("no aggregation for GroupBy");
+			Group group = Group.parseGroup(m_opParams.m_groupBy);
+			
+			if ( aggrs != null ) {
+				return builder.aggregateByGroup(group, aggrs);
 			}
-
-			List<String> parts = CSV.parseCsv(m_opParams.m_groupBy, ':', '\\').toList();
-			Group group = Group.ofKeys(parts.get(0));
-			if ( parts.size() > 1 ) {
-				group.tags(parts.get(1));
+			else if ( m_opParams.m_takeCount > 0 ) {
+				return builder.takeByGroup(group, m_opParams.m_takeCount);
 			}
-
-			return builder.aggregateByGroup(group, aggrs);
+			
+			throw new IllegalArgumentException("no aggregation for GroupBy");
 		}
 		else if ( aggrs != null ) {
 			return builder.aggregate(aggrs);
@@ -448,65 +474,46 @@ abstract class PlanBasedMarmotCommand {
 	}
 	
 	private static class OpParams {
-		@Option(names={"-filter"}, paramLabel="expr", description={"filter expression"})
-		String m_filterExpr;
-		
-		@Option(names={"-update"}, paramLabel="expr", description={"update expression"})
-		String m_updateExpr;
-		
-		@Option(names={"-expand"}, paramLabel="expr", description={"expand expression"})
-		String m_expandExpr;
-		
-		@Option(names={"-project"}, paramLabel="colums", description={"target column list"})
-		String m_projectExpr;
-		
-		@Option(names={"-aggregate"}, paramLabel="funcs", description={"aggregate functions)"})
-		String m_aggregates;
-		
-		@Option(names={"-sample"}, paramLabel="ratio", description={"sampling ratio"})
-		double m_sampleRatio;
-		
-		@Option(names={"-shard"}, paramLabel="count", description={"reducer count"})
-		int m_shardCount = -1;
-		
-		@Option(names={"-buffer"}, paramLabel="meter", description={"buffer radius"})
-		double m_bufferRadius = -1;
-		
 		@Option(names={"-centroid"}, description={"perform centroid on the geometry column"})
 		boolean m_centroid;
 		
-		@Option(names={"-transform_srid"}, paramLabel="srid",
-				description={"destination SRID for transformCRS"})
-		String m_transformSrid;
+		double m_bufferRadius = -1;
+		@Option(names={"-buffer"}, paramLabel="meter", description={"buffer radius"})
+		public void setBuffer(String distStr) {
+			m_bufferRadius = UnitUtils.parseLengthInMeter(distStr);
+		}
 		
 		@Option(names={"-assign_gridcell"}, paramLabel="grid",
 				description={"grid-cell information"})
 		private void setSquareGrid(String gridExpr) {
-			List<String> parts = CSV.parseCsv(gridExpr, ':').toList();
-			if ( parts.size() != 2 ) {
-				throw new IllegalArgumentException("invalid square-grid info: " + gridExpr);
-			}
-			
-			Size2d cellSize = Size2d.fromString(parts.get(1));
-			m_grid = new SquareGrid(parts.get(0), cellSize);
+			m_grid = SquareGrid.parseString(gridExpr);
 		}
 		SquareGrid m_grid;
 		
-		@Option(names={"-distinct"}, paramLabel="key_columns",
-				description={"distinct key columns"})
-		String m_distinctCols;
+		@Option(names={"-expand"}, paramLabel="expr", description={"expand expression"})
+		String m_expandExpr;
 		
-		@Option(names={"-group_by"}, paramLabel="cols:tags",
-				description={"groupping columns (and optionally tag columns)"})
-		String m_groupBy;
+		@Option(names={"-update"}, paramLabel="expr", description={"update expression"})
+		String m_updateExpr;
 		
-		@Option(names={"-join"}, paramLabel="cols:dsid:join_cols",
-				description={"join columns, parameter join dataset, and columns"})
-		String m_join;
+		@Option(names={"-define_column"}, paramLabel="expr", description={"define a column"})
+		String m_defineColumnExpr;
+		
+		@Option(names={"-filter"}, paramLabel="expr", description={"filter expression"})
+		String m_filterExpr;
+		
+		@Option(names={"-sample"}, paramLabel="ratio", description={"sampling ratio"})
+		double m_sampleRatio;
+		
+		//------------------------------------------------------------------------------
 
 		@Option(names={"-spatial_join"}, paramLabel="cols:dsid",
 				description={"join columns, parameter join dataset"})
 		String m_spatialJoin;
+		
+		@Option(names={"-join"}, paramLabel="cols:dsid:join_cols",
+				description={"join columns, parameter join dataset, and columns"})
+		String m_join;
 		
 		@Option(names={"-join_type"}, paramLabel="type",
 				description={"join type: inner|left_outer|right_outer|full_outer|semi|aggregate (default: inner)"})
@@ -519,11 +526,38 @@ abstract class PlanBasedMarmotCommand {
 		@Option(names={"-join_output_cols"}, paramLabel="cols",
 				description={"join output columns"})
 		String m_joinOutCols;
+		
+		//------------------------------------------------------------------------------
+		
+		@Option(names={"-group_by"}, paramLabel="cols:tags",
+				description={"groupping columns (and optionally tag columns)"})
+		String m_groupBy;
+		
+		@Option(names={"-aggregate"}, paramLabel="funcs", description={"aggregate functions)"})
+		String m_aggregates;
+		
+		@Option(names={"-take"}, paramLabel="count", description={"take count"})
+		int m_takeCount = -1;
+		
+		//------------------------------------------------------------------------------
+		
+		@Option(names={"-project"}, paramLabel="colums", description={"target column list"})
+		String m_projectExpr;
+		
+		@Option(names={"-distinct"}, paramLabel="columns", description={"distinct key columns"})
+		String m_distinctCols;
+		
+		@Option(names={"-transform_srid"}, paramLabel="EPSG-code",
+				description={"destination SRID for transformCRS"})
+		String m_transformSrid;
+		
+		@Option(names={"-shard"}, paramLabel="count", description={"reducer count"})
+		int m_shardCount = -1;
 
 		@Option(names={"-store_as_csv"}, paramLabel="csv_info",
 				description={"csv options for result csv files"})
 		private void setStoreAsCsv(String expr) {
-			m_storeAsCsvOptions = StoreAsCsvOptions.DEFAULT();
+			m_storeAsCsvOptions = StoreAsCsvOptions.DEFAULT().quote('"');
 			
 			for ( KeyValue<String,String> kv: Utilities.parseKeyValues(expr) ) {
 				switch ( kv.key().toLowerCase() ) {
