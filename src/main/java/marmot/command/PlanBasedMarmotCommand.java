@@ -56,26 +56,32 @@ import utils.func.FOption;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-abstract class PlanBasedMarmotCommand {
+public abstract class PlanBasedMarmotCommand {
 	@Mixin private MarmotConnector m_connector;
-	@Mixin private OpParams m_opParams;
+	@Mixin protected OpParams m_opParams;
 	@Mixin private StoreDataSetParameters m_storeParams;
 	@Mixin private UsageHelp m_help;
 
 	private MarmotRuntime m_marmot;
 	private GeometryColumnInfo m_gcInfo;
+	private boolean m_joinDisabled = false;
+	private String m_outputDsId;
 	
 	abstract protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder)
 		throws Exception;
 	
 	public void run(String planName, String outputDsId) throws Exception {
 		m_marmot = m_connector.connect();
+		m_outputDsId = outputDsId;
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( m_opParams.m_storeAsCsvOptions != null ) {
 			plan = plan.toBuilder()
 						.storeAsCsv(outputDsId, m_opParams.m_storeAsCsvOptions)
 						.build();
+			m_marmot.execute(plan);
+		}
+		else if ( m_opParams.m_storeEachGroup ) {
 			m_marmot.execute(plan);
 		}
 		else if ( !m_storeParams.getAppend() ) {
@@ -116,6 +122,13 @@ abstract class PlanBasedMarmotCommand {
 		}
 	}
 	
+	protected void setJoinDisabled() {
+		if ( m_joinDisabled ) {
+			throw new IllegalArgumentException("multiple join operations are not permitted");
+		}
+		m_joinDisabled = true;
+	}
+	
 	private PlanBuilder appendOperators(PlanBuilder builder) {
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
@@ -136,6 +149,10 @@ abstract class PlanBasedMarmotCommand {
 		
 		// 'groupBy' 관련 인자가 있는 경우, groupBy 연산을 추가한다.
 		addGroupBy(builder);
+		if ( m_opParams.m_storeEachGroup ) {
+			// storeByGroup 연산이 포함된 경우는 이후 연산을 적용하지 않는다.
+			return builder;
+		}
 		
 		builder = addProject(builder);
 		builder = addDistinct(builder);
@@ -235,6 +252,8 @@ abstract class PlanBasedMarmotCommand {
 			return builder;
 		}
 		
+		setJoinDisabled();
+		
 		List<String> parts = CSV.parseCsv(join, ':', '\\').toList();
 		if ( parts.size() != 2 ) {
 			String details = String.format("invalid spatial_join argument: '%s'%n", join);
@@ -266,33 +285,37 @@ abstract class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder addJoin(PlanBuilder builder) {
-		if ( m_opParams.m_join != null ) {
-			List<String> parts = CSV.parseCsv(m_opParams.m_join, ':', '\\').toList();
-			if ( parts.size() != 3 ) {
-				String details = String.format("invalid join argument: 'join': '%s'",
-												m_opParams.m_join);
-				throw new IllegalArgumentException(details);
-			}
-			String joinCols = parts.get(0);
-			String paramDsId = parts.get(1);
-			String paramJoinCols = parts.get(2);
-			
-			JoinType joinType = FOption.ofNullable(m_opParams.m_joinType)
-										.map(s -> s + "_join")
-										.map(JoinType::fromString)
-										.getOrElse(() -> JoinType.INNER_JOIN);
-			JoinOptions opts = JoinOptions.create(joinType);
-			
-			if ( m_opParams.m_joinOutCols != null ) {
-				return builder.hashJoin(joinCols, paramDsId, paramJoinCols,
-									m_opParams.m_joinOutCols, opts);
-			}
-			else {
-				throw new IllegalArgumentException("'join_output_col' is not present");
-			}
+		if ( m_opParams.m_join == null ) {
+			return builder;
+		}
+
+		setJoinDisabled();
+		
+		List<String> parts = CSV.parseCsv(m_opParams.m_join, ':', '\\').toList();
+		if ( parts.size() != 3 ) {
+			String details = String.format("invalid join argument: 'join': '%s'",
+											m_opParams.m_join);
+			throw new IllegalArgumentException(details);
+		}
+		String joinCols = parts.get(0);
+		String paramDsId = parts.get(1);
+		String paramJoinCols = parts.get(2);
+		
+		JoinType joinType = FOption.ofNullable(m_opParams.m_joinType)
+									.map(s -> s + "_join")
+									.map(JoinType::fromString)
+									.getOrElse(() -> JoinType.INNER_JOIN);
+		JoinOptions opts = JoinOptions.create(joinType);
+		if ( m_opParams.m_joinWorkers > 0 ) {
+			opts = opts.workerCount(m_opParams.m_joinWorkers);
+		}
+		
+		if ( m_opParams.m_joinOutCols != null ) {
+			return builder.hashJoin(joinCols, paramDsId, paramJoinCols,
+								m_opParams.m_joinOutCols, opts);
 		}
 		else {
-			return builder;
+			throw new IllegalArgumentException("'join_output_col' is not present");
 		}
 	}
 	
@@ -307,6 +330,9 @@ abstract class PlanBasedMarmotCommand {
 			}
 			else if ( m_opParams.m_takeCount > 0 ) {
 				return builder.takeByGroup(group, m_opParams.m_takeCount);
+			}
+			else if ( m_opParams.m_storeEachGroup ) {
+				return builder.storeByGroup(group, m_outputDsId, m_storeParams.toOptions());
 			}
 			
 			throw new IllegalArgumentException("no aggregation for GroupBy");
@@ -473,7 +499,7 @@ abstract class PlanBasedMarmotCommand {
 		return builder;
 	}
 	
-	private static class OpParams {
+	public static class OpParams {
 		@Option(names={"-centroid"}, description={"perform centroid on the geometry column"})
 		boolean m_centroid;
 		
@@ -517,15 +543,35 @@ abstract class PlanBasedMarmotCommand {
 		
 		@Option(names={"-join_type"}, paramLabel="type",
 				description={"join type: inner|left_outer|right_outer|full_outer|semi|aggregate (default: inner)"})
-		String m_joinType;
+		protected String m_joinType;
+		
+		public String getJoinType() {
+			return m_joinType;
+		}
 		
 		@Option(names={"-join_expr"}, paramLabel="expr",
-				description={"join expression. (eg: within_distance(15)"})
-		String m_joinExpr;
+				description={"join expression. (eg: within_distance(15))"})
+		protected String m_joinExpr;
+		
+		public String getJoinExpr() {
+			return m_joinExpr;
+		}
 		
 		@Option(names={"-join_output_cols"}, paramLabel="cols",
 				description={"join output columns"})
-		String m_joinOutCols;
+		protected String m_joinOutCols;
+		
+		public String getJoinOutputColumns() {
+			return m_joinOutCols;
+		}
+
+		@Option(names={"-join_workers"}, paramLabel="count",
+				description={"join worker count"})
+		protected int m_joinWorkers = -1;
+		
+		public int getJoinWorkerCount() {
+			return m_joinWorkers;
+		}
 		
 		//------------------------------------------------------------------------------
 		
@@ -538,6 +584,9 @@ abstract class PlanBasedMarmotCommand {
 		
 		@Option(names={"-take"}, paramLabel="count", description={"take count"})
 		int m_takeCount = -1;
+		
+		@Option(names={"-store_each_group"}, description={"store into dataset per a group"})
+		boolean m_storeEachGroup = false;
 		
 		//------------------------------------------------------------------------------
 		
