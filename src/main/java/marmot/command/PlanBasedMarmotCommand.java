@@ -107,15 +107,6 @@ public abstract class PlanBasedMarmotCommand {
 		return builder.build();
 	}
 	
-	protected void createDataSet(String outDsId, Plan plan) throws Exception {
-		if ( !m_storeParams.getAppend() ) {
-			m_marmot.createDataSet(outDsId, plan, m_storeParams.toOptions());
-		}
-		else {
-			m_marmot.execute(plan);
-		}
-	}
-	
 	protected void setJoinDisabled() {
 		if ( m_joinDisabled ) {
 			throw new IllegalArgumentException("multiple join operations are not permitted");

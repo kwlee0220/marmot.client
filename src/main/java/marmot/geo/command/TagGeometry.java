@@ -1,13 +1,13 @@
 package marmot.geo.command;
 
-import static marmot.StoreDataSetOptions.*;
+import static marmot.StoreDataSetOptions.FORCE;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
-import marmot.StoreDataSetOptions;
 import marmot.command.MarmotClientCommands;
 import marmot.optor.JoinOptions;
 import marmot.remote.protobuf.PBMarmotClient;
@@ -65,15 +65,14 @@ public class TagGeometry {
 
 		String outputGeomCol = cl.getOptionString("geom_col").getOrElse(gcInfo.name());
 
+		gcInfo = new GeometryColumnInfo(outputGeomCol, gcInfo.srid());
 		String outputCols = String.format("param.%s as %s,*-{%s}", gcInfo.name(),
 											outputGeomCol, outputGeomCol);
 		Plan plan = marmot.planBuilder("tag_geometry")
 								.load(dsId)
 								.hashJoin(joinCol, refDsId, refCol, outputCols, opts)
-								.store(outDs)
+								.store(outDs, FORCE(gcInfo))
 								.build();
-		
-		gcInfo = new GeometryColumnInfo(outputGeomCol, gcInfo.srid());
-		marmot.createDataSet(outDs, plan, FORCE(gcInfo));
+		marmot.execute(plan);
 	}
 }

@@ -10,6 +10,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import marmot.BindDataSetOptions;
+import marmot.CreateDataSetOptions;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetType;
@@ -103,16 +104,16 @@ public class PBMarmotClient implements MarmotRuntime {
 	/////////////////////////////////////////////////////////////////////
 
 	@Override
-	public DataSet createDataSet(String dsId, RecordSchema schema, StoreDataSetOptions opts)
+	public DataSet createDataSet(String dsId, RecordSchema schema, CreateDataSetOptions opts)
 		throws DataSetExistsException {
 		return m_dsService.createDataSet(dsId, schema, opts);
 	}
 	
-	@Override
-	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
-		throws DataSetExistsException {
-		return m_dsService.createDataSet(dsId, plan, opts);
-	}
+//	@Override
+//	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
+//		throws DataSetExistsException {
+//		return m_dsService.createDataSet(dsId, plan, opts);
+//	}
 	
 	@Override
 	public DataSet getDataSet(String dsId) {

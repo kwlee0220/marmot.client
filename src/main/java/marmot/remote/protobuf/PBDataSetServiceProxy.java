@@ -12,6 +12,7 @@ import com.vividsolutions.jts.geom.Envelope;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import marmot.BindDataSetOptions;
+import marmot.CreateDataSetOptions;
 import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
@@ -87,7 +88,7 @@ public class PBDataSetServiceProxy {
 		return m_marmot;
 	}
 	
-	public DataSet createDataSet(String dsId, RecordSchema schema, StoreDataSetOptions opts)
+	public DataSet createDataSet(String dsId, RecordSchema schema, CreateDataSetOptions opts)
 			throws DataSetExistsException {
 		CreateDataSetRequest proto  = CreateDataSetRequest.newBuilder()
 															.setId(dsId)
@@ -101,7 +102,7 @@ public class PBDataSetServiceProxy {
 		throws DataSetExistsException {
 		CreateDataSetRequest proto = CreateDataSetRequest.newBuilder()
 														.setId(dsId)
-														.setOptions(opts.toProto())
+														.setOptions(opts.toCreateOptions().toProto())
 														.build();
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));
 	}

@@ -1,6 +1,7 @@
 package marmot.geo.command;
 
-import static marmot.StoreDataSetOptions.*;
+import static marmot.StoreDataSetOptions.FORCE;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,7 +12,6 @@ import com.vividsolutions.jts.geom.Envelope;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
-import marmot.StoreDataSetOptions;
 import marmot.command.MarmotClientCommands;
 import marmot.geo.GeoClientUtils;
 import marmot.optor.AggregateFunction;
@@ -95,6 +95,8 @@ public class SquareGridAnalysis {
 			List<AggregateFunction> aggrs = valueColNames.stream()
 														.map(col -> AggregateFunction.SUM(col).as(col))
 														.collect(Collectors.toList());
+			GeometryColumnInfo gcInfo = new GeometryColumnInfo("the_geom",
+																ds.getGeometryColumnInfo().srid());
 			
 			Plan plan;
 			plan = marmot.planBuilder(planName)
@@ -107,12 +109,10 @@ public class SquareGridAnalysis {
 						.aggregateByGroup(Group.ofKeys("cell_id").withTags("cell_geom,cell_pos"), aggrs)
 						.expand("x:long,y:long", "x = cell_pos.getX(); y = cell_pos.getY()")
 						.project("cell_geom as the_geom, x, y, *-{cell_geom,x,y,cell_id,cell_pos}")
-						.store(output)
+						.store(output, FORCE(gcInfo))
 						.build();
-			GeometryColumnInfo gcInfo = new GeometryColumnInfo("the_geom",
-															ds.getGeometryColumnInfo().srid());
-			DataSet result = marmot.createDataSet(output, plan,
-								FORCE(gcInfo));
+			marmot.execute(plan);
+			DataSet result = marmot.getDataSet(output);
 			System.out.println("elapsed time: " + watch.stopAndGetElpasedTimeString());
 //			DataSet result = marmot.getDataSet("tmp/anyang/grid_gas");
 			

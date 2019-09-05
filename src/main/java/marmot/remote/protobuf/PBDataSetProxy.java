@@ -148,13 +148,13 @@ public class PBDataSetProxy implements DataSet {
 		return count;
 	}
 
-	@Override
-	public void appendPlanResult(Plan plan, ExecutePlanOptions execOpts) {
-		Utilities.checkNotNullArgument(plan, "Plan is null");
-		Utilities.checkNotNullArgument(execOpts, "ExecutePlanOptions is null");
-		
-		m_info = m_service.appendPlanResult(getId(), plan, execOpts).m_info;
-	}
+//	@Override
+//	public void appendPlanResult(Plan plan, ExecutePlanOptions execOpts) {
+//		Utilities.checkNotNullArgument(plan, "Plan is null");
+//		Utilities.checkNotNullArgument(execOpts, "ExecutePlanOptions is null");
+//		
+//		m_info = m_service.appendPlanResult(getId(), plan, execOpts).m_info;
+//	}
 
 	@Override
 	public SpatialIndexInfo cluster(ClusterDataSetOptions opts) {
