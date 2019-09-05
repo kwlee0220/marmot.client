@@ -61,6 +61,9 @@ public abstract class PlanBasedMarmotCommand {
 	@Mixin protected OpParams m_opParams;
 	@Mixin private StoreDataSetParameters m_storeParams;
 	@Mixin private UsageHelp m_help;
+	
+	@Option(names={"-print_plan"}, description={"print the plan without executing it"})
+	private boolean m_printPlan = false;
 
 	private MarmotRuntime m_marmot;
 	private GeometryColumnInfo m_gcInfo;
@@ -75,28 +78,10 @@ public abstract class PlanBasedMarmotCommand {
 		m_outputDsId = outputDsId;
 		
 		Plan plan = buildPlan(m_marmot, planName);
-		if ( m_opParams.m_storeAsCsvOptions != null ) {
-			plan = plan.toBuilder()
-						.storeAsCsv(outputDsId, m_opParams.m_storeAsCsvOptions)
-						.build();
-			m_marmot.execute(plan);
-		}
-		else if ( m_opParams.m_storeEachGroup ) {
-			m_marmot.execute(plan);
-		}
-		else if ( !m_storeParams.getAppend() ) {
-			String fromPlanDsId = getStoreTargetDataSetId(plan).getOrNull();
-			if ( outputDsId == null && fromPlanDsId == null ) {
-				throw new IllegalArgumentException("result dataset id is messing");
-			}
-			else if ( outputDsId == null ) {
-				outputDsId = fromPlanDsId;
-			}
-			
-			m_marmot.createDataSet(outputDsId, plan, m_storeParams.toOptions());
+		if ( m_printPlan ) {
+			System.out.println(plan);
 		}
 		else {
-			plan = adjustPlanForStore(outputDsId, plan);
 			m_marmot.execute(plan);
 		}
 	}
@@ -109,6 +94,15 @@ public abstract class PlanBasedMarmotCommand {
 		PlanBuilder builder = marmot.planBuilder(planName);
 		builder = addLoad(marmot, builder);
 		builder = appendOperators(builder);
+		
+		if ( m_opParams.m_storeAsCsvOptions != null ) {
+			builder = builder.storeAsCsv(m_outputDsId, m_opParams.m_storeAsCsvOptions);
+		}
+		else if ( m_opParams.m_storeEachGroup ) { }
+		else {
+			// 마지막으로 store 연산 추가
+			builder = builder.store(m_outputDsId, m_storeParams.toOptions());
+		}
 		
 		return builder.build();
 	}
@@ -650,6 +644,7 @@ public abstract class PlanBasedMarmotCommand {
 								.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
 		switch ( last.getOperatorCase() ) {
 			case STORE_INTO_DATASET:
+			case STORE_DATASET:
 			case STORE_AS_CSV:
 			case STORE_INTO_JDBC_TABLE:
 			case STORE_AND_RELOAD:
@@ -659,7 +654,9 @@ public abstract class PlanBasedMarmotCommand {
 				StoreIntoDataSetProto store = StoreIntoDataSetProto.newBuilder()
 																	.setId(dsId)
 																	.build();
-				OperatorProto op = OperatorProto.newBuilder().setStoreIntoDataset(store).build();
+				OperatorProto op = OperatorProto.newBuilder()
+												.setStoreIntoDataset(store)
+												.build();
 				return Plan.fromProto(plan.toProto()
 											.toBuilder()
 											.addOperators(op)

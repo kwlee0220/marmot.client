@@ -97,15 +97,10 @@ public class PBDataSetServiceProxy {
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));
 	}
 	
-	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts,
-								StoreDataSetOptions opts) throws DataSetExistsException {
-		ExecutePlanRequest execPlan = ExecutePlanRequest.newBuilder()
-														.setPlan(plan.toProto())
-														.setOptions(execOpts.toProto())
-														.build();
+	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
+		throws DataSetExistsException {
 		CreateDataSetRequest proto = CreateDataSetRequest.newBuilder()
 														.setId(dsId)
-														.setPlanExec(execPlan)
 														.setOptions(opts.toProto())
 														.build();
 		return toDataSet(m_dsBlockingStub.createDataSet(proto));

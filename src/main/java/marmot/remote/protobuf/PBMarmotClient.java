@@ -109,10 +109,9 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 	
 	@Override
-	public DataSet createDataSet(String dsId, Plan plan, ExecutePlanOptions execOpts,
-									StoreDataSetOptions opts)
+	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
 		throws DataSetExistsException {
-		return m_dsService.createDataSet(dsId, plan, execOpts, opts);
+		return m_dsService.createDataSet(dsId, plan, opts);
 	}
 	
 	@Override
