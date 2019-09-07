@@ -1,6 +1,7 @@
 package marmot.remote.protobuf;
 
 import java.io.InputStream;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -37,8 +38,10 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 	
 	private final Guard m_guard = Guard.create();
 	@GuardedBy("m_guard") private int m_sync = 0;
-	@GuardedBy("m_guard") private ByteString m_result = null;
+	@GuardedBy("m_guard") private ByteString m_reply = null;
 	@GuardedBy("m_guard") private boolean m_serverClosed = false;
+	@GuardedBy("m_guard") private Exception m_error = null;
+	@GuardedBy("m_guard") private boolean m_completed = false;
 	
 	abstract protected ByteString getHeader() throws Exception;
 	
@@ -60,25 +63,35 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 		Preconditions.checkState(m_channel != null, "Upload stream channel has not been set");
 		
 		try {
-			m_channel.onNext(HEADER());
+			ByteString hdr = getHeader();
+			m_channel.onNext(HEADER(hdr));
+			getLogger().debug("sent HEADER: {}", hdr);
 			
 			int chunkCount = 0;
 			while ( isRunning() ) {
 				LimitedInputStream chunkedStream = new LimitedInputStream(m_stream, m_chunkSize);
 				ByteString chunk = ByteString.readFrom(chunkedStream);
 				if ( chunk.isEmpty() ) {
-					// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기하고
-					// End-of-Stream 메시지를 보낸다.
+					// 마지막 chunk에 대한 sync를 보내고, sync-back을 대기한다.
 					if ( m_guard.get(()->m_sync) < chunkCount ) {
-						sync(chunkCount, chunkCount);
+						if ( sync(chunkCount, chunkCount) < 0 ) {
+							break;
+						}
 					}
-					m_channel.onNext(EOS);
-					getLogger().debug("sent END_OF_STREAM");
 					
-					// 연산이 종료되면 connection 자체가 종료되기 때문에, 서버측에서 'half-close' 될 수 있기
-					// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가 호출될 때까지 기다린다.
-					return m_guard.awaitUntilAndGet(() -> m_result != null, () -> m_result,
-													TIMEOUT, TimeUnit.SECONDS);
+					//
+					// End-of-Stream 메시지를 보내고, 서버쯕에서 connection을 끊기를 대기한다
+					// 여기서 먼저 connection을 끊으면 서버측에서 'half-close' 될 수 있기
+					// 때문에, 단순히 result만 기다리는 것이 아니라, 'onCompleted()'가
+					// 호출될 때까지 기다린다.
+					//
+					m_channel.onNext(EOS);
+					m_guard.run(() -> m_completed = true, true);
+					getLogger().debug("sent END_OF_STREAM");
+
+					m_guard.awaitUntil(() -> m_serverClosed || m_error != null,
+										TIMEOUT, TimeUnit.SECONDS);
+					break;
 				}
 				
 				m_channel.onNext(UpChunkRequest.newBuilder().setChunk(chunk).build());
@@ -86,15 +99,43 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 				getLogger().trace("sent CHUNK[idx={}, size={}]", chunkCount, chunk.size());
 				
 				if ( (chunkCount % SYNC_INTERVAL) == 0 ) {
-					sync(chunkCount, chunkCount - SYNC_INTERVAL);
+					// 세가지 가능성 고려할 것
+					//	1. sync-back을 성공적으로 전송
+					//	2. server측에서 오류 전송
+					//	3. server측에서 connection 단절
+					if ( sync(chunkCount, chunkCount - SYNC_INTERVAL) < 0 ) {
+						break;
+					}
 				}
 			}
 			
-			return m_guard.get(() -> m_result);
+			// 여기에 올 수 있는 세가지 경우
+			//  1. 모든 작업을 성공적으로 마친 경우
+			//  2. server측에서 오류 전송
+			//  3. server측에서 connection 단절
+			
+			m_guard.lock();
+			try {
+				if ( m_error != null ) {
+					throw m_error;
+				}
+				if ( m_reply != null ) {
+					return m_reply;
+				}
+				else {
+					m_error = new PBStreamClosedException("service disconnection");
+					throw m_error;
+				}
+			}
+			finally {
+				m_guard.unlock();
+			}
 		}
 		catch ( Exception e ) {
-			Throwable cause = Throwables.unwrapThrowable(e);
-			m_channel.onNext(ERROR("" + cause));
+			if ( m_guard.get(() -> m_error == null) ) {
+				Throwable cause = Throwables.unwrapThrowable(e);
+				m_channel.onNext(ERROR("" + cause));
+			}
 			
 			throw e;
 		}
@@ -117,13 +158,14 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 				// 스트림의 모든 chunk를 다 보내기 전에 result가 올 수 있기 때문에
 				// 모든 chunk를 다보내고 result가 도착해야만 uploader를 종료시킬 수 있음.
 				ByteString result = resp.getResult();
-				m_guard.run(() -> m_result = result, true);
+				m_guard.run(() -> m_reply = result, true);
 				getLogger().debug("received RESULT: {}", result);
 				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
 				getLogger().info("received PEER_ERROR[cause={}]", ""+cause);
-				
+
+				m_guard.run(() -> m_error = cause, true);
 				notifyFailed(cause);
 				break;
 			default:
@@ -148,13 +190,46 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 		throws InterruptedException, TimeoutException {
 		m_channel.onNext(SYNC(sync));
 		getLogger().debug("sent SYNC[{}] & wait for SYNC[{}]", sync, expectedSyncBack);
-
-		return m_guard.awaitUntilAndGet(() -> m_sync >= sync, () -> m_sync,
-										TIMEOUT, TimeUnit.SECONDS);
+		
+		Date due = new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT));
+		m_guard.lock();
+		try {
+			while ( true ) {
+				if ( m_sync >= sync ) {			// sync에 대한 응답이 온 경우.
+					return m_sync;
+				}
+				else if ( m_error != null || m_serverClosed ) {
+					return -1;
+				}
+				if ( !m_guard.awaitUntil(due) ) {
+					throw new TimeoutException();
+				}
+			}
+		}
+		finally {
+			m_guard.unlock();
+		}
 	}
 	
-	private UpChunkRequest HEADER() throws Exception {
-		return UpChunkRequest.newBuilder().setHeader(getHeader()).build();
+	private void awaitServiceClosed(long timeout)
+		throws InterruptedException, TimeoutException, Exception {
+		Date due = new Date(System.currentTimeMillis() + timeout);
+		
+		m_guard.lock();
+		try {
+			while ( !(m_serverClosed || m_error != null) ) {
+				if ( !m_guard.awaitUntil(due) ) {
+					throw new TimeoutException();
+				}
+			}
+		}
+		finally {
+			m_guard.unlock();
+		}
+	}
+	
+	private UpChunkRequest HEADER(ByteString hdr) throws Exception {
+		return UpChunkRequest.newBuilder().setHeader(hdr).build();
 	}
 	
 	private UpChunkRequest ERROR(String msg) {

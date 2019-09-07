@@ -10,10 +10,11 @@ import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.DownChunkResponse;
-import marmot.protobuf.SuppliableInputStream;
 import marmot.protobuf.PBUtils;
+import marmot.protobuf.SuppliableInputStream;
 import utils.Throwables;
 import utils.Utilities;
+import utils.async.CancellableWork;
 import utils.async.EventDrivenExecution;
 
 
@@ -25,7 +26,7 @@ import utils.async.EventDrivenExecution;
  * @author Kang-Woo Lee (ETRI)
  */
 class StreamDownloadReceiver extends EventDrivenExecution<Void>
-							implements StreamObserver<DownChunkRequest> {
+							implements StreamObserver<DownChunkRequest>, CancellableWork {
 	private final SuppliableInputStream m_stream;
 	private StreamObserver<DownChunkResponse> m_channel;
 	
@@ -53,6 +54,23 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 		notifyStarted();
 		
 		return m_stream;
+	}
+
+	@Override
+	public boolean notifyFailed(Throwable cause) {
+		m_stream.endOfSupply(cause);
+		return super.notifyFailed(cause);
+	}
+
+	@Override
+	public boolean cancelWork() {
+		m_stream.endOfSupply();
+		
+		DownChunkResponse cancel = DownChunkResponse.newBuilder().setCancel(true).build();
+		m_channel.onNext(cancel);
+		m_channel.onCompleted();
+		
+		return true;
 	}
 
 	@Override

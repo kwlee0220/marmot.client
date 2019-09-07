@@ -42,6 +42,9 @@ abstract class StreamUpnDownloadClient implements StreamObserver<UpResponseDownR
 		InputStream result = m_downloader.start(upDown.getDownloadChannel());
 
 		m_uploader.setChannel(upDown.getUploadChannel());
+		m_uploader.whenFailed(cause -> {
+			m_downloader.notifyFailed(cause);
+		});
 		m_uploader.start();
 		
 		return result;
