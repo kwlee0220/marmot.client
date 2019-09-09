@@ -21,7 +21,6 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
-import marmot.StoreDataSetOptions;
 import marmot.io.MarmotFileNotFoundException;
 import utils.Utilities;
 import utils.func.FOption;
@@ -250,5 +249,9 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public void executeModule(String id) {
 		m_pexecService.executeModule(id);
+	}
+	
+	public void ping() {
+		m_pexecService.ping();
 	}
 }

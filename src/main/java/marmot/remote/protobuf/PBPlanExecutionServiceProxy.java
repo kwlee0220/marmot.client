@@ -202,4 +202,8 @@ public class PBPlanExecutionServiceProxy {
 	public void executeModule(String id) {
 		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
 	}
+	
+	public void ping() {
+		m_blockingStub.ping(PBUtils.VOID);
+	}
 }
