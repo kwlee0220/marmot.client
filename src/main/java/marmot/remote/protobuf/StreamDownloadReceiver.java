@@ -2,6 +2,7 @@ package marmot.remote.protobuf;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,10 @@ import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.protobuf.PBUtils;
 import marmot.protobuf.SuppliableInputStream;
+import net.jcip.annotations.GuardedBy;
+import utils.Guard;
 import utils.Throwables;
+import utils.UnitUtils;
 import utils.Utilities;
 import utils.async.CancellableWork;
 import utils.async.EventDrivenExecution;
@@ -29,11 +33,32 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 							implements StreamObserver<DownChunkRequest>, CancellableWork {
 	private final SuppliableInputStream m_stream;
 	private StreamObserver<DownChunkResponse> m_channel;
+
+	private final Guard m_guard = Guard.create();
+	@GuardedBy("m_guard") private State m_state = State.DOWNLOADING;
+	private static enum State {
+		DOWNLOADING,
+		COMPLETED,
+		CANCELLING,
+		CANCELLED,
+	}
 	
 	StreamDownloadReceiver() {
-		m_stream = SuppliableInputStream.create(4);
+		m_stream = new CancellableInputStream(4);
 		
 		setLogger(LoggerFactory.getLogger(StreamDownloadReceiver.class));
+	}
+	
+	private class CancellableInputStream extends SuppliableInputStream {
+		protected CancellableInputStream(int chunkQLength) {
+			super(chunkQLength);
+		}
+		
+		@Override
+		public void close() throws IOException {
+			StreamDownloadReceiver.this.cancel(true);
+			super.close();
+		}
 	}
 
 	InputStream start(ByteString req, StreamObserver<DownChunkResponse> channel) {
@@ -59,18 +84,44 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 	@Override
 	public boolean notifyFailed(Throwable cause) {
 		m_stream.endOfSupply(cause);
+		
 		return super.notifyFailed(cause);
 	}
 
+	private static final long CANCELLING_TIMEOUT = UnitUtils.parseDuration("50s");
 	@Override
 	public boolean cancelWork() {
-		m_stream.endOfSupply();
-		
-		DownChunkResponse cancel = DownChunkResponse.newBuilder().setCancel(true).build();
-		m_channel.onNext(cancel);
-		m_channel.onCompleted();
-		
-		return true;
+		m_guard.lock();
+		try {
+			if ( m_state == State.DOWNLOADING ) {
+				m_state = State.CANCELLING;
+				m_guard.signalAll();
+				
+				m_stream.endOfSupply();
+				
+				// 'CANCEL' 메시지를 보내고, 서버측에서 종료할 때까지 대기한다.
+				getLogger().debug("send CANCEL");
+				DownChunkResponse cancel = DownChunkResponse.newBuilder().setCancel(true).build();
+				m_channel.onNext(cancel);
+			}
+
+			Date due = new Date(System.currentTimeMillis() + CANCELLING_TIMEOUT);
+			while ( m_state == State.CANCELLING ) {
+				try {
+					if ( !m_guard.awaitUntil(due) ) {
+						break;
+					}
+				}
+				catch ( InterruptedException e ) {
+					return false;
+				}
+			}
+			
+			return m_state == State.CANCELLED;
+		}
+		finally {
+			m_guard.unlock();
+		}
 	}
 
 	@Override
@@ -105,7 +156,7 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 				int sync = resp.getSync();
 				getLogger().debug("received SYNC[{}]", sync);
 				
-				if ( !m_stream.isClosed() ) {
+				if ( !m_stream.isClosed() && m_guard.get(() -> m_state == State.DOWNLOADING) ) {
 					getLogger().debug("send SYNC_BACK[{}]", sync);
 					m_channel.onNext(DownChunkResponse.newBuilder()
 													.setSyncBack(sync)
@@ -113,10 +164,7 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 				}
 				break;
 			case EOS:
-				getLogger().debug("received END_OF_STREAM");
-				m_stream.endOfSupply();
-				
-				notifyCompleted(null);
+				onEoSReceived();
 				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
@@ -129,10 +177,36 @@ class StreamDownloadReceiver extends EventDrivenExecution<Void>
 				throw new AssertionError();
 		}
 	}
+	
+	private void onEoSReceived() {
+		getLogger().debug("received END_OF_STREAM");
+		
+		m_guard.lock();
+		try {
+			if ( m_state == State.DOWNLOADING ) {
+				m_stream.endOfSupply();
+				notifyCompleted(null);
+				
+				m_state = State.COMPLETED;
+			}
+			
+			m_guard.signalAll();
+		}
+		finally {
+			m_guard.unlock();
+		}
+	}
 
 	@Override
 	public void onCompleted() {
-		if ( !isDone() ) {
+		State state = m_guard.get(() -> {
+			if ( m_state == State.CANCELLING ) {
+				m_state = State.CANCELLED;
+			}
+			
+			return m_state;
+		}, true);
+		if ( state == State.DOWNLOADING ) {
 			Throwable cause = new IOException("Peer has broken the pipe");
 			m_stream.endOfSupply(cause);
 			notifyFailed(cause);
