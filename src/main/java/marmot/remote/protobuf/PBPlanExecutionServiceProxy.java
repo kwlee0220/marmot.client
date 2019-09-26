@@ -10,6 +10,7 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import marmot.ExecutePlanOptions;
+import marmot.MarmotExecution;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSchema;
@@ -18,6 +19,7 @@ import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.ExecuteProcessRequest;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
+import marmot.proto.service.GetStateResponse;
 import marmot.proto.service.GetStreamRequest;
 import marmot.proto.service.OptionalRecordResponse;
 import marmot.proto.service.PlanExecutionServiceGrpc;
@@ -65,6 +67,15 @@ public class PBPlanExecutionServiceProxy {
 			default:
 				throw new AssertionError();
 		}
+	}
+	
+	public PBMarmotExecutionProxy start(Plan plan, ExecutePlanOptions opts) {
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(opts.toProto())
+													.build();
+		String execId = PBUtils.handle(m_blockingStub.start(req));
+		return new PBMarmotExecutionProxy(this, execId);
 	}
 	
 	public void execute(Plan plan, ExecutePlanOptions opts) {
@@ -201,6 +212,18 @@ public class PBPlanExecutionServiceProxy {
 
 	public void executeModule(String id) {
 		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
+	}
+	
+	public MarmotExecution.State getExecutionState(String id) {
+		GetStateResponse resp = m_blockingStub.getExecutionState(PBUtils.toStringProto(id));
+		switch ( resp.getEitherCase() ) {
+			case STATE:
+				return MarmotExecution.State.fromCode(resp.getStateValue());
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
 	}
 	
 	public void ping() {

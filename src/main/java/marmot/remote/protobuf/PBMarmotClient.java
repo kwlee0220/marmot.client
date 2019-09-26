@@ -15,6 +15,7 @@ import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetType;
 import marmot.ExecutePlanOptions;
+import marmot.MarmotExecution;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
@@ -203,6 +204,11 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
 		return m_pexecService.getOutputRecordSchema(plan, FOption.of(inputSchema));
+	}
+	
+	@Override
+	public MarmotExecution start(Plan plan, ExecutePlanOptions opts) {
+		return m_pexecService.start(plan, opts);
 	}
 	
 	@Override
