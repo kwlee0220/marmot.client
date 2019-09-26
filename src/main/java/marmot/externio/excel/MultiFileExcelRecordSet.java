@@ -92,12 +92,12 @@ public class MultiFileExcelRecordSet extends ConcatedRecordSet {
 	private ExcelRecordSet loadExcelFile(File file) {
 		try {
 			ExcelRecordSet rset = ExcelRecordSet.from(file, m_params);
-			getLogger().info("loading: Excel[{}], from={}", m_params, file);
+			getLogger().info("loading: Excel[{}], {}", m_params, file);
 			
 			return rset;
 		}
 		catch ( Exception e ) {
-			getLogger().warn("fails to load ExcelRecordSet: from=" + file + ", cause=" + e);
+			getLogger().warn("fails to load ExcelRecordSet: " + file + ", cause=" + e);
 			throw new RecordSetException("" + e);
 		}
 	}
