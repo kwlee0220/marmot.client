@@ -29,7 +29,7 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 
 	@Override
 	public boolean cancel() {
-		return false;
+		return m_service.cancelExecution(m_execId);
 	}
 
 	@Override

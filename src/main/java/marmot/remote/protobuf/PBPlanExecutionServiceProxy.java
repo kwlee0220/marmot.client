@@ -226,6 +226,10 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 	
+	public boolean cancelExecution(String id) {
+		return PBUtils.handle(m_blockingStub.cancelExecution(PBUtils.toStringProto(id)));
+	}
+	
 	public void ping() {
 		m_blockingStub.ping(PBUtils.VOID);
 	}
