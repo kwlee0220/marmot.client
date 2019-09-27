@@ -52,23 +52,24 @@ public class RemotePrintSchemaMain implements Runnable {
 	
 			DataSet info = marmot.getDataSet(m_dsId);
 			
-			System.out.println("TYPE     : " + info.getType());
+			System.out.println("TYPE         : " + info.getType());
 			if ( info.getRecordCount() > 0 ) {
-				System.out.println("COUNT    : " + info.getRecordCount());
+				System.out.println("COUNT        : " + info.getRecordCount());
 			}
 			else {
-				System.out.println("COUNT    : unknown");
+				System.out.println("COUNT        : unknown");
 			}
-			System.out.println("SIZE     : " + UnitUtils.toByteSizeString(info.length()));
+			System.out.println("SIZE         : " + UnitUtils.toByteSizeString(info.length()));
 			if ( info.hasGeometryColumn() ) {
-				System.out.println("GEOMETRY : " + info.getGeometryColumnInfo().name());
-				System.out.println("SRID     : " + info.getGeometryColumnInfo().srid());
+				System.out.println("GEOMETRY     : " + info.getGeometryColumnInfo().name());
+				System.out.println("SRID         : " + info.getGeometryColumnInfo().srid());
 			}
-			System.out.println("HDFS PATH: " + info.getHdfsPath());
+			System.out.println("HDFS PATH    : " + info.getHdfsPath());
+			System.out.println("COMPRESSION  : " + info.getCompressionCodecName().getOrElse("none"));
 			SpatialIndexInfo idxInfo = info.getDefaultSpatialIndexInfo().getOrNull();
 			System.out.printf("SPATIAL INDEX: %s%n", (idxInfo != null)
 														? idxInfo.getHdfsFilePath() : "none");
-			System.out.println("COLUMNS  :");
+			System.out.println("COLUMNS      :");
 			info.getRecordSchema().getColumns()
 					.stream()
 					.forEach(c -> System.out.println("\t" + c));
