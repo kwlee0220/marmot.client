@@ -33,7 +33,7 @@ public class RemoteViewDataSetMain {
 			// 원격 MarmotServer에 접속.
 			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
 			ViewDataSet.run(marmot, cl);
-			marmot.disconnect();
+			marmot.shutdown();
 		}
 		catch ( Exception e ) {
 			System.err.printf("failed: %s%n%n", e);

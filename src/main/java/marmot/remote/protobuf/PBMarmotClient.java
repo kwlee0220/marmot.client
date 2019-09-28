@@ -1,7 +1,7 @@
 package marmot.remote.protobuf;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -15,13 +15,13 @@ import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetType;
 import marmot.ExecutePlanOptions;
-import marmot.MarmotExecution;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.exec.MarmotExecution;
 import marmot.io.MarmotFileNotFoundException;
 import utils.Utilities;
 import utils.func.FOption;
@@ -63,7 +63,8 @@ public class PBMarmotClient implements MarmotRuntime {
 		return m_server;
 	}
 	
-	public void disconnect() {
+	@Override
+	public void shutdown() {
 		m_channel.shutdown();
 		m_server.shutdown();
 	}
@@ -86,10 +87,9 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void copyToHdfsFile(String path, Iterator<byte[]> blocks,
-								FOption<Long> blockSize, FOption<String> codecName)
-		throws IOException {
-		m_fileService.copyToHdfsFile(path, blocks, blockSize, codecName);
+	public void copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
+								FOption<String> codecName) throws IOException {
+		m_fileService.copyToHdfsFile(path, stream, blockSize, codecName);
 	}
 
 	@Override
@@ -204,6 +204,11 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
 		return m_pexecService.getOutputRecordSchema(plan, FOption.of(inputSchema));
+	}
+
+	@Override
+	public MarmotExecution getMarmotExecution(String id) {
+		return m_pexecService.getMarmotExecution(id);
 	}
 	
 	@Override

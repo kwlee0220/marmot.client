@@ -123,7 +123,7 @@ public class SquareGridAnalysis {
 //				}
 //			}
 			
-			marmot.disconnect();
+			marmot.shutdown();
 		}
 		catch ( Exception e ) {
 			e.printStackTrace(System.err);

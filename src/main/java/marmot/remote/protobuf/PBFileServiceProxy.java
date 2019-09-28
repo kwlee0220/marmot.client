@@ -2,7 +2,6 @@ package marmot.remote.protobuf;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,24 +9,23 @@ import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
-import io.grpc.stub.CallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import marmot.RecordSet;
 import marmot.io.MarmotFileNotFoundException;
 import marmot.proto.service.CopyToHdfsFileRequest;
-import marmot.proto.service.CopyToHdfsFileRequest.HeaderProto;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.FileServiceGrpc;
 import marmot.proto.service.FileServiceGrpc.FileServiceBlockingStub;
 import marmot.proto.service.FileServiceGrpc.FileServiceStub;
+import marmot.proto.service.UpChunkRequest;
 import marmot.proto.service.VoidResponse;
 import marmot.protobuf.PBUtils;
-import marmot.protobuf.SingleValueObserver;
 import marmot.rset.PBInputStreamRecordSet;
 import utils.StopWatch;
 import utils.Throwables;
 import utils.UnitUtils;
 import utils.func.FOption;
+import utils.io.Lz4Compressions;
 
 /**
  * 
@@ -37,12 +35,12 @@ public class PBFileServiceProxy {
 	private static final Logger s_logger = LoggerFactory.getLogger(PBFileServiceProxy.class);
 	private static final long REPORT_INTERVAL = UnitUtils.parseByteSize("512mb");
 	
-//	private final PBMarmotClient m_marmot;
+	private final PBMarmotClient m_marmot;
 	private final FileServiceStub m_stub;
 	private final FileServiceBlockingStub m_blockingStub;
 
 	PBFileServiceProxy(PBMarmotClient marmot, ManagedChannel channel) {
-//		m_marmot = marmot;
+		m_marmot = marmot;
 		m_blockingStub = FileServiceGrpc.newBlockingStub(channel);
 		m_stub = FileServiceGrpc.newStub(channel);
 	}
@@ -68,61 +66,34 @@ public class PBFileServiceProxy {
 		}
 	}
 
-	public void copyToHdfsFile(String path, Iterator<byte[]> blocks,
-								FOption<Long> blockSize, FOption<String> codecName)
+	public void copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
+								FOption<String> codecName)
 		throws IOException {
-		StopWatch watch = StopWatch.start();
-		int nblocks = 0;
-		
-		SingleValueObserver<VoidResponse> value = new SingleValueObserver<>();
-		CallStreamObserver<CopyToHdfsFileRequest> supplier
-			= (CallStreamObserver<CopyToHdfsFileRequest>)m_stub.copyToHdfsFile(value);
 		try {
-			HeaderProto.Builder hbuilder = HeaderProto.newBuilder()
-													.setPath(PBUtils.toStringProto(path));
-			blockSize.ifPresent(sz -> hbuilder.setBlockSize(sz));
-			codecName.ifPresent(hbuilder::setCompressionCodecName);
-			HeaderProto header = hbuilder.build();
-			supplier.onNext(CopyToHdfsFileRequest.newBuilder().setHeader(header).build());
-
-			long totalUploaded = 0;
-			while ( blocks.hasNext() ) {
-				if ( nblocks % 4 == 0 ) {
-					synchronized ( blocks ) {
-						while ( !supplier.isReady() ) {
-							blocks.wait(100);
-						}
-					}
-				}
-				
-				ByteString block = ByteString.copyFrom(blocks.next());
-				CopyToHdfsFileRequest req = CopyToHdfsFileRequest.newBuilder()
-																.setBlock(block)
-																.build();
-				supplier.onNext(req);
-				
-				++nblocks;
-				totalUploaded += block.size();
-				if ( totalUploaded % REPORT_INTERVAL == 0 ) {
-					logUploadProgress(path, totalUploaded, watch);
-				}
+			if ( m_marmot.useCompression() ) {
+				stream = Lz4Compressions.compress(stream);
 			}
-			supplier.onCompleted();
-			logUploadProgress(path, totalUploaded, watch);
-		}
-		catch ( Throwable e ) {
-			supplier.onError(e);
 			
-			Throwables.throwIfInstanceOf(e, IOException.class);
-			throw Throwables.toRuntimeException(e);
-		}
-		
-		try {
-			value.get();
+			StreamUploadSender uploader = new StreamUploadSender(stream) {
+				@Override
+				protected ByteString getHeader() throws Exception {
+					CopyToHdfsFileRequest.Builder hbuilder = CopyToHdfsFileRequest.newBuilder()
+																.setPath(PBUtils.toStringProto(path));
+					blockSize.ifPresent(sz -> hbuilder.setBlockSize(sz));
+					codecName.ifPresent(hbuilder::setCompressionCodecName);
+					CopyToHdfsFileRequest req = hbuilder.build();
+					return req.toByteString();
+				}
+			};
+			StreamObserver<UpChunkRequest> channel = m_stub.copyToHdfsFile(uploader);
+			uploader.setChannel(channel);
+			uploader.start();
+			
+			ByteString ret = uploader.get();
 		}
 		catch ( Throwable e ) {
-			Throwables.throwIfInstanceOf(e, IOException.class);
-			throw Throwables.toRuntimeException(e);
+			Throwable cause = Throwables.unwrapThrowable(e);
+			throw Throwables.toRuntimeException(cause);
 		}
 	}
 	private void logUploadProgress(String path, long totalUploaded, StopWatch watch) {
