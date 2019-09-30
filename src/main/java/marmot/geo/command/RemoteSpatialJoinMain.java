@@ -35,13 +35,7 @@ public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
 				commandLine.usage(System.out, Ansi.OFF);
 			}
 			else {
-				try {
-					cmd.run("spatial_join", cmd.m_params.m_outputDsId);
-				}
-				catch ( Exception e ) {
-					System.err.printf("failed: %s%n%n", e);
-					commandLine.usage(System.out, Ansi.OFF);
-				}
+				cmd.run("spatial_join", cmd.m_params.m_outputDsId);
 			}
 		}
 		catch ( Exception e ) {
