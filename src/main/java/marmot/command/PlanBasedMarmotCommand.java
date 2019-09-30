@@ -528,7 +528,7 @@ public abstract class PlanBasedMarmotCommand {
 		String m_join;
 		
 		@Option(names={"-join_type"}, paramLabel="type",
-				description={"join type: inner|left_outer|right_outer|full_outer|semi|aggregate (default: inner)"})
+				description={"join type: inner|left_outer|right_outer|full_outer|semi|semi_negated|aggregate (default: inner)"})
 		protected String m_joinType;
 		
 		public String getJoinType() {
