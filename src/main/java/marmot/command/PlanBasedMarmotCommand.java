@@ -247,7 +247,6 @@ public abstract class PlanBasedMarmotCommand {
 		String joinCols = parts.get(0);
 		String paramDsId = parts.get(1);
 		
-		String outCols = m_opParams.m_joinOutCols;
 		String joinType = FOption.ofNullable(m_opParams.m_joinType).getOrElse("inner");
 		
 		SpatialJoinOptions opts = parseSpatialJoinOptions();
@@ -256,6 +255,8 @@ public abstract class PlanBasedMarmotCommand {
 				return builder.spatialJoin(joinCols, paramDsId, opts);
 			case "left_outer":
 				return builder.spatialOuterJoin(joinCols, paramDsId, opts);
+			case "semi_negated":
+				opts = opts.negated(true);
 			case "semi":
 				return builder.spatialSemiJoin(joinCols, paramDsId, opts);
 			case "aggregate":
