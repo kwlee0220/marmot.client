@@ -36,6 +36,7 @@ import utils.KeyValue;
 import utils.UnitUtils;
 import utils.Utilities;
 import utils.func.FOption;
+import utils.func.Funcs;
 
 
 /**
@@ -76,6 +77,8 @@ public abstract class PlanBasedMarmotCommand {
 	public void run(String planName, String outputDsId) throws Exception {
 		m_marmot = m_connector.connect();
 		m_outputDsId = outputDsId;
+		
+		planName = Funcs.getIfNotNull(m_opParams.m_planName, planName);
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( m_printPlan ) {
@@ -486,6 +489,9 @@ public abstract class PlanBasedMarmotCommand {
 	}
 	
 	public static class OpParams {
+		@Option(names="-plan_name", description={"plan name"})
+		String m_planName;
+		
 		@Option(names={"-centroid"}, description={"perform centroid on the geometry column"})
 		boolean m_centroid;
 		
