@@ -3,6 +3,7 @@ package marmot.remote.protobuf;
 import static marmot.ExecutePlanOptions.DEFAULT;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -17,6 +18,7 @@ import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotExecution.State;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.ExecutePlanRequest;
@@ -27,6 +29,9 @@ import marmot.proto.service.ExecutionStateResponse;
 import marmot.proto.service.ExecutionStateResponse.ExecutionStateInfoProto;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
 import marmot.proto.service.GetStreamRequest;
+import marmot.proto.service.MarmotAnalysisProto;
+import marmot.proto.service.MarmotAnalysisResponse;
+import marmot.proto.service.MarmotAnalysisTraverseRequest;
 import marmot.proto.service.OptionalRecordResponse;
 import marmot.proto.service.PlanExecutionServiceGrpc;
 import marmot.proto.service.PlanExecutionServiceGrpc.PlanExecutionServiceBlockingStub;
@@ -76,6 +81,44 @@ public class PBPlanExecutionServiceProxy {
 			default:
 				throw new AssertionError();
 		}
+	}
+	
+	public void addMarmotAnalysis(MarmotAnalysis analytics) {
+		MarmotAnalysisProto req = analytics.toProto();
+		PBUtils.handle(m_blockingStub.addMarmotAnalysis(req));
+	}
+	
+	public void deleteMarmotAnalysis(String id) {
+		PBUtils.handle(m_blockingStub.deleteMarmotAnalysis(PBUtils.toStringProto(id)));
+	}
+	
+	public void deleteMarmotAnalysisAll(String folder) {
+		PBUtils.handle(m_blockingStub.deleteMarmotAnalysisAll(PBUtils.toStringProto(folder)));
+	}
+	
+	public MarmotAnalysis getMarmotAnalysis(String id) {
+		return toMarmotAnalysis(m_blockingStub.getMarmotAnalysis(PBUtils.toStringProto(id)));
+	}
+	
+	public List<MarmotAnalysis> getMarmotAnalysisAllInDir(String folder, boolean recursive) {
+		MarmotAnalysisTraverseRequest req = MarmotAnalysisTraverseRequest.newBuilder()
+																	.setDirectory(folder)
+																	.setRecursive(recursive)
+																	.build();
+
+		return PBUtils.toFStream(m_blockingStub.getMarmotAnalysisAllInDir(req))
+						.map(this::toMarmotAnalysis)
+						.cast(MarmotAnalysis.class)
+						.toList();
+	}
+	
+	public PBMarmotExecutionProxy startMarmotAnalysis(String id) {
+		String execId = PBUtils.handle(m_blockingStub.startMarmotAnalysis(PBUtils.toStringProto(id)));
+		return new PBMarmotExecutionProxy(this, execId);
+	}
+	
+	public void executeMarmotAnalysis(String id) {
+		PBUtils.handle(m_blockingStub.executeMarmotAnalysis(PBUtils.toStringProto(id)));
 	}
 	
 	public PBMarmotExecutionProxy getMarmotExecution(String id) {
@@ -304,5 +347,17 @@ public class PBPlanExecutionServiceProxy {
 	
 	public void ping() {
 		m_blockingStub.ping(PBUtils.VOID);
+	}
+	
+	private MarmotAnalysis toMarmotAnalysis(MarmotAnalysisResponse resp) {
+		switch ( resp.getEitherCase() ) {
+			case ANALYSIS:
+				return MarmotAnalysis.fromProto(resp.getAnalysis());
+			case ERROR:
+				Throwables.sneakyThrow(PBUtils.toException(resp.getError()));
+				throw new AssertionError();
+			default:
+				throw new AssertionError();
+		}
 	}
 }
