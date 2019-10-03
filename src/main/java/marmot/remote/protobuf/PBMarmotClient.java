@@ -234,23 +234,18 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public MarmotExecution startAnalysis(String analysisId) throws MarmotExecutionException {
-		return m_pexecService.startMarmotAnalysis(analysisId);
+	public MarmotExecution start(MarmotAnalysis analysis) throws MarmotExecutionException {
+		return m_pexecService.startMarmotAnalysis(analysis);
 	}
 
 	@Override
-	public void executeAnalysis(String analysisId) throws MarmotExecutionException {
-		m_pexecService.executeMarmotAnalysis(analysisId);
+	public void execute(MarmotAnalysis analysis) throws MarmotExecutionException {
+		m_pexecService.executeMarmotAnalysis(analysis);
 	}
 
 	@Override
 	public MarmotExecution getMarmotExecution(String id) {
 		return m_pexecService.getMarmotExecution(id);
-	}
-	
-	@Override
-	public MarmotExecution start(Plan plan, ExecutePlanOptions opts) {
-		return m_pexecService.start(plan, opts);
 	}
 	
 	@Override

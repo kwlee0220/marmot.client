@@ -8,19 +8,6 @@ import picocli.CommandLine.Mixin;
 
 
 /**
- * 연산 적용 순서는 다음과 같다.
- * <ol>
- * 	<li> range query
- * 	<li> centroid
- * 	<li> buffer
- * 	<li> filter
- * 	<li> spatial_join
- * 	<li> join
- * 	<li> group_by
- * 	<li> project
- * 	<li> sample
- * 	<li> transformCrs
- * 	<li> shard
  * </ol>
  * 
  * @author Kang-Woo Lee (ETRI)

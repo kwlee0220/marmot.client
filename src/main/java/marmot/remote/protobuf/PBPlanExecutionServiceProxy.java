@@ -112,13 +112,13 @@ public class PBPlanExecutionServiceProxy {
 						.toList();
 	}
 	
-	public PBMarmotExecutionProxy startMarmotAnalysis(String id) {
-		String execId = PBUtils.handle(m_blockingStub.startMarmotAnalysis(PBUtils.toStringProto(id)));
+	public PBMarmotExecutionProxy startMarmotAnalysis(MarmotAnalysis analysis) {
+		String execId = PBUtils.handle(m_blockingStub.startMarmotAnalysis(analysis.toProto()));
 		return new PBMarmotExecutionProxy(this, execId);
 	}
 	
-	public void executeMarmotAnalysis(String id) {
-		PBUtils.handle(m_blockingStub.executeMarmotAnalysis(PBUtils.toStringProto(id)));
+	public void executeMarmotAnalysis(MarmotAnalysis analysis) {
+		PBUtils.handle(m_blockingStub.executeMarmotAnalysis(analysis.toProto()));
 	}
 	
 	public PBMarmotExecutionProxy getMarmotExecution(String id) {
