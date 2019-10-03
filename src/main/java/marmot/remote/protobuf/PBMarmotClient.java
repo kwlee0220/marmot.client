@@ -21,7 +21,9 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotExecution;
+import marmot.exec.MarmotExecutionException;
 import marmot.io.MarmotFileNotFoundException;
 import utils.Utilities;
 import utils.func.FOption;
@@ -204,6 +206,41 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
 		return m_pexecService.getOutputRecordSchema(plan, FOption.of(inputSchema));
+	}
+
+	@Override
+	public void addMarmotAnalysis(MarmotAnalysis analysis) {
+		m_pexecService.addMarmotAnalysis(analysis);
+	}
+
+	@Override
+	public void deleteMarmotAnalysis(String id) {
+		m_pexecService.deleteMarmotAnalysis(id);
+	}
+
+	@Override
+	public void deleteMarmotAnalysisAll(String folder) {
+		m_pexecService.deleteMarmotAnalysisAll(folder);
+	}
+
+	@Override
+	public MarmotAnalysis getMarmotAnalysis(String id) {
+		return m_pexecService.getMarmotAnalysis(id);
+	}
+
+	@Override
+	public List<MarmotAnalysis> getMarmotAnalysisAllInDir(String folder, boolean recursive) {
+		return m_pexecService.getMarmotAnalysisAllInDir(folder, recursive);
+	}
+
+	@Override
+	public MarmotExecution startAnalysis(String analysisId) throws MarmotExecutionException {
+		return m_pexecService.startMarmotAnalysis(analysisId);
+	}
+
+	@Override
+	public void executeAnalysis(String analysisId) throws MarmotExecutionException {
+		m_pexecService.executeMarmotAnalysis(analysisId);
 	}
 
 	@Override
