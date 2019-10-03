@@ -56,13 +56,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 				commandLine.usage(System.out, Ansi.OFF);
 			}
 			else {
-				try {
-					cmd.run("copy_dataset", cmd.m_params.m_outputDsId);
-				}
-				catch ( Exception e ) {
-					System.err.printf("failed: %s%n%n", e);
-					commandLine.usage(System.out, Ansi.OFF);
-				}
+				cmd.run("copy_dataset", cmd.m_params.m_outputDsId);
 			}
 		}
 		catch ( Exception e ) {
@@ -86,7 +80,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			opts = opts.negated(true);
 		}
 		if ( rangeExpr != null ) {
-			Map<String,String> kvMap = Utilities.parseKeyValueMap(rangeExpr);
+			Map<String,String> kvMap = Utilities.parseKeyValueMap(rangeExpr, ';');
 			if ( kvMap.get("dataset") == null ) {
 				return builder.query(m_params.m_inputDsId, kvMap.get("dataset"), opts);
 			}

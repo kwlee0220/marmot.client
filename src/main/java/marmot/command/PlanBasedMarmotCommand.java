@@ -600,7 +600,7 @@ public abstract class PlanBasedMarmotCommand {
 		private void setStoreAsCsv(String expr) {
 			m_storeAsCsvOptions = StoreAsCsvOptions.DEFAULT().quote('"');
 			
-			for ( KeyValue<String,String> kv: Utilities.parseKeyValues(expr) ) {
+			for ( KeyValue<String,String> kv: Utilities.parseKeyValues(expr, ';') ) {
 				switch ( kv.key().toLowerCase() ) {
 					case "delim":
 						m_storeAsCsvOptions = m_storeAsCsvOptions.delimiter(kv.value().charAt(0));

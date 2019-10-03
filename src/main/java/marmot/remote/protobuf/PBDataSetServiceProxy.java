@@ -17,7 +17,6 @@ import marmot.DataSet;
 import marmot.DataSetExistsException;
 import marmot.DataSetNotFoundException;
 import marmot.DataSetType;
-import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
 import marmot.Plan;
 import marmot.RecordSchema;
@@ -29,7 +28,6 @@ import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
 import marmot.proto.LongProto;
 import marmot.proto.StringProto;
-import marmot.proto.service.AppendPlanResultRequest;
 import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.BoolResponse;
@@ -44,7 +42,6 @@ import marmot.proto.service.DataSetServiceGrpc.DataSetServiceStub;
 import marmot.proto.service.DataSetTypeProto;
 import marmot.proto.service.DirectoryTraverseRequest;
 import marmot.proto.service.DownChunkResponse;
-import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.FloatResponse;
 import marmot.proto.service.LongResponse;
 import marmot.proto.service.MoveDataSetRequest;
@@ -240,19 +237,19 @@ public class PBDataSetServiceProxy {
 		}
 	}
 	
-	public PBDataSetProxy appendPlanResult(String dsId, Plan plan, ExecutePlanOptions execOpts)
-		throws DataSetNotFoundException {
-		ExecutePlanRequest execPlan = ExecutePlanRequest.newBuilder()
-														.setPlan(plan.toProto())
-														.setOptions(execOpts.toProto())
-														.build();
-		AppendPlanResultRequest req = AppendPlanResultRequest.newBuilder()
-															.setId(dsId)
-															.setPlanExec(execPlan)
-															.build();
-		DataSetInfoResponse resp = m_dsBlockingStub.appendPlanResult(req);
-		return toDataSet(resp);
-	}
+//	public PBDataSetProxy appendPlanResult(String dsId, Plan plan, ExecutePlanOptions execOpts)
+//		throws DataSetNotFoundException {
+//		ExecutePlanRequest execPlan = ExecutePlanRequest.newBuilder()
+//														.setPlan(plan.toProto())
+//														.setOptions(execOpts.toProto())
+//														.build();
+//		AppendPlanResultRequest req = AppendPlanResultRequest.newBuilder()
+//															.setId(dsId)
+//															.setPlanExec(execPlan)
+//															.build();
+//		DataSetInfoResponse resp = m_dsBlockingStub.appendPlanResult(req);
+//		return toDataSet(resp);
+//	}
 	
 	public long getDataSetLength(String id) {
 		return PBUtils.handle(m_dsBlockingStub.getDataSetLength(PBUtils.toStringProto(id)));
@@ -271,14 +268,10 @@ public class PBDataSetServiceProxy {
 	}
 
 	public SpatialIndexInfo clusterDataSet(String id, ClusterDataSetOptions opts) {
-		ClusterDataSetRequest.Builder builder = ClusterDataSetRequest.newBuilder()
-																	.setId(id);
-		opts.quadKeyFilePath().ifPresent(builder::setQuadKeyFile);
-		opts.sampleRatio().ifPresent(builder::setSampleRatio);
-		opts.blockSize().ifPresent(builder::setBlockSize);
-		opts.blockFillRatio().ifPresent(builder::setBlockFillRatio);
-		ClusterDataSetRequest req = builder.build();
-		
+		ClusterDataSetRequest req = ClusterDataSetRequest.newBuilder()
+														.setId(id)
+														.setOptions(opts.toProto())
+														.build();
 		return handle(m_dsBlockingStub.clusterDataSet(req));
 	}
 
