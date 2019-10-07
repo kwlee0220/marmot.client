@@ -39,17 +39,24 @@ public class RemoteMarmotAnalysisMain {
 				commandLine.usage(System.out, Ansi.OFF);
 			}
 			else {
-				ParseResult parsed = commandLine.parseArgs(args);
+				ParseResult root = commandLine.parseArgs(args);
+				ParseResult parsed = root;
 				ParseResult sub;
 				while ( (sub = parsed.subcommand()) != null ) {
 					parsed = sub;
 				}
-				CheckedConsumer<MarmotRuntime> handle = (CheckedConsumer<MarmotRuntime>)
-														parsed.commandSpec().userObject();
 				
-				// 원격 MarmotServer에 접속.
-				PBMarmotClient marmot = cmd.m_connector.connect();
-				handle.accept(marmot);
+				if ( root == parsed ) {
+					commandLine.usage(System.out, Ansi.OFF);
+				}
+				else {
+					CheckedConsumer<MarmotRuntime> handle = (CheckedConsumer<MarmotRuntime>)
+															parsed.commandSpec().userObject();
+					
+					// 원격 MarmotServer에 접속.
+					PBMarmotClient marmot = cmd.m_connector.connect();
+					handle.accept(marmot);
+				}
 			}
 		}
 		catch ( Throwable e ) {

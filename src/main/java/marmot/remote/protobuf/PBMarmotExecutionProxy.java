@@ -40,6 +40,11 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	}
 
 	@Override
+	public int getWorkingExecutionIndex() {
+		return 0;
+	}
+
+	@Override
 	public Throwable getFailureCause() throws IllegalStateException {
 		if ( m_state == State.RUNNING ) {
 			getState();

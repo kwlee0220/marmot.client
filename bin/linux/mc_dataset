@@ -1,4 +1,4 @@
-#!  /bin/bash
+#!	/bin/bash
 
 java -cp $MARMOT_CLIENT_HOME/bin/marmot.client.jar	\
-marmot.command.PrintStPlanMain "$@"
+marmot.command.RemoteDataSetMain "$@"
