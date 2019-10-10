@@ -11,22 +11,17 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import marmot.ExecutePlanOptions;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
 import marmot.exec.MarmotAnalysis;
-import marmot.exec.MarmotExecution.State;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.ExecuteProcessRequest;
 import marmot.proto.service.ExecutionInfoProto;
 import marmot.proto.service.ExecutionInfoResponse;
-import marmot.proto.service.ExecutionStateResponse;
-import marmot.proto.service.ExecutionStateResponse.ExecutionStateInfoProto;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
 import marmot.proto.service.GetStreamRequest;
 import marmot.proto.service.MarmotAnalysisProto;
@@ -112,9 +107,9 @@ public class PBPlanExecutionServiceProxy {
 						.toList();
 	}
 	
-	public PBMarmotExecutionProxy startMarmotAnalysis(MarmotAnalysis analysis) {
+	public PBMarmotAnalysisExecutionProxy startMarmotAnalysis(MarmotAnalysis analysis) {
 		String execId = PBUtils.handle(m_blockingStub.startMarmotAnalysis(analysis.toProto()));
-		return new PBMarmotExecutionProxy(this, execId);
+		return new PBMarmotAnalysisExecutionProxy(this, analysis, execId);
 	}
 	
 	public void executeMarmotAnalysis(MarmotAnalysis analysis) {
@@ -273,11 +268,6 @@ public class PBPlanExecutionServiceProxy {
 		PBUtils.handle(m_blockingStub.executeModule(PBUtils.toStringProto(id)));
 	}
 	
-	public Tuple2<State, Throwable> getExecutionState(String id) {
-		ExecutionStateResponse resp = m_blockingStub.getExecutionState(PBUtils.toStringProto(id));
-		return fromExecutionStateResponse(resp);
-	}
-	
 	public ExecutionInfoProto getExecutionInfo(String id) {
 		ExecutionInfoResponse resp = m_blockingStub.getExecutionInfo(PBUtils.toStringProto(id));
 		switch ( resp.getEitherCase() ) {
@@ -290,28 +280,42 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 	
-	public Tuple2<State, Throwable> setExecutionInfo(String id, ExecutionInfoProto proto) {
+	public ExecutionInfoProto setExecutionInfo(String id, ExecutionInfoProto proto) {
 		SetExecutionInfoRequest req = SetExecutionInfoRequest.newBuilder()
 															.setExecId(id)
 															.setExecInfo(proto)
 															.build();
-		ExecutionStateResponse resp = m_blockingStub.setExecutionInfo(req);
-		return fromExecutionStateResponse(resp);
+		ExecutionInfoResponse resp = m_blockingStub.setExecutionInfo(req);
+		switch ( resp.getEitherCase() ) {
+			case EXEC_INFO:
+				return resp.getExecInfo();
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
 	}
 	
 	public boolean cancelExecution(String id) {
 		return PBUtils.handle(m_blockingStub.cancelExecution(PBUtils.toStringProto(id)));
 	}
 	
-	public Tuple2<State, Throwable> waitForFinished(String id) {
+	public ExecutionInfoProto waitForFinished(String id) {
 		WaitForFinishedRequest req = WaitForFinishedRequest.newBuilder()
 															.setExecId(id)
 															.build();
-		ExecutionStateResponse resp = m_blockingStub.waitForFinished(req);
-		return fromExecutionStateResponse(resp);
+		ExecutionInfoResponse resp = m_blockingStub.waitForFinished(req);
+		switch ( resp.getEitherCase() ) {
+			case EXEC_INFO:
+				return resp.getExecInfo();
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
 	}
 	
-	public Tuple2<State, Throwable> waitForFinished(String id, long timeout, TimeUnit unit) {
+	public ExecutionInfoProto waitForFinished(String id, long timeout, TimeUnit unit) {
 		TimeoutProto toProto = TimeoutProto.newBuilder()
 											.setTimeout(timeout)
 											.setTimeUnit(unit.name())
@@ -320,30 +324,37 @@ public class PBPlanExecutionServiceProxy {
 															.setExecId(id)
 															.setTimeout(toProto)
 															.build();
-		ExecutionStateResponse resp = m_blockingStub.waitForFinished(req);
-		return fromExecutionStateResponse(resp);
-	}
-	
-	private Tuple2<State, Throwable> fromExecutionStateResponse(ExecutionStateResponse resp) {
+		ExecutionInfoResponse resp = m_blockingStub.waitForFinished(req);
 		switch ( resp.getEitherCase() ) {
-			case EXEC_STATE_INFO:
-				ExecutionStateInfoProto infoProto = resp.getExecStateInfo();
-				State state = PBUtils.fromExecutionStateProto(infoProto.getState());
-				switch ( infoProto.getOptionalFailureCauseCase() ) {
-					case FAILURE_CAUSE:
-						Throwable cause = PBUtils.toException(infoProto.getFailureCause());
-						return Tuple.of(state, cause);
-					case OPTIONALFAILURECAUSE_NOT_SET:
-						return Tuple.of(state, null);
-					default:
-						throw new AssertionError();
-				}
+			case EXEC_INFO:
+				return resp.getExecInfo();
 			case ERROR:
 				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
 			default:
 				throw new AssertionError();
 		}
 	}
+	
+//	private Tuple2<State, Throwable> fromExecutionStateResponse(ExecutionStateResponse resp) {
+//		switch ( resp.getEitherCase() ) {
+//			case EXEC_STATE_INFO:
+//				ExecutionStateInfoProto infoProto = resp.getExecStateInfo();
+//				State state = PBUtils.fromExecutionStateProto(infoProto.getState());
+//				switch ( infoProto.getOptionalFailureCauseCase() ) {
+//					case FAILURE_CAUSE:
+//						Throwable cause = PBUtils.toException(infoProto.getFailureCause());
+//						return Tuple.of(state, cause);
+//					case OPTIONALFAILURECAUSE_NOT_SET:
+//						return Tuple.of(state, null);
+//					default:
+//						throw new AssertionError();
+//				}
+//			case ERROR:
+//				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+//			default:
+//				throw new AssertionError();
+//		}
+//	}
 	
 	public void ping() {
 		m_blockingStub.ping(PBUtils.VOID);
