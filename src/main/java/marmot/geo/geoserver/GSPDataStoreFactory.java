@@ -73,7 +73,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			int port = (int)GSPDataStoreFactory.MARMOT_PORT.lookUp(params);
 			
 			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-			marmot.shutdown();
+			marmot.close();
 			
 			return true;
 		}

@@ -1,11 +1,15 @@
 package marmot.remote.protobuf;
 
+import static marmot.support.DateTimeFunctions.DateTimeFromMillis;
+
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 import marmot.exec.MarmotExecution;
 import marmot.proto.service.ExecutionInfoProto;
 import marmot.proto.service.ExecutionInfoProto.ExecutionStateInfoProto;
+import marmot.proto.service.ExecutionInfoProto.ExecutionStateProto;
 import marmot.protobuf.PBUtils;
 
 /**
@@ -13,15 +17,16 @@ import marmot.protobuf.PBUtils;
  * @author Kang-Woo Lee (ETRI)
  */
 public class PBMarmotExecutionProxy implements MarmotExecution {
-	private final PBPlanExecutionServiceProxy m_service;
+	protected final PBPlanExecutionServiceProxy m_service;
 	private final String m_execId;
 	protected ExecutionInfoProto m_info;
-	private State m_state = State.RUNNING;
-	private Throwable m_cause = null;
+	protected State m_state = State.RUNNING;
+	protected Throwable m_cause = null;
 	
-	public PBMarmotExecutionProxy(PBPlanExecutionServiceProxy service, String execId) {
+	public PBMarmotExecutionProxy(PBPlanExecutionServiceProxy service, ExecutionInfoProto info) {
 		m_service = service;
-		m_execId = execId;
+		m_execId = info.getId();
+		m_info = info;
 	}
 
 	@Override
@@ -135,16 +140,27 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	public int hashCode() {
 		return m_execId.hashCode();
 	}
-
+	
 	@Override
 	public String toString() {
-		String causeStr = (m_cause != null) ? m_cause.toString() : "";
-		return String.format("%s(%s,%s%s)", getClass().getSimpleName(), m_execId, m_state, causeStr);
+		String failedCause = "";
+		if ( m_state == State.FAILED ) {
+			failedCause = String.format(" (cause=%s)", m_cause);
+		}
+		
+		LocalDateTime ldt = DateTimeFromMillis(m_info.getStartedTime());
+		String finishedStr = "";
+		if ( m_info.getFinishedTime() > 0 ) {
+			finishedStr = String.format(", finished=%s", DateTimeFromMillis(m_info.getFinishedTime()));
+		}
+		
+		return String.format("%s: %s%s, started=%s%s", getId(), m_state, failedCause,
+								ldt, finishedStr);
 	}
 	
 	protected void updateExecutionInfo(ExecutionInfoProto infoProto) {
 		m_info = infoProto;
-		m_state =  PBUtils.fromExecutionStateProto(m_info.getExecStateInfo().getState());
+		m_state =  fromExecutionStateProto(m_info.getExecStateInfo().getState());
 		ExecutionStateInfoProto stateProto = m_info.getExecStateInfo();
 		switch ( stateProto.getOptionalFailureCauseCase() ) {
 			case FAILURE_CAUSE:
@@ -153,6 +169,21 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 			case OPTIONALFAILURECAUSE_NOT_SET:
 				m_cause = null;
 				break;
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	private static State fromExecutionStateProto(ExecutionStateProto proto) {
+		switch ( proto ) {
+			case EXEC_RUNNING:
+				return State.RUNNING;
+			case EXEC_COMPLETED:
+				return State.COMPLETED;
+			case EXEC_CANCELLED:
+				return State.CANCELLED;
+			case EXEC_FAILED:
+				return State.FAILED;
 			default:
 				throw new AssertionError();
 		}

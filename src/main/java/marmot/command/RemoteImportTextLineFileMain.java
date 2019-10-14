@@ -85,6 +85,6 @@ public class RemoteImportTextLineFileMain {
 					});
 		importFile.run(marmot);
 		
-		marmot.shutdown();
+		marmot.close();
 	}
 }

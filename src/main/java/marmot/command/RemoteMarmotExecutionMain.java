@@ -8,22 +8,20 @@ import picocli.CommandLine.Help;
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-@Command(name="mc_analysis",
+@Command(name="mc_exec",
 		parameterListHeading = "Parameters:%n",
 		optionListHeading = "Options:%n",
-		description="marmot analytics commands",
+		description="marmot execution related commands",
 		subcommands = {
-			MarmotAnalysisCommands.List.class,
-			MarmotAnalysisCommands.Add.class,
-			MarmotAnalysisCommands.Delete.class,
-			MarmotAnalysisCommands.Show.class,
-			MarmotAnalysisCommands.Run.class,
+			MarmotExecutionCommands.Show.class,
+			MarmotExecutionCommands.ListExecs.class,
+			MarmotExecutionCommands.Cancel.class,
 		})
-public class RemoteMarmotAnalysisMain extends MarmotClientCommand {
+public class RemoteMarmotExecutionMain extends MarmotClientCommand {
 	public static final void main(String... args) throws Exception {
 		MarmotClientCommands.configureLog4j();
 
-		RemoteMarmotAnalysisMain cmd = new RemoteMarmotAnalysisMain();
+		RemoteMarmotExecutionMain cmd = new RemoteMarmotExecutionMain();
 		CommandLine.run(cmd, System.out, System.err, Help.Ansi.OFF, args);
 	}
 }

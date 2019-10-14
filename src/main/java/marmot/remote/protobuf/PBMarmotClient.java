@@ -21,6 +21,8 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.exec.CompositeAnalysis;
+import marmot.exec.ExecutionNotFoundException;
 import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotAnalysisExecution;
 import marmot.exec.MarmotExecution;
@@ -66,8 +68,7 @@ public class PBMarmotClient implements MarmotRuntime {
 		return m_server;
 	}
 	
-	@Override
-	public void shutdown() {
+	public void close() {
 		m_channel.shutdown();
 		m_server.shutdown();
 	}
@@ -210,43 +211,68 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void addMarmotAnalysis(MarmotAnalysis analysis) {
-		m_pexecService.addMarmotAnalysis(analysis);
+	public MarmotAnalysis getAnalysis(String id) {
+		return m_pexecService.getAnalysis(id);
 	}
 
 	@Override
-	public void deleteMarmotAnalysis(String id) {
-		m_pexecService.deleteMarmotAnalysis(id);
+	public MarmotAnalysis findAnalysis(String id) {
+		return m_pexecService.findAnalysis(id);
 	}
 
 	@Override
-	public void deleteMarmotAnalysisAll(String folder) {
-		m_pexecService.deleteMarmotAnalysisAll(folder);
+	public CompositeAnalysis findParentAnalysis(String id) {
+		return m_pexecService.findParentAnalysis(id);
 	}
 
 	@Override
-	public MarmotAnalysis getMarmotAnalysis(String id) {
-		return m_pexecService.getMarmotAnalysis(id);
+	public List<CompositeAnalysis> getAncestorAnalysisAll(String id) {
+		return m_pexecService.getAncestorAnalysisAll(id);
 	}
 
 	@Override
-	public List<MarmotAnalysis> getMarmotAnalysisAllInDir(String folder, boolean recursive) {
-		return m_pexecService.getMarmotAnalysisAllInDir(folder, recursive);
+	public List<MarmotAnalysis> getDescendantAnalysisAll(String id) {
+		return m_pexecService.getDescendantAnalysisAll(id);
 	}
 
 	@Override
-	public MarmotAnalysisExecution start(MarmotAnalysis analysis) throws MarmotExecutionException {
-		return m_pexecService.startMarmotAnalysis(analysis);
+	public List<MarmotAnalysis> getAnalysisAll() {
+		return m_pexecService.getAnalysisAll();
 	}
 
 	@Override
-	public void execute(MarmotAnalysis analysis) throws MarmotExecutionException {
-		m_pexecService.executeMarmotAnalysis(analysis);
+	public void addAnalysis(MarmotAnalysis analysis) {
+		m_pexecService.addAnalysis(analysis);
 	}
 
 	@Override
-	public MarmotExecution getMarmotExecution(String id) {
+	public void deleteAnalysis(String id, boolean recursive) {
+		m_pexecService.deleteAnalysis(id, recursive);
+	}
+
+	@Override
+	public void deleteAnalysisAll() {
+		m_pexecService.deleteAnalysisAll();
+	}
+
+	@Override
+	public MarmotAnalysisExecution startAnalysis(MarmotAnalysis analysis) throws MarmotExecutionException {
+		return m_pexecService.startAnalysis(analysis);
+	}
+
+	@Override
+	public void executeAnalysis(MarmotAnalysis analysis) throws MarmotExecutionException {
+		m_pexecService.executeAnalysis(analysis);
+	}
+
+	@Override
+	public MarmotExecution getMarmotExecution(String id) throws ExecutionNotFoundException {
 		return m_pexecService.getMarmotExecution(id);
+	}
+
+	@Override
+	public List<MarmotExecution> getMarmotExecutionAll() {
+		return m_pexecService.getMarmotExecutionAll();
 	}
 	
 	@Override
@@ -288,11 +314,6 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public void executeProcess(String processId, Map<String, String> params) {
 		m_pexecService.executeProcess(processId, params);
-	}
-
-	@Override
-	public void executeModule(String id) {
-		m_pexecService.executeModule(id);
 	}
 	
 	public void ping() {
