@@ -146,8 +146,8 @@ public class PBPlanExecutionServiceProxy {
 		PBUtils.handle(m_blockingStub.deleteAnalysisAll(PBUtils.VOID));
 	}
 	
-	public PBMarmotAnalysisExecutionProxy startAnalysis(MarmotAnalysis analysis) {
-		return (PBMarmotAnalysisExecutionProxy)fromInfoResponse(m_blockingStub.startAnalysis(analysis.toProto()));
+	public PBMarmotExecutionProxy startAnalysis(MarmotAnalysis analysis) {
+		return (PBMarmotExecutionProxy)fromInfoResponse(m_blockingStub.startAnalysis(analysis.toProto()));
 	}
 	
 	public void executeAnalysis(MarmotAnalysis analysis) {
@@ -185,14 +185,7 @@ public class PBPlanExecutionServiceProxy {
 	}
 	
 	private PBMarmotExecutionProxy fromProto(ExecutionInfoProto info) {
-		switch ( info.getOptionalAnalysisIdCase() ) {
-			case ANALYSIS_ID:
-				return new PBMarmotAnalysisExecutionProxy(this, info);
-			case OPTIONALANALYSISID_NOT_SET:
-				return new PBMarmotExecutionProxy(this, info);
-			default:
-				throw new AssertionError();
-		}
+		return new PBMarmotExecutionProxy(this, info);
 	}
 	
 	public PBMarmotExecutionProxy start(Plan plan, ExecutePlanOptions opts) {

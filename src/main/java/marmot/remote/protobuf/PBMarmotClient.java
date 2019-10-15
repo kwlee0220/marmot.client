@@ -24,7 +24,6 @@ import marmot.RecordSet;
 import marmot.exec.CompositeAnalysis;
 import marmot.exec.ExecutionNotFoundException;
 import marmot.exec.MarmotAnalysis;
-import marmot.exec.MarmotAnalysisExecution;
 import marmot.exec.MarmotExecution;
 import marmot.exec.MarmotExecutionException;
 import marmot.io.MarmotFileNotFoundException;
@@ -256,7 +255,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public MarmotAnalysisExecution startAnalysis(MarmotAnalysis analysis) throws MarmotExecutionException {
+	public MarmotExecution startAnalysis(MarmotAnalysis analysis) throws MarmotExecutionException {
 		return m_pexecService.startAnalysis(analysis);
 	}
 

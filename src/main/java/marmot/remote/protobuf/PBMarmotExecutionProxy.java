@@ -6,27 +6,51 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
+import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotExecution;
 import marmot.proto.service.ExecutionInfoProto;
 import marmot.proto.service.ExecutionInfoProto.ExecutionStateInfoProto;
 import marmot.proto.service.ExecutionInfoProto.ExecutionStateProto;
 import marmot.protobuf.PBUtils;
+import net.jcip.annotations.GuardedBy;
+import utils.Guard;
+import utils.UnitUtils;
+import utils.func.FOption;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
 public class PBMarmotExecutionProxy implements MarmotExecution {
-	protected final PBPlanExecutionServiceProxy m_service;
+	private static final long TIME_PRECISION = 1000;	// 1s
+	
+	private final PBPlanExecutionServiceProxy m_service;
 	private final String m_execId;
-	protected ExecutionInfoProto m_info;
-	protected State m_state = State.RUNNING;
-	protected Throwable m_cause = null;
+	private final FOption<MarmotAnalysis> m_analysis;
+	
+	private final Guard m_guard = Guard.create();
+	@GuardedBy("m_guard") private long m_ts;
+	@GuardedBy("m_guard") private ExecutionInfoProto m_info;
+	@GuardedBy("m_guard") private State m_state = State.RUNNING;
+	@GuardedBy("m_guard") private Throwable m_cause = null;
 	
 	public PBMarmotExecutionProxy(PBPlanExecutionServiceProxy service, ExecutionInfoProto info) {
 		m_service = service;
 		m_execId = info.getId();
-		m_info = info;
+		
+		switch ( info.getOptionalAnalysisIdCase() ) {
+			case ANALYSIS_ID:
+				String analId = info.getAnalysisId();
+				m_analysis = FOption.of(m_service.getAnalysis(analId));
+				break;
+			case OPTIONALANALYSISID_NOT_SET:
+				m_analysis = FOption.empty();
+				break;
+			default:
+				throw new AssertionError();
+		}
+		
+		update(info);
 	}
 
 	@Override
@@ -35,23 +59,37 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	}
 
 	@Override
-	public synchronized State getState() {
-		if ( m_state == State.RUNNING ) {
-			updateExecutionInfo(m_service.getExecutionInfo(m_execId));
-		}
+	public FOption<MarmotAnalysis> getMarmotAnalysis() {
+		return m_analysis;
+	}
 
+	@Override
+	public int getCurrentExecutionIndex() {
+		if ( m_state == State.RUNNING ) {
+			update();
+		}
+		
+		return m_info.getCurrentExecIndex();
+	}
+
+	@Override
+	public State getState() {
+		if ( m_state == State.RUNNING ) {
+			update();
+		}
+		
 		return m_state;
 	}
 
 	@Override
 	public Throwable getFailureCause() throws IllegalStateException {
 		if ( m_state == State.RUNNING ) {
-			getState();
+			update();
 		}
+		
 		if ( m_state == State.FAILED ) {
 			return m_cause;
 		}
-		
 		throw new IllegalStateException("not failed state: state=" + getState());
 	}
 
@@ -63,14 +101,14 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	@Override
 	public void waitForFinished() throws InterruptedException {
 		if ( m_state == State.RUNNING ) {
-			updateExecutionInfo(m_service.waitForFinished(m_execId));
+			update(m_service.waitForFinished(m_execId));
 		}
 	}
 
 	@Override
 	public boolean waitForFinished(long timeout, TimeUnit unit) throws InterruptedException {
 		if ( m_state == State.RUNNING ) {
-			updateExecutionInfo(m_service.waitForFinished(m_execId, timeout, unit));
+			update(m_service.waitForFinished(m_execId, timeout, unit));
 		}
 		
 		return m_state != State.RUNNING;
@@ -78,17 +116,13 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 
 	@Override
 	public long getStartedTime() {
-		if ( m_info == null ) {
-			updateExecutionInfo(m_service.getExecutionInfo(m_execId));
-		}
-		
 		return m_info.getStartedTime();
 	}
 
 	@Override
 	public long getFinishedTime() {
 		if ( m_state == State.RUNNING ) {
-			updateExecutionInfo(m_service.getExecutionInfo(m_execId));
+			update();
 		}
 		
 		return m_info.getFinishedTime();
@@ -97,7 +131,7 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	@Override
 	public Duration getMaximumRunningTime() {
 		if ( m_state == State.RUNNING ) {
-			updateExecutionInfo(m_service.getExecutionInfo(m_execId));
+			update();
 		}
 		
 		return Duration.ofMillis(m_info.getMaxRunningTime());
@@ -114,7 +148,7 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 
 	@Override
 	public Duration getRetentionTime() {
-		updateExecutionInfo(m_service.getExecutionInfo(m_execId));
+		update();
 		
 		return Duration.ofMillis(m_info.getRetentionTime());
 	}
@@ -143,34 +177,56 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 	
 	@Override
 	public String toString() {
+		State state = getState();
+		
+		String analyStr = m_analysis.map(anal -> String.format(", %s[%s]", anal.getType(), anal.getId()))
+									.getOrElse("");
+		
 		String failedCause = "";
-		if ( m_state == State.FAILED ) {
+		if ( state == State.FAILED ) {
 			failedCause = String.format(" (cause=%s)", m_cause);
 		}
 		
-		LocalDateTime ldt = DateTimeFromMillis(m_info.getStartedTime());
-		String finishedStr = "";
-		if ( m_info.getFinishedTime() > 0 ) {
-			finishedStr = String.format(", finished=%s", DateTimeFromMillis(m_info.getFinishedTime()));
-		}
-		
-		return String.format("%s: %s%s, started=%s%s", getId(), m_state, failedCause,
-								ldt, finishedStr);
+		long elapsed = ( state == State.RUNNING )
+					? System.currentTimeMillis() - m_info.getStartedTime()
+					: m_info.getFinishedTime() - m_info.getStartedTime();
+		String elapsedStr = UnitUtils.toSecondString(elapsed);
+
+		LocalDateTime startedStr = DateTimeFromMillis(m_info.getStartedTime());
+		return String.format("%s: %s%s%s, started=%s, elapsed=%s", getId(), state,
+							failedCause, analyStr, startedStr, elapsedStr);
 	}
 	
-	protected void updateExecutionInfo(ExecutionInfoProto infoProto) {
-		m_info = infoProto;
-		m_state =  fromExecutionStateProto(m_info.getExecStateInfo().getState());
-		ExecutionStateInfoProto stateProto = m_info.getExecStateInfo();
-		switch ( stateProto.getOptionalFailureCauseCase() ) {
-			case FAILURE_CAUSE:
-				m_cause = PBUtils.toException(stateProto.getFailureCause());
-				break;
-			case OPTIONALFAILURECAUSE_NOT_SET:
-				m_cause = null;
-				break;
-			default:
-				throw new AssertionError();
+	private void update() {
+		if ( (System.currentTimeMillis() - m_guard.get(() -> m_ts)) < TIME_PRECISION ) {
+			return;
+		}
+		
+		update(m_service.getExecutionInfo(m_execId));
+	}
+	
+	private void update(ExecutionInfoProto info) {
+		m_guard.lock();
+		try {
+			m_info = info;
+			
+			m_state =  fromExecutionStateProto(m_info.getExecStateInfo().getState());
+			ExecutionStateInfoProto stateProto = m_info.getExecStateInfo();
+			switch ( stateProto.getOptionalFailureCauseCase() ) {
+				case FAILURE_CAUSE:
+					m_cause = PBUtils.toException(stateProto.getFailureCause());
+					break;
+				case OPTIONALFAILURECAUSE_NOT_SET:
+					m_cause = null;
+					break;
+				default:
+					throw new AssertionError();
+			}
+			
+			m_ts = System.currentTimeMillis();
+		}
+		finally {
+			m_guard.unlock();
 		}
 	}
 	
