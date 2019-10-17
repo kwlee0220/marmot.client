@@ -21,14 +21,17 @@ import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSchema;
 import marmot.RecordSet;
+import marmot.StoreDataSetOptions;
 import marmot.exec.CompositeAnalysis;
 import marmot.exec.ExecutionNotFoundException;
 import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotExecution;
 import marmot.exec.MarmotExecutionException;
 import marmot.io.MarmotFileNotFoundException;
+import marmot.proto.optor.OperatorProto;
 import utils.Utilities;
 import utils.func.FOption;
+import utils.stream.FStream;
 
 /**
  * 
@@ -112,11 +115,33 @@ public class PBMarmotClient implements MarmotRuntime {
 		return m_dsService.createDataSet(dsId, schema, opts);
 	}
 	
-//	@Override
-//	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
-//		throws DataSetExistsException {
-//		return m_dsService.createDataSet(dsId, plan, opts);
-//	}
+	public DataSet createDataSet(String dsId, Plan plan, StoreDataSetOptions opts)
+		throws DataSetExistsException {
+		plan = adjustPlanForStore(plan, dsId, opts);
+		execute(plan);
+		return getDataSet(dsId);
+	}
+	
+	private Plan adjustPlanForStore(Plan plan, String dsId, StoreDataSetOptions opts) {
+		FOption<OperatorProto> last = plan.getLastOperator();
+		if ( last.isAbsent() ) {
+			throw new IllegalArgumentException("Plan is empty");
+		}
+		
+		PlanBuilder builder;
+		switch ( last.get().getOperatorCase() ) {
+			case STORE_DATASET:
+				List<OperatorProto> optors = plan.toProto().getOperatorsList();
+				optors.remove(optors.size()-1);
+				builder = FStream.from(optors)
+								.foldLeft(planBuilder(plan.getName()), (b,o) -> b.add(o));
+				break;
+			default:
+				builder = plan.toBuilder();
+		}
+		
+		return builder.store(dsId, opts).build();
+	}
 	
 	@Override
 	public DataSet getDataSet(String dsId) {

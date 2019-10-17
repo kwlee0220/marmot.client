@@ -27,8 +27,6 @@ import marmot.optor.geo.SpatialRelation;
 import marmot.optor.geo.SquareGrid;
 import marmot.plan.Group;
 import marmot.plan.SpatialJoinOptions;
-import marmot.proto.optor.OperatorProto;
-import marmot.proto.optor.StoreIntoDataSetProto;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import utils.CSV;
@@ -624,41 +622,5 @@ public abstract class PlanBasedMarmotCommand {
 			}
 		}
 		private StoreAsCsvOptions m_storeAsCsvOptions;
-	}
-	
-	private static FOption<String> getStoreTargetDataSetId(Plan plan) {
-		OperatorProto last = plan.getLastOperator()
-								.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
-		switch ( last.getOperatorCase() ) {
-			case STORE_INTO_DATASET:
-				return FOption.of(last.getStoreIntoDataset().getId());
-			default:
-				return FOption.empty();
-		}
-	}
-	
-	private static Plan adjustPlanForStore(String dsId, Plan plan) {
-		OperatorProto last = plan.getLastOperator()
-								.getOrElseThrow(() -> new IllegalArgumentException("plan is empty"));
-		switch ( last.getOperatorCase() ) {
-			case STORE_INTO_DATASET:
-			case STORE_DATASET:
-			case STORE_AS_CSV:
-			case STORE_INTO_JDBC_TABLE:
-			case STORE_AND_RELOAD:
-			case STORE_AS_HEAPFILE:
-				return plan;
-			default:
-				StoreIntoDataSetProto store = StoreIntoDataSetProto.newBuilder()
-																	.setId(dsId)
-																	.build();
-				OperatorProto op = OperatorProto.newBuilder()
-												.setStoreIntoDataset(store)
-												.build();
-				return Plan.fromProto(plan.toProto()
-											.toBuilder()
-											.addOperators(op)
-											.build());
-		}
 	}
 }
