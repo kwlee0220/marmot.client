@@ -13,7 +13,7 @@ import picocli.CommandLine.Help;
 		optionListHeading = "Options:%n",
 		description="marmot analytics commands",
 		subcommands = {
-			MarmotAnalysisCommands.List.class,
+			MarmotAnalysisCommands.ListAnalysis.class,
 			MarmotAnalysisCommands.Add.class,
 			MarmotAnalysisCommands.Delete.class,
 			MarmotAnalysisCommands.Show.class,
