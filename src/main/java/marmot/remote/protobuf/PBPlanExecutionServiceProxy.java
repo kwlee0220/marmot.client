@@ -21,6 +21,7 @@ import marmot.exec.CompositeAnalysis;
 import marmot.exec.MarmotAnalysis;
 import marmot.exec.MarmotExecution;
 import marmot.proto.StringProto;
+import marmot.proto.service.AddAnalysisRequest;
 import marmot.proto.service.DeleteAnalysisRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.ExecutePlanRequest;
@@ -30,7 +31,6 @@ import marmot.proto.service.ExecutionInfoProto;
 import marmot.proto.service.ExecutionInfoResponse;
 import marmot.proto.service.GetOutputRecordSchemaRequest;
 import marmot.proto.service.GetStreamRequest;
-import marmot.proto.service.MarmotAnalysisProto;
 import marmot.proto.service.MarmotAnalysisResponse;
 import marmot.proto.service.OptionalRecordResponse;
 import marmot.proto.service.PlanExecutionServiceGrpc;
@@ -129,8 +129,11 @@ public class PBPlanExecutionServiceProxy {
 						.toList();
 	}
 	
-	public void addAnalysis(MarmotAnalysis analysis) {
-		MarmotAnalysisProto req = analysis.toProto();
+	public void addAnalysis(MarmotAnalysis analysis, boolean force) {
+		AddAnalysisRequest req = AddAnalysisRequest.newBuilder()
+													.setAnalysis(analysis.toProto())
+													.setForce(force)
+													.build();
 		PBUtils.handle(m_blockingStub.addAnalysis(req));
 	}
 

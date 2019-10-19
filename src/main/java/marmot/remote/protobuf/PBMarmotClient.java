@@ -265,8 +265,8 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void addAnalysis(MarmotAnalysis analysis) {
-		m_pexecService.addAnalysis(analysis);
+	public void addAnalysis(MarmotAnalysis analysis, boolean force) {
+		m_pexecService.addAnalysis(analysis, force);
 	}
 
 	@Override
