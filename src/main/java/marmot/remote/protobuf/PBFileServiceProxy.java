@@ -78,7 +78,8 @@ public class PBFileServiceProxy {
 				@Override
 				protected ByteString getHeader() throws Exception {
 					CopyToHdfsFileRequest.Builder hbuilder = CopyToHdfsFileRequest.newBuilder()
-																.setPath(PBUtils.toStringProto(path));
+																.setPath(PBUtils.toStringProto(path))
+																.setUseCompression(m_marmot.useCompression());
 					blockSize.ifPresent(sz -> hbuilder.setBlockSize(sz));
 					codecName.ifPresent(hbuilder::setCompressionCodecName);
 					CopyToHdfsFileRequest req = hbuilder.build();
