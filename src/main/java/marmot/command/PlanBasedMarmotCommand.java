@@ -119,7 +119,7 @@ public abstract class PlanBasedMarmotCommand {
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
 		builder = addAssignGridCell(builder);
-		builder = addDefineColumn(builder);
+		builder = addDefineColumnAll(builder);
 		builder = addUpdate(builder);
 		builder = addExpand(builder);
 		builder = addFilter(builder);
@@ -198,28 +198,32 @@ public abstract class PlanBasedMarmotCommand {
 		return builder;
 	}
 	
-	private PlanBuilder addDefineColumn(PlanBuilder builder) {
-		if ( m_opParams.m_defineColumnExpr != null ) {
-			String colDecl = m_opParams.m_defineColumnExpr;
+	private PlanBuilder addDefineColumnAll(PlanBuilder builder) {
+		for ( String expr: m_opParams.m_defineColumnExpr ) {
+			builder = addDefineColumn(builder, expr);
+		}
+		
+		return builder;
+	}
+	
+	private PlanBuilder addDefineColumn(PlanBuilder builder, String expr) {
+		int idx = expr.indexOf('=');
+		if ( idx >= 0 ) {
+			String initValue = expr.substring(idx+1).trim();
 			
-			int idx = m_opParams.m_defineColumnExpr.indexOf('=');
-			if ( idx >= 0 ) {
-				String initValue = m_opParams.m_defineColumnExpr.substring(idx+1).trim();
-				
-				String decl = m_opParams.m_defineColumnExpr.substring(0, idx).trim();
-				idx = decl.indexOf(' ');
-				if ( idx < 0 ) {
-					throw new IllegalArgumentException("invalid define_column expr: " + m_opParams.m_defineColumnExpr);
-				}
-				String typeName = decl.substring(0, idx).trim();
-				String colName = decl.substring(idx+1).trim();
-				colDecl = String.format("%s:%s", colName, typeName);
-				
-				builder = builder.defineColumn(colDecl, initValue);
+			String decl = expr.substring(0, idx).trim();
+			idx = decl.indexOf(' ');
+			if ( idx < 0 ) {
+				throw new IllegalArgumentException("invalid define_column expr: " + expr);
 			}
-			else {
-				builder = builder.defineColumn(m_opParams.m_defineColumnExpr);
-			}
+			String typeName = decl.substring(0, idx).trim();
+			String colName = decl.substring(idx+1).trim();
+			String colDecl = String.format("%s:%s", colName, typeName);
+			
+			builder = builder.defineColumn(colDecl, initValue);
+		}
+		else {
+			builder = builder.defineColumn(expr);
 		}
 		
 		return builder;
@@ -512,8 +516,9 @@ public abstract class PlanBasedMarmotCommand {
 		@Option(names={"-update"}, paramLabel="expr", description={"update expression"})
 		String m_updateExpr;
 		
-		@Option(names={"-define_column"}, paramLabel="expr", description={"define a column"})
-		String m_defineColumnExpr;
+		@Option(names={"-define_column"}, paramLabel="expr",
+				description={"define a column, format: <type> <var>[ = <init_expr>]"})
+		List<String> m_defineColumnExpr = Lists.newArrayList();
 		
 		@Option(names={"-filter"}, paramLabel="expr", description={"filter expression"})
 		String m_filterExpr;
