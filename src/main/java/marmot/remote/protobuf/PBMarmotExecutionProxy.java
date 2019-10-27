@@ -193,7 +193,7 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 		String elapsedStr = UnitUtils.toSecondString(elapsed);
 
 		LocalDateTime startedStr = DateTimeFromMillis(m_info.getStartedTime());
-		return String.format("%s: %9s%s%s, started=%s, elapsed=%s", getId(), state,
+		return String.format("%10s: %9s%s%s, started=%s, elapsed=%s", getId(), state,
 							failedCause, analyStr, startedStr, elapsedStr);
 	}
 	
