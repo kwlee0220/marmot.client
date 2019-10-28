@@ -118,7 +118,7 @@ class DataSetTree extends JTree {
 		m_menuItemDelete.addActionListener(e -> onDeleteMenuSelected(e));
 		m_menuItemCluster.addActionListener(e -> onClusterMenuSelected(e));
 		m_menuItemDeleteCluster.addActionListener(e -> onDeleteClusterMenuSelected(e));
-		m_menuItemExportShp.addActionListener(e -> onClusterMenuSelected(e));
+		m_menuItemExportShp.addActionListener(e -> onExportToShpSelected(e));
 	}
 	
 	Observable<Selection> observeSelection() {
