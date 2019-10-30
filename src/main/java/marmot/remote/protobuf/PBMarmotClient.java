@@ -93,9 +93,9 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public void copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
+	public long copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
 								FOption<String> codecName) throws IOException {
-		m_fileService.copyToHdfsFile(path, stream, blockSize, codecName);
+		return m_fileService.copyToHdfsFile(path, stream, blockSize, codecName);
 	}
 
 	@Override

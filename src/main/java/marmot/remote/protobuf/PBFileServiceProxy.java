@@ -12,6 +12,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import marmot.RecordSet;
 import marmot.io.MarmotFileNotFoundException;
+import marmot.proto.LongProto;
 import marmot.proto.service.CopyToHdfsFileRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.proto.service.FileServiceGrpc;
@@ -66,7 +67,7 @@ public class PBFileServiceProxy {
 		}
 	}
 
-	public void copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
+	public long copyToHdfsFile(String path, InputStream stream, FOption<Long> blockSize,
 								FOption<String> codecName)
 		throws IOException {
 		try {
@@ -91,6 +92,7 @@ public class PBFileServiceProxy {
 			uploader.start();
 			
 			ByteString ret = uploader.get();
+			return LongProto.parseFrom(ret).getValue();
 		}
 		catch ( Throwable e ) {
 			Throwable cause = Throwables.unwrapThrowable(e);
