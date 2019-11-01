@@ -48,7 +48,7 @@ public class MarmotClientCommand implements PicocliCommand {
 		catch ( Exception e ) {
 			System.err.printf("failed: %s%n%n", e);
 			
-			m_spec.commandLine().usage(System.out, Ansi.OFF);
+//			m_spec.commandLine().usage(System.out, Ansi.OFF);
 		}
 	}
 }
