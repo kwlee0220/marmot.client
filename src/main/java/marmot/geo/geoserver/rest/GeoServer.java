@@ -3,6 +3,7 @@ package marmot.geo.geoserver.rest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -70,13 +72,21 @@ public class GeoServer {
 			Tuple3<Integer, String, String> ret = get(getLayersUrl());
 			if ( ret._1 >= 200 && ret._1 < 300 ) {
 				JsonParser gson = new JsonParser();
-				return FStream.from(gson.parse(ret._3).getAsJsonObject().entrySet())
-						.flatMapIterable(v -> ((JsonObject)v.getValue()).entrySet())
-						.flatMapIterable(v -> (JsonArray)v.getValue()).cast(JsonObject.class)
-						.map(o -> o.get("name").getAsString())
-						.filter(fn -> fn.startsWith(m_storeName + ":"))
-						.map(this::parseLayerName)
-						.toList();
+				
+				JsonElement layersElm = gson.parse(ret._3).getAsJsonObject()
+											.get("layers");
+				if ( layersElm.isJsonPrimitive() ) {	// 등록된 layer가 없는 경우
+					return Collections.emptyList();
+				}
+				
+				JsonArray layers = layersElm.getAsJsonObject()
+											.getAsJsonArray("layer");
+				return FStream.from(layers)
+								.cast(JsonObject.class)
+								.map(o -> o.get("name").getAsString())
+								.filter(fn -> fn.startsWith(m_storeName + ":"))
+								.map(this::parseLayerName)
+								.toList();
 			}
 			else {
 				throw new GeoServerException(ret._2);
