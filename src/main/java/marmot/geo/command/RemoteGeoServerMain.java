@@ -4,7 +4,6 @@ import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
-import marmot.command.PicocliCommands;
 import marmot.command.PicocliCommands.SubCommand;
 import marmot.geo.command.RemoteGeoServerMain.Add;
 import marmot.geo.command.RemoteGeoServerMain.Delete;
