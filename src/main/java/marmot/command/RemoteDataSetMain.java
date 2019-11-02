@@ -22,7 +22,7 @@ import picocli.CommandLine.Help;
 		optionListHeading = "Options:%n",
 		description="dataset-related commands",
 		subcommands = {
-			DatasetCommands.List.class,
+			DatasetCommands.ListDataSet.class,
 			DatasetCommands.Show.class,
 			DatasetCommands.Schema.class,
 			DatasetCommands.Move.class,
