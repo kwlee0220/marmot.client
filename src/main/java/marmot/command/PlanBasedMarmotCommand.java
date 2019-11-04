@@ -88,8 +88,8 @@ public abstract class PlanBasedMarmotCommand {
 			
 			DataSet outDs = m_marmot.getDataSet(outputDsId);
 			String geomStr = outDs.hasGeometryColumn()
-							? outDs.getGeometryColumnInfo() + ", " : "";
-			System.out.printf("created: ds=%s, %scount=%d, schema=%s%n", outDs.getId(), geomStr,
+							? ", " + outDs.getGeometryColumnInfo() + ", " : "";
+			System.out.printf("created: %s%s, count=%d, schema=%s%n", outDs.getId(), geomStr,
 								outDs.getRecordCount(), outDs.getRecordSchema());
 		}
 	}
