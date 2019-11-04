@@ -125,6 +125,17 @@ task distributeBinary(type:Copy) {
 	from "${buildDir}/libs/${archivesBaseName}-${version}-javadoc.jar"
 }
 
+apply plugin: 'maven-publish'
+publishing {
+	publications {
+		main(MavenPublication) {
+			artifact jar
+			artifact sourceJar
+			artifact javadocJar
+		}
+	}
+}
+
 apply plugin: 'eclipse'
 eclipse {
 	classpath {
