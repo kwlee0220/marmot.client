@@ -15,6 +15,7 @@ import java.util.List;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -84,6 +85,12 @@ public abstract class PlanBasedMarmotCommand {
 		}
 		else {
 			m_marmot.execute(plan);
+			
+			DataSet outDs = m_marmot.getDataSet(outputDsId);
+			String geomStr = outDs.hasGeometryColumn()
+							? outDs.getGeometryColumnInfo() + ", " : "";
+			System.out.printf("created: ds=%s, %scount=%d, schema=%s%n", outDs.getId(), geomStr,
+								outDs.getRecordCount(), outDs.getRecordSchema());
 		}
 	}
 	
