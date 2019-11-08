@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
-import io.vavr.Lazy;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
@@ -33,6 +32,7 @@ import marmot.geo.query.GeoDataStore;
 import marmot.optor.AggregateFunction;
 import utils.Throwables;
 import utils.func.FOption;
+import utils.func.Lazy;
 import utils.func.Tuple;
 
 

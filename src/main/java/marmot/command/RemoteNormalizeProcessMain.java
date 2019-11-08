@@ -1,6 +1,5 @@
 package marmot.command;
 
-import io.vavr.CheckedConsumer;
 import marmot.MarmotRuntime;
 import marmot.process.NormalizeParameters;
 import marmot.remote.protobuf.PBMarmotClient;
@@ -10,6 +9,7 @@ import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 import utils.CSV;
+import utils.func.CheckedConsumer;
 
 /**
  * 
