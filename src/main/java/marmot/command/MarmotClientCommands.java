@@ -7,7 +7,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 
-import io.vavr.control.Option;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.func.FOption;
@@ -83,7 +82,7 @@ public class MarmotClientCommands {
 	}
 	
 	public static void configureLog4j() {
-		String configFileName = Option.of(System.getenv("MARMOT_CLIENT_HOME"))
+		String configFileName = FOption.ofNullable(System.getenv("MARMOT_CLIENT_HOME"))
 									.map(File::new)
 									.map(parent -> new File(parent, "log4j.properties"))
 									.map(file -> file.toString())
