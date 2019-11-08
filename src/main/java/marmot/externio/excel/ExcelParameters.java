@@ -2,12 +2,11 @@ package marmot.externio.excel;
 
 import java.util.List;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import picocli.CommandLine.Option;
 import utils.CSV;
 import utils.Utilities;
 import utils.func.FOption;
+import utils.func.Tuple;
 
 /**
  * 
@@ -40,7 +39,7 @@ public class ExcelParameters {
 		return this;
 	}
 	
-	public FOption<Tuple2<String,String>> pointColumns() {
+	public FOption<Tuple<String,String>> pointColumns() {
 		return m_pointCols.map(cols -> {
 			List<String> parts = CSV.parseCsv(cols, ',', '\\').toList();
 			return Tuple.of(parts.get(0), parts.get(1));

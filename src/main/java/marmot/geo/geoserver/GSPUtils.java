@@ -11,10 +11,9 @@ import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.spatial.BBOX;
 import org.opengis.geometry.BoundingBox;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import utils.Utilities;
 import utils.func.FOption;
+import utils.func.Tuple;
 import utils.stream.FStream;
 
 /**
@@ -38,8 +37,8 @@ public class GSPUtils {
 		return "/" + sfTypeName.replace('.', '/');
 	}
 	
-	static Tuple2<BoundingBox,FOption<Filter>> resolveQuery(BoundingBox mbr, Query query) {
-		Tuple2<FOption<BoundingBox>,FOption<Filter>> ret = parseCql(query.getFilter());
+	static Tuple<BoundingBox,FOption<Filter>> resolveQuery(BoundingBox mbr, Query query) {
+		Tuple<FOption<BoundingBox>,FOption<Filter>> ret = parseCql(query.getFilter());
 		
 		if ( ret._1.isPresent() ) {
 			BoundingBox bbox = ret._1.get();
@@ -57,7 +56,7 @@ public class GSPUtils {
 
 	private static final FilterFactory2 FILTER_FACT
 					= CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
-	private static Tuple2<FOption<BoundingBox>,FOption<Filter>> parseCql(Filter filter) {
+	private static Tuple<FOption<BoundingBox>,FOption<Filter>> parseCql(Filter filter) {
 		Utilities.checkNotNullArgument(filter, "filter is null");
 
 		if ( filter instanceof BBOX ) {

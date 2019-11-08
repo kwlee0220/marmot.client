@@ -19,7 +19,6 @@ import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
 import io.vavr.Lazy;
-import io.vavr.Tuple2;
 import marmot.DataSet;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
@@ -34,6 +33,7 @@ import marmot.geo.query.GeoDataStore;
 import marmot.optor.AggregateFunction;
 import utils.Throwables;
 import utils.func.FOption;
+import utils.func.Tuple;
 
 
 /**
@@ -78,7 +78,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 				return m_mbr.get();
 			}
 			else {
-				Tuple2<BoundingBox, FOption<Filter>> resolved
+				Tuple<BoundingBox, FOption<Filter>> resolved
 										= GSPUtils.resolveQuery(m_mbr.get(), query);
 				if ( resolved._1 == null && resolved._2.isAbsent() ) {
 					return new ReferencedEnvelope(m_mbr.get());
@@ -99,7 +99,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 
 	@Override
 	protected int getCountInternal(Query query) throws IOException {
-		Tuple2<BoundingBox, FOption<Filter>> resolved
+		Tuple<BoundingBox, FOption<Filter>> resolved
 										= GSPUtils.resolveQuery(m_mbr.get(), query);
 		if ( resolved._1 == null && resolved._2.isAbsent() ) {
 			return (int)m_ds.getRecordCount();
@@ -114,7 +114,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	@Override
 	protected FeatureReader<SimpleFeatureType, SimpleFeature> getReaderInternal(Query query) {
 		try {
-			Tuple2<BoundingBox, FOption<Filter>> resolved
+			Tuple<BoundingBox, FOption<Filter>> resolved
 											= GSPUtils.resolveQuery(m_mbr.get(), query);
 			BoundingBox bbox = resolved._1;
 			Envelope range = GeoClientUtils.toEnvelope(bbox.getMinX(), bbox.getMinY(),

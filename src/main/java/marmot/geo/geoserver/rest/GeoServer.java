@@ -31,12 +31,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import marmot.DataSet;
 import marmot.geo.geoserver.GSPUtils;
 import utils.CSV;
+import utils.func.Tuple;
+import utils.func.Tuple3;
 import utils.stream.FStream;
 import utils.stream.KVFStream;
 
@@ -125,7 +124,7 @@ public class GeoServer {
 			Map<String,String> params = Maps.newHashMap();
 			params.put("recurse", "true");
 			
-			Tuple2<Integer, String> ret = delete(getFeatureTypeUrl(ftName), params);
+			Tuple<Integer, String> ret = delete(getFeatureTypeUrl(ftName), params);
 			if ( ret._1 >= 200 && ret._1 < 300 ) {
 				return true;
 			}
@@ -182,7 +181,7 @@ public class GeoServer {
 			    return Tuple.of(code, details, handler.handleResponse(resp));
 		    }
 		    else {
-		    	return Tuple.of(code, details, null);
+		    	return Tuple.of(code, details, (String)null);
 		    }
 		}
 	}
@@ -212,7 +211,7 @@ public class GeoServer {
 		}
 	}
 	
-	private Tuple2<Integer,String> delete(String url, Map<String,String> params)
+	private Tuple<Integer,String> delete(String url, Map<String,String> params)
 		throws ClientProtocolException, IOException, AuthenticationException, URISyntaxException {
 		URI uri = KVFStream.from(params)
 						.foldLeft(new URIBuilder(url), (b,kv) -> b.addParameter(kv.key(), kv.value()))

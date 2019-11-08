@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import io.vavr.Tuple2;
 import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -16,6 +15,7 @@ import marmot.externio.ImportIntoDataSet;
 import marmot.support.MetaPlanLoader;
 import utils.Throwables;
 import utils.func.FOption;
+import utils.func.Tuple;
 
 /**
  * 
@@ -81,7 +81,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		PlanBuilder builder = new PlanBuilder("import_csv");
 		
 		GeometryColumnInfo info = m_params.getGeometryColumnInfo().get();
-		Tuple2<String,String> ptCols = m_excelParams.pointColumns().get();
+		Tuple<String,String> ptCols = m_excelParams.pointColumns().get();
 		builder = builder.toPoint(ptCols._1, ptCols._2, info.name());
 		
 		String prjExpr = String.format("%s,*-{%s,%s,%s}", info.name(), info.name(),
