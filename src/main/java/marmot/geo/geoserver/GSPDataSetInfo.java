@@ -17,8 +17,8 @@ import marmot.Record;
 import marmot.RecordSchema;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.optor.AggregateFunction;
-import utils.Guard;
 import utils.Throwables;
+import utils.async.Guard;
 
 /**
  * 

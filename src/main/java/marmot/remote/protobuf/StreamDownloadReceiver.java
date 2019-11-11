@@ -14,12 +14,12 @@ import marmot.proto.service.DownChunkResponse;
 import marmot.protobuf.PBUtils;
 import marmot.protobuf.SuppliableInputStream;
 import net.jcip.annotations.GuardedBy;
-import utils.Guard;
 import utils.Throwables;
 import utils.UnitUtils;
 import utils.Utilities;
 import utils.async.CancellableWork;
 import utils.async.EventDrivenExecution;
+import utils.async.Guard;
 
 
 /**

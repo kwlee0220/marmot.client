@@ -3,8 +3,6 @@ package marmot.command.explorer;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.EventQueue;
-import java.io.IOException;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -16,19 +14,10 @@ import javax.swing.ListSelectionModel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 
-import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-
 import io.reactivex.Observable;
 import marmot.DataSet;
 import marmot.MarmotRuntime;
-import marmot.command.MarmotClientCommands;
 import marmot.command.explorer.DataSetTree.Selection;
-import marmot.remote.protobuf.PBMarmotClient;
-import utils.CommandLine;
-import utils.CommandLineException;
-import utils.CommandLineParser;
 
 /**
  * 
@@ -43,50 +32,50 @@ public class DataSetExplorer extends JFrame {
 	private DataSetInfoPanel m_dsInfoPanel;
 	private DefaultMutableTreeNode rootNode;
 
-	public static void main(String[] args) throws IOException {
-//		PropertyConfigurator.configure("log4j.properties");
-		LogManager.getRootLogger().setLevel(Level.OFF);
-		
-		CommandLineParser parser = new CommandLineParser("mc_explorer ");
-		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
-		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
-		parser.addOption("help", "show usage", false);
-		
-		CommandLine cl = null;
-		try {
-			cl = parser.parseArgs(args);
-			if ( cl.hasOption("help") ) {
-				cl.exitWithUsage(0);
-			}
+//	public static void main(String[] args) throws IOException {
+////		PropertyConfigurator.configure("log4j.properties");
+//		LogManager.getRootLogger().setLevel(Level.OFF);
+//		
+//		CommandLineParser parser = new CommandLineParser("mc_explorer ");
+//		parser.addArgOption("host", "ip_addr", "marmot server host (default: localhost)", false);
+//		parser.addArgOption("port", "number", "marmot server port (default: 12985)", false);
+//		parser.addOption("help", "show usage", false);
+//		
+//		CommandLine cl = null;
+//		try {
+//			cl = parser.parseArgs(args);
+//			if ( cl.hasOption("help") ) {
+//				cl.exitWithUsage(0);
+//			}
+//
+//			String host = MarmotClientCommands.getMarmotHost(cl);
+//			int port = MarmotClientCommands.getMarmotPort(cl);
+//			
+//			// 원격 MarmotServer에 접속.
+//			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
+//
+//			EventQueue.invokeLater(new Runnable() {
+//				public void run() {
+//					try {
+//						DataSetExplorer frame = new DataSetExplorer(marmot);
+//						frame.setVisible(true);
+//						frame.init();
+//					}
+//					catch ( Exception e ) {
+//						e.printStackTrace();
+//					}
+//				}
+//			});
+//		}
+//		catch ( ParseException | CommandLineException e ) {
+//			System.err.println(e);
+//			if ( cl != null ) {
+//				cl.exitWithUsage(-1);
+//			}
+//		}
+//	}
 
-			String host = MarmotClientCommands.getMarmotHost(cl);
-			int port = MarmotClientCommands.getMarmotPort(cl);
-			
-			// 원격 MarmotServer에 접속.
-			PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-
-			EventQueue.invokeLater(new Runnable() {
-				public void run() {
-					try {
-						DataSetExplorer frame = new DataSetExplorer(marmot);
-						frame.setVisible(true);
-						frame.init();
-					}
-					catch ( Exception e ) {
-						e.printStackTrace();
-					}
-				}
-			});
-		}
-		catch ( ParseException | CommandLineException e ) {
-			System.err.println(e);
-			if ( cl != null ) {
-				cl.exitWithUsage(-1);
-			}
-		}
-	}
-
-	private void init() {
+	void init() {
 		
 	}
 

@@ -16,10 +16,10 @@ import marmot.proto.service.UpChunkResponse;
 import marmot.protobuf.LimitedInputStream;
 import marmot.protobuf.PBUtils;
 import net.jcip.annotations.GuardedBy;
-import utils.Guard;
 import utils.Throwables;
 import utils.Utilities;
 import utils.async.AbstractThreadedExecution;
+import utils.async.Guard;
 import utils.io.IOUtils;
 
 /**
