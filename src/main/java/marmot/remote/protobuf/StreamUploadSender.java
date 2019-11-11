@@ -5,6 +5,8 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
@@ -15,7 +17,6 @@ import marmot.proto.service.UpChunkRequest;
 import marmot.proto.service.UpChunkResponse;
 import marmot.protobuf.LimitedInputStream;
 import marmot.protobuf.PBUtils;
-import net.jcip.annotations.GuardedBy;
 import utils.Throwables;
 import utils.Utilities;
 import utils.async.AbstractThreadedExecution;

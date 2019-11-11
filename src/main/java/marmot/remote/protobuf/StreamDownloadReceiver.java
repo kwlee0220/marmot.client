@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
@@ -13,7 +15,6 @@ import marmot.proto.service.DownChunkRequest;
 import marmot.proto.service.DownChunkResponse;
 import marmot.protobuf.PBUtils;
 import marmot.protobuf.SuppliableInputStream;
-import net.jcip.annotations.GuardedBy;
 import utils.Throwables;
 import utils.UnitUtils;
 import utils.Utilities;
