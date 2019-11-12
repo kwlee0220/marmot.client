@@ -1,6 +1,6 @@
 package marmot.remote.protobuf;
 
-import static marmot.support.DateTimeFunctions.DateTimeFromMillis;
+import static utils.Utilities.fromUTCEpocMillis;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -193,7 +193,7 @@ public class PBMarmotExecutionProxy implements MarmotExecution {
 					: m_info.getFinishedTime() - m_info.getStartedTime();
 		String elapsedStr = UnitUtils.toSecondString(elapsed);
 
-		LocalDateTime startedStr = DateTimeFromMillis(m_info.getStartedTime());
+		LocalDateTime startedStr = fromUTCEpocMillis(m_info.getStartedTime()).toLocalDateTime();
 		return String.format("%10s: %9s%s%s, started=%s, elapsed=%s", getId(), state,
 							failedCause, analyStr, startedStr, elapsedStr);
 	}
