@@ -106,9 +106,10 @@ apply plugin: 'maven-publish'
 publishing {
 	publications {
 		main(MavenPublication) {
-			artifact jar
-			artifact sourceJar
-			artifact javadocJar
+			components.java
+			
+//			artifact sourceJar
+//			artifact javadocJar
 			artifact shadowJar
 		}
 	}
