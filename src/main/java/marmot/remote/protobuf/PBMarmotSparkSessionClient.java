@@ -2,16 +2,20 @@ package marmot.remote.protobuf;
 
 import java.io.IOException;
 
+import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.TextFormat;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import marmot.ExecutePlanOptions;
 import marmot.MarmotSparkSession;
-import marmot.Plan;
-import marmot.proto.service.ExecutePlanRequest;
+import marmot.StoreDataSetOptions;
+import marmot.exec.MarmotExecutionException;
 import marmot.proto.service.MarmotSparkSessionServiceGrpc;
 import marmot.proto.service.MarmotSparkSessionServiceGrpc.MarmotSparkSessionServiceBlockingStub;
+import marmot.proto.service.RunSQLRequest;
+import marmot.proto.service.ViewMappingProto;
 import marmot.protobuf.PBUtils;
 
 /**
@@ -53,13 +57,24 @@ public class PBMarmotSparkSessionClient implements MarmotSparkSession {
 	ManagedChannel getChannel() {
 		return m_channel;
 	}
-	
+
 	@Override
-	public void execute(Plan plan, ExecutePlanOptions opts) {
-		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
-													.setPlan(plan.toProto())
-													.setOptions(opts.toProto())
+	public void createOrReplaceView(String viewName, String dsId) {
+		ViewMappingProto mapping = ViewMappingProto.newBuilder()
+													.setViewName(viewName)
+													.setDsId(dsId)
 													.build();
-		PBUtils.handle(m_blockingStub.execute(req));
+		PBUtils.handle(m_blockingStub.createOrReplaceView(mapping));
+	}
+
+	@Override
+	public void runSql(String sqlStmt, String outDsId, StoreDataSetOptions opts)
+		throws MarmotExecutionException {
+		RunSQLRequest req = RunSQLRequest.newBuilder()
+										.setSqlStatement(sqlStmt)
+										.setOutputDsId(outDsId)
+										.setOptions(opts.toProto())
+										.build();
+		PBUtils.handle(m_blockingStub.runSql(req));
 	}
 }
