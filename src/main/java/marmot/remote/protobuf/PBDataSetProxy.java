@@ -1,5 +1,6 @@
 package marmot.remote.protobuf;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.vividsolutions.jts.geom.Envelope;
@@ -123,7 +124,7 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public RecordSet queryRange(Envelope range, FOption<String> filterExpr) {
+	public RecordSet queryRange(Envelope range, FOption<String> filterExpr) throws IOException {
 		return m_service.queryRange(getId(), range, filterExpr);
 	}
 
