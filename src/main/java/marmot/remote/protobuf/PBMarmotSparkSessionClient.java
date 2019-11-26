@@ -2,16 +2,16 @@ package marmot.remote.protobuf;
 
 import java.io.IOException;
 
-import com.google.protobuf.AbstractMessage;
-import com.google.protobuf.TextFormat;
-
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import marmot.ExecutePlanOptions;
 import marmot.MarmotSparkSession;
+import marmot.Plan;
 import marmot.StoreDataSetOptions;
 import marmot.exec.MarmotExecutionException;
+import marmot.proto.service.ExecutePlanRequest;
 import marmot.proto.service.MarmotSparkSessionServiceGrpc;
 import marmot.proto.service.MarmotSparkSessionServiceGrpc.MarmotSparkSessionServiceBlockingStub;
 import marmot.proto.service.RunSQLRequest;
@@ -56,6 +56,15 @@ public class PBMarmotSparkSessionClient implements MarmotSparkSession {
 	
 	ManagedChannel getChannel() {
 		return m_channel;
+	}
+	
+	@Override
+	public void execute(Plan plan, ExecutePlanOptions opts) {
+		ExecutePlanRequest req = ExecutePlanRequest.newBuilder()
+													.setPlan(plan.toProto())
+													.setOptions(opts.toProto())
+													.build();
+		PBUtils.handle(m_blockingStub.execute(req));
 	}
 
 	@Override
