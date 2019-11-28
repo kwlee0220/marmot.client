@@ -123,13 +123,18 @@ public abstract class PlanBasedMarmotCommand {
 	}
 	
 	private PlanBuilder appendOperators(PlanBuilder builder) {
+		builder = addFilter0All(builder);
+		// ----------------------------------------
 		builder = addCentroid(builder);
 		builder = addBuffer(builder);
 		builder = addAssignGridCell(builder);
+		// ----------------------------------------
 		builder = addDefineColumnAll(builder);
-		builder = addUpdate(builder);
 		builder = addExpand(builder);
-		builder = addFilter(builder);
+		builder = addUpdateAll(builder);
+		// ----------------------------------------
+		builder = addFilterAll(builder);
+		builder = addProject0(builder);
 		
 		// 'spatial_join' 관련 인자가 있는 경우, spatial_join 연산을 추가한다.
 		if ( m_opParams.m_spatialJoin != null ) {
@@ -151,6 +156,14 @@ public abstract class PlanBasedMarmotCommand {
 		builder = addDistinct(builder);
 		builder = addTransformCrs(builder);
 		builder = addShard(builder);
+		
+		return builder;
+	}
+	
+	private PlanBuilder addFilter0All(PlanBuilder builder) {
+		for ( String expr: m_opParams.m_filter0Expr ) {
+			builder = builder.filter(expr);
+		}
 		
 		return builder;
 	}
@@ -198,9 +211,9 @@ public abstract class PlanBasedMarmotCommand {
 		return builder;
 	}
 	
-	private PlanBuilder addUpdate(PlanBuilder builder) {
-		if ( m_opParams.m_updateExpr != null ) {
-			builder = builder.update(m_opParams.m_updateExpr);
+	private PlanBuilder addUpdateAll(PlanBuilder builder) {
+		for ( String expr: m_opParams.m_updateExpr ) {
+			builder = builder.update(expr);
 		}
 		return builder;
 	}
@@ -236,10 +249,11 @@ public abstract class PlanBasedMarmotCommand {
 		return builder;
 	}
 	
-	private PlanBuilder addFilter(PlanBuilder builder) {
-		if ( m_opParams.m_filterExpr != null ) {
-			builder = builder.filter(m_opParams.m_filterExpr);
+	private PlanBuilder addFilterAll(PlanBuilder builder) {
+		for ( String expr: m_opParams.m_filterExpr ) {
+			builder = builder.filter(expr);
 		}
+		
 		return builder;
 	}
 	
@@ -457,6 +471,14 @@ public abstract class PlanBasedMarmotCommand {
 		return Iterables.toArray(aggrs, AggregateFunction.class);
 	}
 	
+	private PlanBuilder addProject0(PlanBuilder builder) {
+		if ( m_opParams.m_project0Expr != null ) {
+			builder = builder.project(m_opParams.m_project0Expr);
+		}
+		
+		return builder;
+	}
+	
 	private PlanBuilder addProject(PlanBuilder builder) {
 		if ( m_opParams.m_projectExpr != null ) {
 			builder = builder.project(m_opParams.m_projectExpr);
@@ -517,18 +539,21 @@ public abstract class PlanBasedMarmotCommand {
 		}
 		SquareGrid m_grid;
 		
-		@Option(names={"-expand"}, paramLabel="expr", description={"expand expression"})
+		@Option(names={"-expand"}, paramLabel="expr", description={"column declarations"})
 		String m_expandExpr;
 		
-		@Option(names={"-update"}, paramLabel="expr", description={"update expression"})
-		String m_updateExpr;
+		@Option(names={"-update"}, paramLabel="expr", description={"column update expression"})
+		List<String> m_updateExpr = Lists.newArrayList();
 		
 		@Option(names={"-define_column"}, paramLabel="expr",
 				description={"define a column, format: <type> <var>[ = <init_expr>]"})
 		List<String> m_defineColumnExpr = Lists.newArrayList();
 		
+		@Option(names={"-filter0"}, paramLabel="expr", description={"filter expression"})
+		List<String> m_filter0Expr;
+		
 		@Option(names={"-filter"}, paramLabel="expr", description={"filter expression"})
-		String m_filterExpr;
+		List<String> m_filterExpr;
 		
 		@Option(names={"-sample"}, paramLabel="ratio", description={"sampling ratio"})
 		double m_sampleRatio;
@@ -577,8 +602,8 @@ public abstract class PlanBasedMarmotCommand {
 		
 		//------------------------------------------------------------------------------
 		
-		@Option(names={"-group_by"}, paramLabel="cols:tags",
-				description={"groupping columns (and optionally tag columns)"})
+		@Option(names={"-group_by"}, paramLabel="keys=<expr>[;tags=<expr>][;orderBy=<expr>][;workers=<n>]",
+				description={"groupping columns ('key=ufid,name;tags=the_geom;orderBy=age:A;workers=11')"})
 		String m_groupBy;
 		
 		@Option(names={"-aggregate"}, paramLabel="funcs", description={"aggregate functions)"})
@@ -591,6 +616,9 @@ public abstract class PlanBasedMarmotCommand {
 		boolean m_storeEachGroup = false;
 		
 		//------------------------------------------------------------------------------
+		
+		@Option(names={"-project0"}, paramLabel="colums", description={"target column list"})
+		String m_project0Expr;
 		
 		@Option(names={"-project"}, paramLabel="colums", description={"target column list"})
 		String m_projectExpr;
