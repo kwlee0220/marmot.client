@@ -54,7 +54,7 @@ public class PBMarmotClient implements MarmotRuntime {
 		return new PBMarmotClient(channel, true);
 	}
 	
-	private PBMarmotClient(ManagedChannel channel, boolean useCompression) throws IOException {
+	protected PBMarmotClient(ManagedChannel channel, boolean useCompression) throws IOException {
 		m_channel = channel;
 		m_useCompression = useCompression;
 		
