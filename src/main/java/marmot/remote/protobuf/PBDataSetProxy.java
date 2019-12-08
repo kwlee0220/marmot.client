@@ -1,25 +1,23 @@
 package marmot.remote.protobuf;
 
 import java.io.IOException;
-import java.util.List;
 
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.DataSet;
 import marmot.DataSetType;
-import marmot.ExecutePlanOptions;
 import marmot.GeometryColumnInfo;
 import marmot.GeometryColumnNotExistsException;
 import marmot.InsufficientThumbnailException;
 import marmot.Plan;
 import marmot.RecordSchema;
 import marmot.RecordSet;
-import marmot.SpatialClusterInfo;
 import marmot.ThumbnailNotFoundException;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
+import marmot.geo.query.RangeQueryEstimate;
 import utils.Utilities;
 import utils.func.FOption;
 
@@ -124,8 +122,13 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public RecordSet queryRange(Envelope range, FOption<String> filterExpr) throws IOException {
-		return m_service.queryRange(getId(), range, filterExpr);
+	public RangeQueryEstimate estimateRangeQuery(Envelope range) throws IOException {
+		return m_service.estimateRangeQuery(getId(), range);
+	}
+
+	@Override
+	public RecordSet queryRange(Envelope range, int nsamples) throws IOException {
+		return m_service.queryRange(getId(), range, nsamples);
 	}
 
 	@Override
@@ -165,11 +168,6 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public void deleteSpatialCluster() {
 		m_service.deleteSpatialCluster(getId());
-	}
-
-	@Override
-	public List<SpatialClusterInfo> querySpatialClusterInfo(Envelope bounds) {
-		return m_service.querySpatialClusterInfo(getId(), bounds);
 	}
 
 	@Override

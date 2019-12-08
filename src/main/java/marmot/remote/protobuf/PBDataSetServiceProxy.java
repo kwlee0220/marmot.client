@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -21,11 +20,11 @@ import marmot.GeometryColumnInfo;
 import marmot.Plan;
 import marmot.RecordSchema;
 import marmot.RecordSet;
-import marmot.SpatialClusterInfo;
 import marmot.StoreDataSetOptions;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.SpatialIndexInfo;
 import marmot.geo.command.ClusterDataSetOptions;
+import marmot.geo.query.RangeQueryEstimate;
 import marmot.proto.LongProto;
 import marmot.proto.StringProto;
 import marmot.proto.service.AppendRecordSetRequest;
@@ -42,17 +41,16 @@ import marmot.proto.service.DataSetServiceGrpc.DataSetServiceStub;
 import marmot.proto.service.DataSetTypeProto;
 import marmot.proto.service.DirectoryTraverseRequest;
 import marmot.proto.service.DownChunkResponse;
+import marmot.proto.service.EstimateRangeQueryRequest;
 import marmot.proto.service.FloatResponse;
 import marmot.proto.service.LongResponse;
 import marmot.proto.service.MoveDataSetRequest;
 import marmot.proto.service.MoveDirRequest;
 import marmot.proto.service.QueryRangeRequest;
-import marmot.proto.service.QuerySpatialClusterInfoRequest;
+import marmot.proto.service.RangeQueryEstimateResponse;
 import marmot.proto.service.ReadDataSetRequest;
 import marmot.proto.service.ReadRawSpatialClusterRequest;
 import marmot.proto.service.ReadThumbnailRequest;
-import marmot.proto.service.SpatialClusterInfoProto;
-import marmot.proto.service.SpatialClusterInfoResponse;
 import marmot.proto.service.SpatialIndexInfoResponse;
 import marmot.proto.service.StringResponse;
 import marmot.proto.service.UpChunkRequest;
@@ -184,17 +182,33 @@ public class PBDataSetServiceProxy {
 		return PBInputStreamRecordSet.from(is);
 	}
 	
-	public RecordSet queryRange(String dsId, Envelope range, FOption<String> filterExpr)
+	public RangeQueryEstimate estimateRangeQuery(String dsId, Envelope range) {
+		EstimateRangeQueryRequest req = EstimateRangeQueryRequest.newBuilder()
+																.setDatasetId(dsId)
+																.setRange(PBUtils.toProto(range))
+																.build();
+		RangeQueryEstimateResponse resp = m_dsBlockingStub.estimateRangeQuery(req);
+		switch ( resp.getEitherCase() ) {
+			case ESTIMATE:
+				return RangeQueryEstimate.fromProto(resp.getEstimate());
+			case ERROR:
+				throw Throwables.toRuntimeException(PBUtils.toException(resp.getError()));
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	public RecordSet queryRange(String dsId, Envelope range, int nsamples)
 		throws DataSetNotFoundException {
 		StreamDownloadReceiver downloader = new StreamDownloadReceiver();
 		StreamObserver<DownChunkResponse> channel = m_dsStub.queryRange(downloader);
 		
-		QueryRangeRequest.Builder builder = QueryRangeRequest.newBuilder()
-															.setId(dsId)
-															.setRange(PBUtils.toProto(range))
-															.setUseCompression(m_marmot.useCompression());
-		filterExpr.ifPresent(builder::setFilterExpr);
-		QueryRangeRequest req = builder.build();
+		QueryRangeRequest req = QueryRangeRequest.newBuilder()
+												.setId(dsId)
+												.setRange(PBUtils.toProto(range))
+												.setSampleCount(nsamples)
+												.setUseCompression(m_marmot.useCompression())
+												.build();
 
 		// start download by sending 'stream-download' request
 		InputStream is = downloader.start(req.toByteString(), channel);
@@ -277,32 +291,6 @@ public class PBDataSetServiceProxy {
 
 	public void deleteSpatialCluster(String id) {
 		PBUtils.handle(m_dsBlockingStub.deleteSpatialCluster(PBUtils.toStringProto(id)));
-	}
-
-	public List<SpatialClusterInfo> querySpatialClusterInfo(String dsId, Envelope bounds) {
-		QuerySpatialClusterInfoRequest req = QuerySpatialClusterInfoRequest.newBuilder()
-													.setDatasetId(dsId)
-													.setBounds(PBUtils.toProto(bounds))
-													.build();
-		Iterator<SpatialClusterInfoResponse> respIter = m_dsBlockingStub.querySpatialClusterInfo(req);
-		
-		List<SpatialClusterInfo> infoList = Lists.newArrayList();
-		while ( respIter.hasNext() ) {
-			SpatialClusterInfoResponse resp = respIter.next();
-			switch ( resp.getEitherCase() ) {
-				case SPATIAL_CLUSTER_INFO:
-					SpatialClusterInfoProto infoProto = resp.getSpatialClusterInfo();
-					infoList.add(SpatialClusterInfo.fromProto(infoProto));
-					break;
-				case ERROR:
-					Exception cause = PBUtils.toException(resp.getError());
-					throw Throwables.toRuntimeException(cause);
-				default:
-					throw new AssertionError();
-			}
-		}
-		
-		return infoList;
 	}
 	
 	public RecordSet readSpatialCluster(String dsId, String quadKey) {
