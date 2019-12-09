@@ -121,6 +121,7 @@ task distributeBinary(type:Copy) {
 	into "${distDir}"
 	from ("${projectDir}") {
 		include 'bin/**'
+		include 'lib/**'
 		include 'log4j.properties'
 		include '.gitignore'
 	}
