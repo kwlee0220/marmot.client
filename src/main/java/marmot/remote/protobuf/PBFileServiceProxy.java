@@ -20,7 +20,7 @@ import marmot.proto.service.FileServiceGrpc.FileServiceBlockingStub;
 import marmot.proto.service.FileServiceGrpc.FileServiceStub;
 import marmot.proto.service.UpChunkRequest;
 import marmot.proto.service.VoidResponse;
-import marmot.protobuf.PBInputStreamRecordSet;
+import marmot.protobuf.PBRecordProtos;
 import marmot.protobuf.PBUtils;
 import utils.StopWatch;
 import utils.Throwables;
@@ -53,7 +53,7 @@ public class PBFileServiceProxy {
 		StreamObserver<DownChunkResponse> channel = m_stub.readMarmotFile(downloader);
 		InputStream is = downloader.start(PBUtils.toStringProto(path).toByteString(), channel);
 		
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 
 	public void deleteHdfsFile(String path) throws IOException {

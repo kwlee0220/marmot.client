@@ -40,8 +40,7 @@ import marmot.proto.service.RecordSchemaResponse;
 import marmot.proto.service.SetExecutionInfoRequest;
 import marmot.proto.service.TimeoutProto;
 import marmot.proto.service.WaitForFinishedRequest;
-import marmot.protobuf.PBInputStreamRecordSet;
-import marmot.protobuf.PBRecordSetInputStream;
+import marmot.protobuf.PBRecordProtos;
 import marmot.protobuf.PBUtils;
 import marmot.support.DefaultRecord;
 import utils.Throwables;
@@ -222,12 +221,12 @@ public class PBPlanExecutionServiceProxy {
 			is = Lz4Compressions.decompress(is);
 		}
 		
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 
 	public RecordSet executeLocally(Plan plan, RecordSet input) {
 		try {
-			InputStream is = PBRecordSetInputStream.from(input);
+			InputStream is = PBRecordProtos.toInputStream(input);
 			StreamUpnDownloadClient client = new StreamUpnDownloadClient(is) {
 				@Override
 				protected ByteString getHeader() throws Exception {
@@ -246,7 +245,7 @@ public class PBPlanExecutionServiceProxy {
 				stream = Lz4Compressions.decompress(stream);
 			}
 			
-			return PBInputStreamRecordSet.from(stream);
+			return PBRecordProtos.readRecordSet(stream);
 		}
 		catch ( Throwable e ) {
 			Throwable cause = Throwables.unwrapThrowable(e);
@@ -289,7 +288,7 @@ public class PBPlanExecutionServiceProxy {
 			is = Lz4Compressions.decompress(is);
 		}
 		
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 	
     public RecordSet executeToStream(String id, Plan plan) {
@@ -303,7 +302,7 @@ public class PBPlanExecutionServiceProxy {
 												.build();
 		InputStream is = downloader.start(req.toByteString(), channel);
 		
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
     }
 
 	public RecordSchema getProcessRecordSchema(String processId,

@@ -56,8 +56,7 @@ import marmot.proto.service.StringResponse;
 import marmot.proto.service.UpChunkRequest;
 import marmot.proto.service.UpdateGeometryColumnInfoRequest;
 import marmot.proto.service.VoidResponse;
-import marmot.protobuf.PBInputStreamRecordSet;
-import marmot.protobuf.PBRecordSetInputStream;
+import marmot.protobuf.PBRecordProtos;
 import marmot.protobuf.PBUtils;
 import utils.Throwables;
 import utils.func.FOption;
@@ -179,7 +178,7 @@ public class PBDataSetServiceProxy {
 		if ( m_marmot.useCompression() ) {
 			is = Lz4Compressions.decompress(is);
 		}
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 	
 	public RangeQueryEstimate estimateRangeQuery(String dsId, Envelope range) {
@@ -216,12 +215,12 @@ public class PBDataSetServiceProxy {
 			is = Lz4Compressions.decompress(is);
 		}
 		
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 	
 	public long appendRecordSet(String dsId, RecordSet rset, FOption<Plan> plan) {
 		try {
-			InputStream is = PBRecordSetInputStream.from(rset);
+			InputStream is = PBRecordProtos.toInputStream(rset);
 			if ( m_marmot.useCompression() ) {
 				is = Lz4Compressions.compress(is);
 			}
@@ -307,7 +306,7 @@ public class PBDataSetServiceProxy {
 		if ( m_marmot.useCompression() ) {
 			is = Lz4Compressions.decompress(is);
 		}
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 
 	public List<String> getDirAll() {
@@ -394,7 +393,7 @@ public class PBDataSetServiceProxy {
 			is = Lz4Compressions.decompress(is);
 		}
 
-		return PBInputStreamRecordSet.from(is);
+		return PBRecordProtos.readRecordSet(is);
 	}
 	
 	public float getThumbnailRatio(String dsId) {
