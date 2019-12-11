@@ -35,11 +35,6 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public PBMarmotClient getMarmotRuntime() {
-		return m_service.getMarmotRuntime();
-	}
-
-	@Override
 	public String getId() {
 		return m_info.getId();
 	}
