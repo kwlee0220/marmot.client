@@ -1,7 +1,7 @@
 package marmot.command;
 
 import marmot.MarmotRuntime;
-import marmot.process.NormalizeParameters;
+import marmot.analysis.module.NormalizeParameters;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;

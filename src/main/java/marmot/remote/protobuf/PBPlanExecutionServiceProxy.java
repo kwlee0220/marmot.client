@@ -5,8 +5,10 @@ import static marmot.ExecutePlanOptions.DEFAULT;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
@@ -85,6 +87,24 @@ public class PBPlanExecutionServiceProxy {
 			default:
 				throw new AssertionError();
 		}
+	}
+	
+	public Set<String> getModuleAnalsisClassIdAll() {
+		return Sets.newHashSet(PBUtils.handle(m_blockingStub.getModuleAnalysisClassIdAll(PBUtils.VOID)));
+	}
+	
+	public List<String> getModuleParameterNameAll(String id) {
+		return PBUtils.handle(m_blockingStub.getModuleAnalysisParameterNameAll(
+																		PBUtils.toStringProto(id)));
+	}
+	
+	public Set<String> getSystemAnalsisClassIdAll() {
+		return Sets.newHashSet(PBUtils.handle(m_blockingStub.getSystemAnalysisClassIdAll(PBUtils.VOID)));
+	}
+	
+	public List<String> getSystemParameterNameAll(String id) {
+		return PBUtils.handle(m_blockingStub.getSystemAnalysisParameterNameAll(
+																		PBUtils.toStringProto(id)));
 	}
 
 	public MarmotAnalysis getAnalysis(String id) {

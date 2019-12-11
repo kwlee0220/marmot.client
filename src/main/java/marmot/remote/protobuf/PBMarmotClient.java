@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -232,6 +233,26 @@ public class PBMarmotClient implements MarmotRuntime {
 	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan, RecordSchema inputSchema) {
 		return m_pexecService.getOutputRecordSchema(plan, FOption.of(inputSchema));
+	}
+
+	@Override
+	public Set<String> getModuleAnalsisClassIdAll() {
+		return m_pexecService.getModuleAnalsisClassIdAll();
+	}
+
+	@Override
+	public List<String> getModuleAnalysisParameterNameAll(String classId) {
+		return m_pexecService.getModuleParameterNameAll(classId);
+	}
+
+	@Override
+	public Set<String> getSystemAnalsisClassIdAll() {
+		return m_pexecService.getSystemAnalsisClassIdAll();
+	}
+
+	@Override
+	public List<String> getSystemAnalysisParameterNameAll(String classId) {
+		return m_pexecService.getSystemParameterNameAll(classId);
 	}
 
 	@Override
