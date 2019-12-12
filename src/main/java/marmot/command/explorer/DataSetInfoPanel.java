@@ -8,8 +8,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import marmot.Column;
-import marmot.DataSet;
-import marmot.GeometryColumnInfo;
+import marmot.dataset.DataSet;
+import marmot.dataset.GeometryColumnInfo;
 import utils.UnitUtils;
 
 /**

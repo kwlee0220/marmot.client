@@ -14,8 +14,8 @@ import org.opengis.feature.type.Name;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import marmot.DataSet;
 import marmot.MarmotRuntime;
+import marmot.dataset.DataSet;
 import marmot.geo.query.GeoDataStore;
 import utils.Utilities;
 import utils.stream.FStream;
@@ -40,7 +40,7 @@ public class GSPDataStore extends ContentDataStore {
 		setNamespaceURI(WORKSPACE_URI);
 	}
 	
-	public GSPDataStore setSampleCount(long count) {
+	public GSPDataStore setSampleCount(int count) {
 		m_store.setSampleCount(count);
 		return this;
 	}

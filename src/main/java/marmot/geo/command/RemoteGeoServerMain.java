@@ -1,10 +1,10 @@
 package marmot.geo.command;
 
-import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
 import marmot.command.PicocliCommands.SubCommand;
+import marmot.dataset.DataSet;
 import marmot.geo.command.RemoteGeoServerMain.Add;
 import marmot.geo.command.RemoteGeoServerMain.Delete;
 import marmot.geo.command.RemoteGeoServerMain.ListDataSet;

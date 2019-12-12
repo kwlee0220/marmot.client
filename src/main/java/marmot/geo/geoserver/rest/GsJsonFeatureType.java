@@ -6,9 +6,9 @@ import com.google.gson.annotations.SerializedName;
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.Column;
-import marmot.DataSet;
-import marmot.GeometryColumnInfo;
 import marmot.RecordSchema;
+import marmot.dataset.DataSet;
+import marmot.dataset.GeometryColumnInfo;
 import marmot.geo.CRSUtils;
 import marmot.geo.CoordinateTransform;
 import marmot.geo.geoserver.GSPUtils;

@@ -18,12 +18,12 @@ import org.slf4j.LoggerFactory;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
-import marmot.DataSet;
-import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.RecordSet;
+import marmot.dataset.DataSet;
+import marmot.dataset.GeometryColumnInfo;
 import marmot.geo.CRSUtils;
 import marmot.geo.GeoClientUtils;
 import marmot.geo.geotools.MarmotFeatureIterator;
@@ -67,7 +67,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		});
 	}
 	
-	public RecordSet query(Envelope range) {
+	public RecordSet query(Envelope range) throws Exception {
 		return m_store.createRangeQuery(m_dsId, range).run();
 	}
 

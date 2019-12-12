@@ -6,9 +6,9 @@ import java.util.Map;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.io.ParseException;
 
-import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
+import marmot.dataset.DataSet;
 import marmot.geo.GeoClientUtils;
 import marmot.plan.PredicateOptions;
 import picocli.CommandLine;

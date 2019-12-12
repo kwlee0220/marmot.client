@@ -7,12 +7,12 @@ import javax.swing.SwingWorker;
 import javax.swing.table.AbstractTableModel;
 
 import marmot.Column;
-import marmot.DataSet;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.Record;
 import marmot.RecordSet;
+import marmot.dataset.DataSet;
 import marmot.type.DataType;
 
 

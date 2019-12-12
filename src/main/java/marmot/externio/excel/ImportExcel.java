@@ -4,13 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.PlanBuilder;
 import marmot.RecordSet;
 import marmot.RecordSetException;
 import marmot.command.ImportParameters;
+import marmot.dataset.GeometryColumnInfo;
 import marmot.externio.ImportIntoDataSet;
 import marmot.support.MetaPlanLoader;
 import utils.Throwables;

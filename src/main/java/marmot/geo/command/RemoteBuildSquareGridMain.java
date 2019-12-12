@@ -1,10 +1,10 @@
 package marmot.geo.command;
 
-import marmot.GeometryColumnInfo;
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
 import marmot.command.MarmotClientCommands;
 import marmot.command.PlanBasedMarmotCommand;
+import marmot.dataset.GeometryColumnInfo;
 import marmot.optor.geo.SquareGrid;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;

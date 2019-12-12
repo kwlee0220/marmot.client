@@ -1,18 +1,14 @@
 package marmot.remote.protobuf;
 
-import java.io.IOException;
-
 import com.vividsolutions.jts.geom.Envelope;
 
-import marmot.DataSet;
-import marmot.DataSetType;
-import marmot.GeometryColumnInfo;
-import marmot.GeometryColumnNotExistsException;
-import marmot.InsufficientThumbnailException;
 import marmot.Plan;
 import marmot.RecordSchema;
 import marmot.RecordSet;
-import marmot.ThumbnailNotFoundException;
+import marmot.dataset.DataSet;
+import marmot.dataset.DataSetType;
+import marmot.dataset.GeometryColumnInfo;
+import marmot.dataset.GeometryColumnNotExistsException;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
@@ -47,11 +43,6 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public DataSetType getType() {
 		return m_info.getType();
-	}
-
-	@Override
-	public String getDirName() {
-		return m_info.getDirName();
 	}
 
 	@Override
@@ -117,12 +108,12 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public RangeQueryEstimate estimateRangeQuery(Envelope range) throws IOException {
+	public RangeQueryEstimate estimateRangeQuery(Envelope range) {
 		return m_service.estimateRangeQuery(getId(), range);
 	}
-
+	
 	@Override
-	public RecordSet queryRange(Envelope range, int nsamples) throws IOException {
+	public RecordSet queryRange(Envelope range, int nsamples) {
 		return m_service.queryRange(getId(), range, nsamples);
 	}
 
@@ -171,17 +162,6 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public boolean hasThumbnail() {
-		return m_service.hasThumbnail(getId());
-	}
-
-	@Override
-	public RecordSet readThumbnail(Envelope bounds, int count)
-		throws ThumbnailNotFoundException, InsufficientThumbnailException {
-		return m_service.readThumbnail(getId(), bounds, count);
-	}
-
-	@Override
 	public void createThumbnail(int sampleCount) throws IndexNotFoundException {
 		m_service.createThumbnail(getId(), sampleCount);
 	}
@@ -189,11 +169,6 @@ public class PBDataSetProxy implements DataSet {
 	@Override
 	public boolean deleteThumbnail() {
 		return m_service.deleteThumbnail(getId());
-	}
-
-	@Override
-	public float getThumbnailRatio() throws ThumbnailNotFoundException {
-		return m_service.getThumbnailRatio(getId());
 	}
 	
 	@Override
