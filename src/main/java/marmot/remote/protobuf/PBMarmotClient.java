@@ -236,7 +236,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public Set<String> getModuleAnalsisClassIdAll() {
+	public Set<String> getModuleAnalysisClassIdAll() {
 		return m_pexecService.getModuleAnalsisClassIdAll();
 	}
 
@@ -246,7 +246,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public Set<String> getSystemAnalsisClassIdAll() {
+	public Set<String> getSystemAnalysisClassIdAll() {
 		return m_pexecService.getSystemAnalsisClassIdAll();
 	}
 
