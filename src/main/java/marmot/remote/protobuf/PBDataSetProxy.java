@@ -44,6 +44,11 @@ public class PBDataSetProxy implements DataSet {
 	public DataSetType getType() {
 		return m_info.getType();
 	}
+	
+	@Override
+	public String getDirName() {
+		return m_info.getDirName();
+	}
 
 	@Override
 	public boolean hasGeometryColumn() {
