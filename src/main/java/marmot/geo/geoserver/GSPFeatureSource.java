@@ -135,7 +135,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 	}
 	
 	private PlanBuilder newPlanBuilder(BoundingBox bbox, FOption<Filter> filter) {
-		PlanBuilder builder = m_marmot.planBuilder("query_Dataset");
+		PlanBuilder builder = Plan.builder("query_Dataset");
 		
 		if ( bbox != null ) {
 			Geometry key = GeoClientUtils.toPolygon(bbox);

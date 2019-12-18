@@ -430,7 +430,7 @@ class DataSetTree extends JTree {
 					try {
 						double ratio = Double.parseDouble(sampleText.getText());
 						if ( ratio > 0 && ratio < 1 ) {
-							Plan plan = m_marmot.planBuilder("sample")
+							Plan plan = Plan.builder("sample")
 											.load(ds.getId())
 											.sample(ratio)
 											.build();

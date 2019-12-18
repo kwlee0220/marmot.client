@@ -80,7 +80,7 @@ class DataSetTableModel extends AbstractTableModel {
 			protected void done() { }
 			
 			private void load(DataSet ds2) {
-				PlanBuilder builder = m_marmot.planBuilder("list a dataset")
+				PlanBuilder builder = Plan.builder("list a dataset")
 											.load(ds.getId());
 				for ( Column col: ds2.getRecordSchema().getColumns() ) {
 					if ( col.type().isGeometryType()

@@ -99,7 +99,7 @@ public abstract class PlanBasedMarmotCommand {
 	}
 
 	protected Plan buildPlan(MarmotRuntime marmot, String planName) throws Exception {
-		PlanBuilder builder = marmot.planBuilder(planName);
+		PlanBuilder builder = Plan.builder(planName);
 		builder = addLoad(marmot, builder);
 		builder = appendOperators(builder);
 		

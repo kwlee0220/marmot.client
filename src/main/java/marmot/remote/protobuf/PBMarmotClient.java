@@ -135,7 +135,7 @@ public class PBMarmotClient implements MarmotRuntime {
 				List<OperatorProto> optors = plan.toProto().getOperatorsList();
 				optors.remove(optors.size()-1);
 				builder = FStream.from(optors)
-								.foldLeft(planBuilder(plan.getName()), (b,o) -> b.add(o));
+								.foldLeft(Plan.builder(plan.getName()), (b,o) -> b.add(o));
 				break;
 			default:
 				builder = plan.toBuilder();
@@ -168,11 +168,6 @@ public class PBMarmotClient implements MarmotRuntime {
 		Utilities.checkNotNullArgument(folder, "dataset folder is null");
 		
 		return m_dsService.getDataSetAllInDir(folder, recursive);
-	}
-
-	@Override
-	public void createKafkaTopic(String topic, boolean force) {
-		m_dsService.createKafkaTopic(topic, force);
 	}
 
 	@Override
@@ -221,11 +216,6 @@ public class PBMarmotClient implements MarmotRuntime {
 	/////////////////////////////////////////////////////////////////////
 
 	@Override
-	public PlanBuilder planBuilder(String planName) {
-		return new PlanBuilder(planName);
-	}
-
-	@Override
 	public RecordSchema getOutputRecordSchema(Plan plan) {
 		return m_pexecService.getOutputRecordSchema(plan, FOption.empty());
 	}
@@ -246,7 +236,7 @@ public class PBMarmotClient implements MarmotRuntime {
 	}
 
 	@Override
-	public Set<String> getSystemAnalsisClassIdAll() {
+	public Set<String> getSystemAnalysisClassIdAll() {
 		return m_pexecService.getSystemAnalsisClassIdAll();
 	}
 
