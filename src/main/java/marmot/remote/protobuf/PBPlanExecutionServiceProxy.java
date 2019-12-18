@@ -89,7 +89,7 @@ public class PBPlanExecutionServiceProxy {
 		}
 	}
 	
-	public Set<String> getModuleAnalsisClassIdAll() {
+	public Set<String> getModuleAnalysisClassIdAll() {
 		return Sets.newHashSet(PBUtils.handle(m_blockingStub.getModuleAnalysisClassIdAll(PBUtils.VOID)));
 	}
 	
@@ -98,7 +98,7 @@ public class PBPlanExecutionServiceProxy {
 																		PBUtils.toStringProto(id)));
 	}
 	
-	public Set<String> getSystemAnalsisClassIdAll() {
+	public Set<String> getSystemAnalysisClassIdAll() {
 		return Sets.newHashSet(PBUtils.handle(m_blockingStub.getSystemAnalysisClassIdAll(PBUtils.VOID)));
 	}
 	
