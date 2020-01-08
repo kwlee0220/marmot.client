@@ -87,7 +87,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 					// 호출될 때까지 기다린다.
 					//
 					m_channel.onNext(EOS);
-					m_guard.run(() -> m_completed = true, true);
+					m_guard.runAndSignalAll(() -> m_completed = true);
 					getLogger().debug("sent END_OF_STREAM");
 
 					m_guard.awaitUntil(() -> m_serverClosed || m_error != null,
@@ -153,20 +153,20 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 			case SYNC_BACK:
 				getLogger().debug("received SYNC_BACK[{}]", resp.getSyncBack());
 				
-				m_guard.run(() -> m_sync = resp.getSyncBack(), true);
+				m_guard.runAndSignalAll(() -> m_sync = resp.getSyncBack());
 				break;
 			case RESULT:
 				// 스트림의 모든 chunk를 다 보내기 전에 result가 올 수 있기 때문에
 				// 모든 chunk를 다보내고 result가 도착해야만 uploader를 종료시킬 수 있음.
 				ByteString result = resp.getResult();
-				m_guard.run(() -> m_reply = result, true);
+				m_guard.runAndSignalAll(() -> m_reply = result);
 				getLogger().debug("received RESULT: {}", result);
 				break;
 			case ERROR:
 				Exception cause = PBUtils.toException(resp.getError());
 				getLogger().info("received PEER_ERROR[cause={}]", ""+cause);
 
-				m_guard.run(() -> m_error = cause, true);
+				m_guard.runAndSignalAll(() -> m_error = cause);
 				notifyFailed(cause);
 				break;
 			default:
@@ -184,7 +184,7 @@ abstract class StreamUploadSender extends AbstractThreadedExecution<ByteString>
 	@Override
 	public void onCompleted() {
 		getLogger().debug("received SERVER_COMPLETE");
-		m_guard.run(() -> m_serverClosed = true, true);
+		m_guard.runAndSignalAll(() -> m_serverClosed = true);
 	}
 	
 	private int sync(int sync, int expectedSyncBack)
