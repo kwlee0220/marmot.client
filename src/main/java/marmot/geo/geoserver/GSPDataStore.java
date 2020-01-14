@@ -1,6 +1,5 @@
 package marmot.geo.geoserver;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -14,7 +13,6 @@ import org.opengis.feature.type.Name;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import marmot.MarmotRuntime;
 import marmot.dataset.DataSet;
 import marmot.geo.query.GeoDataStore;
 import utils.Utilities;
@@ -32,27 +30,11 @@ public class GSPDataStore extends ContentDataStore {
 	private final GeoDataStore m_store;
 	private String[] m_prefixes = new String[0];
 	
-	public GSPDataStore(MarmotRuntime marmot, File cacheDir) throws IOException {
-		Utilities.checkNotNullArgument(marmot, "MarmotRuntime is null");
-		Utilities.checkNotNullArgument(cacheDir, "Disk cache directory is null");
-		
-		m_store = GeoDataStore.from(marmot, cacheDir);
+	public GSPDataStore(GeoDataStore geoStore) throws IOException {
+		Utilities.checkNotNullArgument(geoStore, "GeoDataStore is null");
+
+		m_store = geoStore;
 		setNamespaceURI(WORKSPACE_URI);
-	}
-	
-	public GSPDataStore setSampleCount(int count) {
-		m_store.setSampleCount(count);
-		return this;
-	}
-	
-	public GSPDataStore setMaxLocalCacheCost(int cost) {
-		m_store.setMaxLocalCacheCost(cost);
-		return this;
-	}
-	
-	public GSPDataStore usePrefetch(boolean flag) {
-		m_store.setUsePrefetch(flag);
-		return this;
 	}
 	
 	public GSPDataStore datasetPrefixes(String... prefixes) {

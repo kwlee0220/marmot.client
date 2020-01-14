@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Files;
 
+import marmot.geo.query.GeoDataStore;
 import marmot.remote.protobuf.PBMarmotClient;
 import utils.CSV;
 
@@ -92,6 +93,8 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		String host = (String)MARMOT_HOST.lookUp(params);
 		int port = (int)MARMOT_PORT.lookUp(params);
 		
+		GeoDataStore.Builder builder = GeoDataStore.builder();
+		
 		File cacheDir;
 		String cacheDirPath = (String)DISK_CACHE_DIR.lookUp(params);
 		if ( cacheDirPath == null ) {
@@ -101,14 +104,26 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 		else {
 			cacheDir = new File(cacheDirPath);
 		}
+		builder.setCacheDir(cacheDir);
 		
 		PBMarmotClient marmot = PBMarmotClient.connect(host, port);
-		GSPDataStore store = new GSPDataStore(marmot, cacheDir);
+		builder.setMarmotRuntime(marmot);
 
 		Integer sampleCount = (Integer)MARMOT_SAMPLE_COUNT.lookUp(params);
 		if ( sampleCount != null ) {
-			store.setSampleCount(sampleCount);
+			builder.setSampleCount(sampleCount);
 		}
+		
+		boolean usePrefetch = (Boolean)USE_PREFETCH.lookUp(params);
+		builder.setUsePrefetch(usePrefetch);
+		
+		Integer maxCost = (Integer)MAX_LOCAL_CACHE_COST.lookUp(params);
+		if ( maxCost != null ) {
+			builder.setMaxLocalCacheCost(maxCost);
+		}
+		
+		GeoDataStore geoStore = builder.build();
+		GSPDataStore store = new GSPDataStore(geoStore);
 
 		String[] prefixes = new String[0];
 		String prefixesStr = (String)DATASET_PREFIXES.lookUp(params);
@@ -116,14 +131,6 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 			prefixes = CSV.parseCsvAsArray(prefixesStr);
 		}
 		store.datasetPrefixes(prefixes);
-		
-		boolean usePrefetch = (Boolean)USE_PREFETCH.lookUp(params);
-		store.usePrefetch(usePrefetch);
-		
-		Integer maxCost = (Integer)MAX_LOCAL_CACHE_COST.lookUp(params);
-		if ( maxCost != null ) {
-			store.setMaxLocalCacheCost(maxCost);
-		}
 		
 		s_logger.info("create MarmotDataStore: cache[dir={}], sample_count={}, "
 					+ "prefetch={}", cacheDir, sampleCount, usePrefetch);
