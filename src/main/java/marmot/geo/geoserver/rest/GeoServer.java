@@ -154,7 +154,7 @@ public class GeoServer {
 								m_urlPrefix, m_workspace, m_storeName, ftName);
 	}
 	
-	private String toFeatureTypeName(String dsId) {
+	public String toFeatureTypeName(String dsId) {
 		return GSPUtils.toSimpleFeatureTypeName(dsId);
 	}
 	
