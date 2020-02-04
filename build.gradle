@@ -58,6 +58,7 @@ shadowJar {
 	exclude 'META-INF/*.RSA'
 	
 	relocate 'com.fasterxml', 'shadow.com.fasterxml'
+	relocate 'org.apache.http', "shadow.org.apache.http"	// 포도 업체때문에 conflict를 회피하려고
 }
 
 
