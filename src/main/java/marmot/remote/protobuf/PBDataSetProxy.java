@@ -175,6 +175,12 @@ public class PBDataSetProxy implements DataSet {
 	public boolean deleteThumbnail() {
 		return m_service.deleteThumbnail(getId());
 	}
+
+	@Override
+	public FOption<Float> getThumbnailRatio() {
+		float ratio = m_service.getThumbnailRatio(getId());
+		return (ratio >= 0) ? FOption.of(ratio) : FOption.empty();
+	}
 	
 	@Override
 	public String toString() {
