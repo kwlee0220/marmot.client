@@ -1,4 +1,5 @@
-apply plugin: 'java'
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'nebula-aggregate-javadocs'	// gradle aggregateJavadocs
  
@@ -15,7 +16,6 @@ buildscript {
 		jcenter()
 	}
 	dependencies {
-//		classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
 		classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.4'
 		classpath 'com.netflix.nebula:gradle-aggregate-javadocs-plugin:2.2.+'
 	}
@@ -103,7 +103,6 @@ artifacts {
 	archives shadowJar
 }
 
-apply plugin: 'maven-publish'
 publishing {
 	publications {
 		main(MavenPublication) {
