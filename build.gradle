@@ -42,7 +42,6 @@ dependencies {
 	compile project(':utils')
 	compile project(':marmot.common')
 
-//	compile	"org.geotools:gt-swt:${geotools_version}"
 	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
 	
 	testCompile "junit:junit:4.12"
@@ -97,19 +96,13 @@ task javadocJar(type: Jar) {
 	from javadoc.destinationDir
 }
 
-artifacts {
-	archives sourceJar
-	archives javadocJar
-	archives shadowJar
-}
-
 publishing {
 	publications {
-		main(MavenPublication) {
-			components.java
+		marmotClient(MavenPublication) {
+			from components.java
 			
-//			artifact sourceJar
-//			artifact javadocJar
+			artifact sourceJar
+			artifact javadocJar
 			artifact shadowJar
 		}
 	}
