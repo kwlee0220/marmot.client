@@ -12,7 +12,7 @@ import marmot.dataset.GeometryColumnNotExistsException;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.IndexNotFoundException;
 import marmot.geo.catalog.SpatialIndexInfo;
-import marmot.geo.command.ClusterDataSetOptions;
+import marmot.geo.command.CreateSpatialIndexOptions;
 import marmot.geo.query.RangeQueryEstimate;
 import utils.Utilities;
 import utils.func.FOption;
@@ -152,7 +152,7 @@ public class PBDataSetProxy implements DataSet {
 //	}
 
 	@Override
-	public SpatialIndexInfo cluster(ClusterDataSetOptions opts) {
+	public SpatialIndexInfo cluster(CreateSpatialIndexOptions opts) {
 		return m_service.clusterDataSet(getId(), opts);
 	}
 

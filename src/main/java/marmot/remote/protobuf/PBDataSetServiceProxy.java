@@ -21,7 +21,7 @@ import marmot.dataset.DataSetType;
 import marmot.dataset.GeometryColumnInfo;
 import marmot.geo.catalog.DataSetInfo;
 import marmot.geo.catalog.SpatialIndexInfo;
-import marmot.geo.command.ClusterDataSetOptions;
+import marmot.geo.command.CreateSpatialIndexOptions;
 import marmot.geo.query.RangeQueryEstimate;
 import marmot.optor.CreateDataSetOptions;
 import marmot.optor.StoreDataSetOptions;
@@ -30,9 +30,9 @@ import marmot.proto.StringProto;
 import marmot.proto.service.AppendRecordSetRequest;
 import marmot.proto.service.BindDataSetRequest;
 import marmot.proto.service.BoolResponse;
-import marmot.proto.service.ClusterDataSetRequest;
 import marmot.proto.service.CreateDataSetRequest;
 import marmot.proto.service.CreateKafkaTopicRequest;
+import marmot.proto.service.CreateSpatialIndexRequest;
 import marmot.proto.service.CreateThumbnailRequest;
 import marmot.proto.service.DataSetInfoResponse;
 import marmot.proto.service.DataSetServiceGrpc;
@@ -280,16 +280,16 @@ public class PBDataSetServiceProxy {
 		return PBUtils.handle(m_dsBlockingStub.deleteDataSet(PBUtils.toStringProto(id)));
 	}
 
-	public SpatialIndexInfo clusterDataSet(String id, ClusterDataSetOptions opts) {
-		ClusterDataSetRequest req = ClusterDataSetRequest.newBuilder()
+	public SpatialIndexInfo clusterDataSet(String id, CreateSpatialIndexOptions opts) {
+		CreateSpatialIndexRequest req = CreateSpatialIndexRequest.newBuilder()
 														.setId(id)
 														.setOptions(opts.toProto())
 														.build();
-		return handle(m_dsBlockingStub.clusterDataSet(req));
+		return handle(m_dsBlockingStub.createSpatialIndex(req));
 	}
 
 	public void deleteSpatialCluster(String id) {
-		PBUtils.handle(m_dsBlockingStub.deleteSpatialCluster(PBUtils.toStringProto(id)));
+		PBUtils.handle(m_dsBlockingStub.deleteSpatialIndex(PBUtils.toStringProto(id)));
 	}
 	
 	public RecordSet readSpatialCluster(String dsId, String quadKey) {

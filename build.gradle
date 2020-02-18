@@ -96,6 +96,12 @@ task javadocJar(type: Jar) {
 	from javadoc.destinationDir
 }
 
+artifacts {
+	archives sourceJar
+	archives javadocJar
+	archives shadowJar
+}
+
 publishing {
 	publications {
 		marmotClient(MavenPublication) {
