@@ -232,7 +232,9 @@ public class PBDataSetServiceProxy {
 									= AppendRecordSetRequest.newBuilder()
 															.setId(dsId)
 															.setUseCompression(m_marmot.useCompression());
-					plan.map(Plan::toProto).ifPresent(builder::setPlan);
+					
+					plan.map(Plan::serialize).ifPresent(builder::setPlan);
+//					plan.map(Plan::toProto).ifPresent(builder::setPlan);
 					AppendRecordSetRequest req = builder.build();
 					return req.toByteString();
 				}
