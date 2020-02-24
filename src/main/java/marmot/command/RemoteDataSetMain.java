@@ -28,7 +28,6 @@ import picocli.CommandLine.Help;
 			DatasetCommands.Move.class,
 			DatasetCommands.SetGcInfo.class,
 			DatasetCommands.AttachGeometry.class,
-			DatasetCommands.Cluster.class,
 			DatasetCommands.Count.class,
 			DatasetCommands.Bind.class,
 			DatasetCommands.Delete.class,

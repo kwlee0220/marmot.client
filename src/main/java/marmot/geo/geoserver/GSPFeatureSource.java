@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -138,8 +137,7 @@ public class GSPFeatureSource extends ContentFeatureSource {
 		PlanBuilder builder = Plan.builder("query_Dataset");
 		
 		if ( bbox != null ) {
-			Geometry key = GeoClientUtils.toPolygon(bbox);
-			builder.query(m_dsId, key);
+			builder = builder.query(m_dsId, GeoClientUtils.toEnvelope(bbox));
 		}
 		else {
 			builder.load(m_dsId);
