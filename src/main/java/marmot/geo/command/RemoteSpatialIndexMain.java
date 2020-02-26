@@ -1,20 +1,21 @@
-package marmot.command;
+package marmot.geo.command;
 
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSet;
+import marmot.command.MarmotClientCommand;
+import marmot.command.MarmotClientCommands;
 import marmot.command.PicocliCommands.SubCommand;
-import marmot.command.RemoteSpatialIndexMain.CreateSpatialIndex;
-import marmot.command.RemoteSpatialIndexMain.DeleteSpatialIndex;
-import marmot.command.RemoteSpatialIndexMain.DrawSpatialIndex;
-import marmot.command.RemoteSpatialIndexMain.ShowSpatialIndex;
 import marmot.dataset.DataSet;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ExportShapefileParameters;
 import marmot.externio.shp.ShapefileParameters;
 import marmot.geo.catalog.SpatialIndexInfo;
-import marmot.geo.command.CreateSpatialIndexOptions;
+import marmot.geo.command.RemoteSpatialIndexMain.CreateSpatialIndex;
+import marmot.geo.command.RemoteSpatialIndexMain.DeleteSpatialIndex;
+import marmot.geo.command.RemoteSpatialIndexMain.DrawSpatialIndex;
+import marmot.geo.command.RemoteSpatialIndexMain.ShowSpatialIndex;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
@@ -47,19 +48,16 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		CommandLine.run(cmd, System.out, System.err, Help.Ansi.OFF, args);
 	}
 
-	@Command(name="create", description="cluster the dataset")
+	@Command(name="create", description="create a spatial index of database")
 	static class CreateSpatialIndex extends SubCommand {
 		@Parameters(paramLabel="id", index="0", arity="1..1", description={"dataset id"})
 		private String m_dsId;
-		
-		@Option(names="-sample_ratio", paramLabel="ratio", description="sampling ratio (0:1]")
-		private double m_sampleRatio;
 
-		@Option(names= {"-c", "-cluster_size"}, paramLabel="nbytes", description="cluster size (eg: '64mb')")
-		private void setClusterSize(String sizeStr) {
-			m_clusterSize = UnitUtils.parseByteSize(sizeStr);
+		@Option(names= {"-sample_size"}, paramLabel="nbytes", description="sample size (eg: '64mb')")
+		private void setSampleSize(String sizeStr) {
+			m_sampleSize = UnitUtils.parseByteSize(sizeStr);
 		}
-		private long m_clusterSize = -1;
+		private long m_sampleSize = -1;
 
 		@Option(names= {"-b", "-block_size"}, paramLabel="nbytes", description="block size (eg: '64mb')")
 		private void setBlockSize(String blkSizeStr) {
@@ -73,11 +71,8 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
 			CreateSpatialIndexOptions options = CreateSpatialIndexOptions.DEFAULT();
-			if ( m_clusterSize > 0 ) {
-				options = options.clusterSize(m_clusterSize);
-			}
-			if ( m_sampleRatio > 0 ) {
-				options = options.sampleRatio(m_sampleRatio);
+			if ( m_sampleSize > 0 ) {
+				options = options.sampleSize(m_sampleSize);
 			}
 			if ( m_blkSize > 0 ) {
 				options = options.blockSize(m_blkSize);
@@ -87,7 +82,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 			}
 			
 			DataSet ds = marmot.getDataSet(m_dsId);
-			SpatialIndexInfo idxInfo = ds.cluster(options);
+			SpatialIndexInfo idxInfo = ds.createSpatialIndex(options);
 			
 			System.out.printf("clustered: nclusters=%d nrecords=%d, non-duplicated=%d%n",
 							idxInfo.getClusterCount(), idxInfo.getRecordCount(),
@@ -104,7 +99,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
 			DataSet ds = marmot.getDataSet(m_dsId);
-			ds.deleteSpatialCluster();
+			ds.deleteSpatialIndex();
 		}
 	}
 

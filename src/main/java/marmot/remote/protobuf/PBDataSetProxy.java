@@ -87,7 +87,7 @@ public class PBDataSetProxy implements DataSet {
 	}
 
 	@Override
-	public FOption<SpatialIndexInfo> getDefaultSpatialIndexInfo() throws IndexNotFoundException {
+	public FOption<SpatialIndexInfo> getSpatialIndexInfo() throws IndexNotFoundException {
 		SpatialIndexInfo idxInfo = m_service.getDefaultSpatialIndexInfoOrNull(getId());
 		return FOption.ofNullable(idxInfo);
 	}
@@ -152,12 +152,12 @@ public class PBDataSetProxy implements DataSet {
 //	}
 
 	@Override
-	public SpatialIndexInfo cluster(CreateSpatialIndexOptions opts) {
+	public SpatialIndexInfo createSpatialIndex(CreateSpatialIndexOptions opts) {
 		return m_service.clusterDataSet(getId(), opts);
 	}
 
 	@Override
-	public void deleteSpatialCluster() {
+	public void deleteSpatialIndex() {
 		m_service.deleteSpatialCluster(getId());
 	}
 

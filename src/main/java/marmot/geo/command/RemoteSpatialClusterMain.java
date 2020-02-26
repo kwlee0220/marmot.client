@@ -1,4 +1,4 @@
-package marmot.command;
+package marmot.geo.command;
 
 import static utils.UnitUtils.parseByteSize;
 
@@ -9,15 +9,18 @@ import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSet;
 import marmot.analysis.module.geo.ClusterSpatialDataSetParameters;
+import marmot.command.MarmotClientCommand;
+import marmot.command.MarmotClientCommands;
+import marmot.command.PicocliCommands;
 import marmot.command.PicocliCommands.SubCommand;
-import marmot.command.RemoteSpatialClusterMain.CreateSpatialCluster;
-import marmot.command.RemoteSpatialClusterMain.DrawSpatialClusterInfo;
-import marmot.command.RemoteSpatialClusterMain.ShowSpatialClusterInfos;
 import marmot.dataset.DataSet;
 import marmot.dataset.DataSetType;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ExportShapefileParameters;
 import marmot.externio.shp.ShapefileParameters;
+import marmot.geo.command.RemoteSpatialClusterMain.CreateSpatialCluster;
+import marmot.geo.command.RemoteSpatialClusterMain.DrawSpatialClusterInfo;
+import marmot.geo.command.RemoteSpatialClusterMain.ShowSpatialClusterInfos;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
@@ -120,7 +123,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			}
 			Funcs.acceptIfNotNull(m_compressCodec, params::compressionCodecName);
 			
-			marmot.executeProcess(ClusterSpatialDataSetParameters.processName(), params.toMap());
+			marmot.executeProcess(ClusterSpatialDataSetParameters.moduleName(), params.toMap());
 		}
 	}
 

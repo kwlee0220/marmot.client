@@ -56,7 +56,7 @@ class DataSetInfoPanel extends JPanel {
 			m_srid.setText(gcinfo.srid());
 			
 			Column geomCol = ds.getRecordSchema().getColumn(gcinfo.name());
-			String clustered = ds.isSpatiallyClustered() ? ", CLUSTERED" : "";
+			String clustered = ds.hasSpatialIndex() ? ", CLUSTERED" : "";
 			String geomStr = String.format("'%s' (%s)%s", gcinfo.name(), geomCol.type(), clustered);
 			m_geomCol.setText(geomStr);
 		}

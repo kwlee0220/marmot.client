@@ -229,7 +229,7 @@ class DataSetTree extends JTree {
 			
 			menu.setLabel("");
 			menu.add(m_menuItemDelete);
-			if ( ds.isSpatiallyClustered() ) {
+			if ( ds.hasSpatialIndex() ) {
 				menu.add(m_menuItemDeleteCluster);
 			}
 			else {
@@ -295,7 +295,7 @@ class DataSetTree extends JTree {
 				SwingWorker<Void, Object> worker = new SwingWorker<Void, Object>() {
 					@Override
 					public Void doInBackground() {
-						ds.cluster();
+						ds.createSpatialIndex();
 						
 						return null;
 					}
@@ -331,7 +331,7 @@ class DataSetTree extends JTree {
 				if ( yesno != JOptionPane.YES_OPTION ) {
 					return;
 				}
-				ds.deleteSpatialCluster();
+				ds.deleteSpatialIndex();
 
 				SwingUtilities.invokeLater(() -> {
 					DefaultMutableTreeNode parent = (DefaultMutableTreeNode)node.getParent();
