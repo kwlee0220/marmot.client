@@ -22,6 +22,7 @@ import picocli.CommandLine.Help;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import utils.StopWatch;
 import utils.UnitUtils;
 
 
@@ -68,6 +69,9 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		@Option(names="-workers", paramLabel="count", description="reduce task count")
 		private int m_nworkers = -1;
 
+		@Option(names={"-v", "-verbose"}, description="verbose")
+		private boolean m_verbose = false;
+
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
 			CreateSpatialIndexOptions options = CreateSpatialIndexOptions.DEFAULT();
@@ -80,13 +84,18 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 			if ( m_nworkers > 0 ) {
 				options = options.workerCount(m_nworkers);
 			}
-			
+
+			StopWatch watch = StopWatch.start();
 			DataSet ds = marmot.getDataSet(m_dsId);
 			SpatialIndexInfo idxInfo = ds.createSpatialIndex(options);
+			watch.stop();
 			
-			System.out.printf("clustered: nclusters=%d nrecords=%d, non-duplicated=%d%n",
-							idxInfo.getClusterCount(), idxInfo.getRecordCount(),
-							idxInfo.getNonDuplicatedRecordCount());
+			if ( m_verbose ) {
+				System.out.printf("index created: nclusters=%d nrecords=%d, non-duplicated=%d, elapsed=%s%n",
+									idxInfo.getClusterCount(), idxInfo.getRecordCount(),
+									idxInfo.getNonDuplicatedRecordCount(),
+									watch.getElapsedSecondString());
+			}
 		}
 	}
 

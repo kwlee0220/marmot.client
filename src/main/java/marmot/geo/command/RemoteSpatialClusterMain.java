@@ -11,7 +11,6 @@ import marmot.RecordSet;
 import marmot.analysis.module.geo.ClusterSpatialDataSetParameters;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
-import marmot.command.PicocliCommands;
 import marmot.command.PicocliCommands.SubCommand;
 import marmot.dataset.DataSet;
 import marmot.dataset.DataSetType;
@@ -27,6 +26,7 @@ import picocli.CommandLine.Help;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import utils.StopWatch;
 import utils.func.Funcs;
 
 
@@ -89,6 +89,9 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 
 		@Option(names={"-f", "-force"}, description="force to create a new dataset")
 		private boolean m_force = false;
+
+		@Option(names={"-v", "-verbose"}, description="verbose")
+		private boolean m_verbose = false;
 		
 		@Option(names="-workers", paramLabel="count", description="cluster writer count")
 		private int m_workerCount = -1;
@@ -123,7 +126,13 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			}
 			Funcs.acceptIfNotNull(m_compressCodec, params::compressionCodecName);
 			
+			StopWatch watch = StopWatch.start();
 			marmot.executeProcess(ClusterSpatialDataSetParameters.moduleName(), params.toMap());
+			watch.stop();
+			
+			if ( m_verbose ) {
+				System.out.printf("elapsed: %s%n", watch.getElapsedSecondString());
+			}
 		}
 	}
 
