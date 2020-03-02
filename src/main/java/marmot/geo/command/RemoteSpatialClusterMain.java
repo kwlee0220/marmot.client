@@ -163,9 +163,11 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		private static final void printSpatialClusterInfo(Record record) {
 			String quadKey = record.getString("quad_key");
 			long count = record.getLong("count");
+			long replicaCount = record.getLong("replica_count");
 			Envelope bounds = (Envelope)record.get("data_bounds");
 			
-			System.out.printf("quad_key=%s, count=%d, bounds=%s%n", quadKey, count, bounds);
+			System.out.printf("quad_key=%s, count=%d, replicas=%d, bounds=%s%n",
+								quadKey, count, replicaCount, bounds);
 		}
 	}
 
@@ -192,8 +194,9 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			
 			Plan plan = Plan.builder("read_cluster_index")
 							.loadMarmotFile(infoPath)
+							.filter("quad_key != 'outliers'")
 							.defineColumn("the_geom:polygon",  "ST_GeomFromEnvelope(data_bounds)")
-							.project("the_geom,quadKey,count")
+							.project("the_geom,quad_key,count")
 							.build();
 			
 			try ( RecordSet rset = marmot.executeLocally(plan) ) {
