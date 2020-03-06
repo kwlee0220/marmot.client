@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine.Option;
+import utils.func.FOption;
 
 /**
  * 
@@ -53,5 +54,13 @@ public class MarmotConnector {
 		}
 
 		return DEFAULT_MARMOT_PORT;
+	}
+	
+	public static FOption<String> getZooKeeper() {
+		return FOption.ofNullable(System.getenv("MARMOT_ZKHOST"));
+	}
+	
+	public static FOption<String> getKafkaBroker() {
+		return FOption.ofNullable(System.getenv("MARMOT_KAFKA_BROKER"));
 	}
 }
