@@ -85,12 +85,14 @@ public class KafkaImporterMain extends MarmotClientCommand {
 			props.put(ConsumerConfig.GROUP_ID_CONFIG, m_consumerId);
 			props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
 			props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-			props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-			props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+			props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+						StringDeserializer.class.getName());
+			props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+						ByteArrayDeserializer.class.getName());
 			
+			List<String> topics = Arrays.asList(parent.m_topic);
 			ExecutorService exector = Executors.newCachedThreadPool();
-			MarmotKafkaImporter importer = new MarmotKafkaImporter(marmot, Arrays.asList(parent.m_topic),
-																	props, exector);
+			MarmotKafkaImporter importer = new MarmotKafkaImporter(marmot, topics, props, exector);
 			importer.start();
 			importer.waitForDone();
 			
