@@ -91,8 +91,9 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 			watch.stop();
 			
 			if ( m_verbose ) {
-				System.out.printf("index created: nclusters=%d nrecords=%d, non-duplicated=%d, elapsed=%s%n",
-									idxInfo.getClusterCount(), idxInfo.getRecordCount(),
+				System.out.printf("index created: dataset=%s, nclusters=%d nrecords=%d, "
+									+ "non-duplicated=%d, elapsed=%s%n",
+									m_dsId, idxInfo.getClusterCount(), idxInfo.getRecordCount(),
 									idxInfo.getNonDuplicatedRecordCount(),
 									watch.getElapsedSecondString());
 			}
