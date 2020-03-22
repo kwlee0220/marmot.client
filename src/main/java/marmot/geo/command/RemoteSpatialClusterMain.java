@@ -118,7 +118,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			
 			params.clusterSize(m_clusterSize);
 			if ( m_workerCount > 0 ) {
-				params.workerCount(m_workerCount);
+				params.partitionCount(m_workerCount);
 			}
 			params.force(m_force);
 			if ( m_blkSize > 0 ) {
