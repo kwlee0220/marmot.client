@@ -93,8 +93,8 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		@Option(names={"-v", "-verbose"}, description="verbose")
 		private boolean m_verbose = false;
 		
-		@Option(names="-workers", paramLabel="count", description="cluster writer count")
-		private int m_workerCount = -1;
+		@Option(names="-partitions", paramLabel="count", description="partition count")
+		private int m_partitionCount = -1;
 
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
@@ -117,8 +117,8 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			}
 			
 			params.clusterSize(m_clusterSize);
-			if ( m_workerCount > 0 ) {
-				params.partitionCount(m_workerCount);
+			if ( m_partitionCount > 0 ) {
+				params.partitionCount(m_partitionCount);
 			}
 			params.force(m_force);
 			if ( m_blkSize > 0 ) {
