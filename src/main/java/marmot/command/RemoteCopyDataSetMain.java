@@ -10,6 +10,7 @@ import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
 import marmot.dataset.DataSet;
 import marmot.geo.GeoClientUtils;
+import marmot.plan.LoadOptions;
 import marmot.plan.PredicateOptions;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -18,6 +19,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.Utilities;
+import utils.func.FOption;
 
 
 /**
@@ -93,7 +95,10 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			throw new IllegalArgumentException("invalid range expression: " + rangeExpr);
 		}
 		else {
-			return builder.load(m_params.m_inputDsId);
+			LoadOptions loadOpts = m_params.m_mapperCount
+										.map(cnt -> (cnt > 0) ? LoadOptions.FIXED_MAPPERS(cnt) :LoadOptions.FIXED_MAPPERS())
+										.getOrElse(LoadOptions.DEFAULT);
+			return builder.load(m_params.m_inputDsId, loadOpts);
 		}
 	}
 	
@@ -109,5 +114,11 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		
 		@Option(names={"-ex_range"}, paramLabel="range expr", description={"target range area"})
 		String m_exRange;
+		
+		@Option(names="-mappers", paramLabel="count", description="number of mappers")
+		public void setMapperCount(int count) {
+			m_mapperCount = FOption.of(count);
+		}
+		private FOption<Integer> m_mapperCount = FOption.empty();
 	}
 }

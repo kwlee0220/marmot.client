@@ -8,7 +8,6 @@ import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.Record;
 import marmot.RecordSet;
-import marmot.analysis.module.geo.ClusterSpatialDataSetParameters;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
 import marmot.command.PicocliCommands.SubCommand;
@@ -17,6 +16,7 @@ import marmot.dataset.DataSetType;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ExportShapefileParameters;
 import marmot.externio.shp.ShapefileParameters;
+import marmot.geo.CoordinateTransform;
 import marmot.geo.command.RemoteSpatialClusterMain.CreateSpatialCluster;
 import marmot.geo.command.RemoteSpatialClusterMain.DrawSpatialClusterInfo;
 import marmot.geo.command.RemoteSpatialClusterMain.ShowSpatialClusterInfos;
@@ -27,7 +27,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
-import utils.func.Funcs;
+import utils.func.FOption;
 
 
 /**
@@ -59,17 +59,28 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		@Parameters(paramLabel="output-id", index="1", arity="1..1", description={"output dataset id"})
 		private String m_outputDsId;
 		
+		@Option(names="-mapper_count", paramLabel="count", description="mapper count")
+		private void setMapperCount(int count) {
+			m_mapperCount = FOption.of(count);
+		}
+		private FOption<Integer> m_mapperCount = FOption.empty();
+		
 		@Option(names="-quadkey_dataset", paramLabel="dataset-id", description="quadkey dataset id")
 		private String m_quadKeyDsId = null;
 		
 		@Option(names="-quadkey_length", paramLabel="length", description="maximum quad-key length")
 		private int m_quadKeyLength = -1;
 		
-		@Option(names="-sample_size", paramLabel="nbytes", description="total sampling data size (eg: '128mb')")
+		@Option(names="-sample_size", paramLabel="nbytes",
+				description="total sampling data size (eg: '128mb')")
 		private void setSampleSize(String sizeStr) {
 			m_sampleSize = parseByteSize(sizeStr);
 		}
 		private long m_sampleSize = -1;
+
+		@Option(names="-valid_range", paramLabel="ds_id",
+				description="reference dataset id for valid range")
+		private String m_validRangeDsId = null;
 
 		@Option(names= {"-cluster_size"}, paramLabel="nbytes", required=true,
 				description="cluster size (eg: '64mb')")
@@ -77,9 +88,9 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			m_clusterSize = parseByteSize(sizeStr);
 		}
 		private long m_clusterSize = -1;
-
-		@Option(names={"-c", "-compress"}, paramLabel="codec", description="compression codec name")
-		private String m_compressCodec = null;
+		
+		@Option(names="-partitions", paramLabel="count", description="partition count")
+		private int m_partitionCount = -1;
 
 		@Option(names= {"-b", "-block_size"}, paramLabel="nbytes", description="block size (eg: '64mb')")
 		private void setBlockSize(String sizeStr) {
@@ -92,47 +103,63 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 
 		@Option(names={"-v", "-verbose"}, description="verbose")
 		private boolean m_verbose = false;
-		
-		@Option(names="-partitions", paramLabel="count", description="partition count")
-		private int m_partitionCount = -1;
 
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
-			ClusterSpatialDataSetParameters params = new ClusterSpatialDataSetParameters();
-			params.inputDataSet(m_inputDsId);
-			params.outputDataSet(m_outputDsId);
-			
-			if ( m_quadKeyDsId != null ) {
-				params.quadKeyDataSet(m_quadKeyDsId);
-			}
-			else {
-				if ( m_sampleSize < 0 ) {
-					throw new IllegalArgumentException("sample-size is missing");
-				}
-				params.sampleSize(m_sampleSize);
-
-				if ( m_quadKeyLength > 0 ) {
-					params.maxQuadKeyLength(m_quadKeyLength);
-				}
-			}
-			
-			params.clusterSize(m_clusterSize);
-			if ( m_partitionCount > 0 ) {
-				params.partitionCount(m_partitionCount);
-			}
-			params.force(m_force);
-			if ( m_blkSize > 0 ) {
-				params.blockSize(m_blkSize);
-			}
-			Funcs.acceptIfNotNull(m_compressCodec, params::compressionCodecName);
-			
 			StopWatch watch = StopWatch.start();
-			marmot.executeProcess(ClusterSpatialDataSetParameters.moduleName(), params.toMap());
+			
+			DataSet input = marmot.getDataSet(m_inputDsId);
+			if ( !input.hasGeometryColumn() ) {
+				throw new IllegalArgumentException("target dataset does not have geometry column: id=" + m_inputDsId);
+			}
+			
+			FOption<Envelope> validRange = (m_validRangeDsId != null)
+										? getValidRange(marmot, m_validRangeDsId, input.getGeometryColumnInfo().srid())
+										: FOption.empty();
+
+			ClusterSpatiallyOptions clusterOpts = ClusterSpatiallyOptions.DEFAULT()
+																		.force(m_force);
+			clusterOpts = m_mapperCount.transform(clusterOpts, (o,c) -> o.mapperCount(c));
+			clusterOpts = validRange.transform(clusterOpts, ClusterSpatiallyOptions::validRange);
+			if ( m_partitionCount > 0 ) {
+				clusterOpts = clusterOpts.partitionCount(m_partitionCount);
+			}
+			if ( m_blkSize > 0 ) {
+				clusterOpts = clusterOpts.blockSize(m_blkSize);
+			}
+
+			if ( m_quadKeyDsId != null ) {
+				clusterOpts = clusterOpts.quadKeyDsId(m_quadKeyDsId);
+			}
+			else if ( m_sampleSize > 0 ) {
+				clusterOpts = clusterOpts.sampleSize(m_sampleSize);
+			}
+			input.clusterSpatially(m_outputDsId, clusterOpts);
 			watch.stop();
 			
 			if ( m_verbose ) {
 				System.out.printf("elapsed: %s%n", watch.getElapsedSecondString());
 			}
+		}
+		
+		private FOption<Envelope> getValidRange(MarmotRuntime marmot, String validRangeDsId,
+														String tarSrid) {
+			DataSet refDs = marmot.getDataSetOrNull(m_validRangeDsId);
+			if ( refDs == null ) {
+				throw new IllegalArgumentException("invalid valid_range dataset id=" + m_validRangeDsId);
+			}
+			if ( !refDs.hasGeometryColumn() ) {
+				throw new IllegalArgumentException("valid_range dataset does not have geometry column: id=" + m_validRangeDsId);
+			}
+			
+			String refSrid = refDs.getGeometryColumnInfo().srid();
+			
+			Envelope bounds = refDs.getBounds();
+			if ( !refSrid.equals(tarSrid) ) {
+				CoordinateTransform trans = CoordinateTransform.get(refSrid, tarSrid);
+				bounds = trans.transform(bounds);
+			}
+			return FOption.of(bounds);
 		}
 	}
 
