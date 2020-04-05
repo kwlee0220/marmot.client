@@ -82,8 +82,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 				description="reference dataset id for valid range")
 		private String m_validRangeDsId = null;
 
-		@Option(names= {"-cluster_size"}, paramLabel="nbytes", required=true,
-				description="cluster size (eg: '64mb')")
+		@Option(names= {"-cluster_size"}, paramLabel="nbytes", description="cluster size (eg: '64mb')")
 		private void setClusterSize(String sizeStr) {
 			m_clusterSize = parseByteSize(sizeStr);
 		}
@@ -133,6 +132,9 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			}
 			else if ( m_sampleSize > 0 ) {
 				clusterOpts = clusterOpts.sampleSize(m_sampleSize);
+			}
+			else if ( m_clusterSize > 0 ) {
+				clusterOpts = clusterOpts.clusterSize(m_clusterSize);
 			}
 			input.clusterSpatially(m_outputDsId, clusterOpts);
 			watch.stop();
