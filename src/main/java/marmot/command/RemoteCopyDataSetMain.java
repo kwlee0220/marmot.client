@@ -96,7 +96,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		}
 		else {
 			LoadOptions loadOpts = m_params.m_mapperCount
-										.map(cnt -> (cnt > 0) ? LoadOptions.FIXED_MAPPERS(cnt) :LoadOptions.FIXED_MAPPERS())
+										.map(cnt -> (cnt > 0) ? LoadOptions.FIXED_MAPPERS(cnt) :LoadOptions.MAPPERS())
 										.getOrElse(LoadOptions.DEFAULT);
 			return builder.load(m_params.m_inputDsId, loadOpts);
 		}
