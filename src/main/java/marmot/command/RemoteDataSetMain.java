@@ -10,7 +10,6 @@ import marmot.command.RemoteDataSetMain.RemoteImport;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
-import picocli.CommandLine.Option;
 
 
 /**
@@ -53,7 +52,7 @@ public class RemoteDataSetMain extends MarmotClientCommand {
 				ImportJdbcCmd.class,
 			},
 			description="import into the dataset")
-	public static class RemoteImport extends SubCommand {
+	public static class RemoteImport extends SubCommand<MarmotRuntime> {
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception { }
 	}

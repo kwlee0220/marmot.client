@@ -50,7 +50,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="create", description="create a spatial index of database")
-	static class CreateSpatialIndex extends SubCommand {
+	static class CreateSpatialIndex extends SubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="id", index="0", arity="1..1", description={"dataset id"})
 		private String m_dsId;
 
@@ -101,7 +101,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="delete", description="delete the cluster of the dataset")
-	static class DeleteSpatialIndex extends SubCommand {
+	static class DeleteSpatialIndex extends SubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
@@ -114,7 +114,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="show", description="display spatial cluster information for a dataset")
-	static class ShowSpatialIndex extends SubCommand {
+	static class ShowSpatialIndex extends SubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
@@ -146,7 +146,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="draw", description="create a shapefile for spatial cluster tiles of a dataset")
-	static class DrawSpatialIndex extends SubCommand {
+	static class DrawSpatialIndex extends SubCommand<MarmotRuntime> {
 		@Mixin private ShapefileParameters m_shpParams;
 		
 		@Parameters(paramLabel="dataset-id", index="0", arity="1..1", description={"id of the target dataset"})

@@ -44,7 +44,7 @@ public class RemoteGeoServerMain extends MarmotClientCommand {
 		CommandLine.run(cmd, System.out, System.err, Help.Ansi.OFF, args);
 	}
 	
-	static abstract class AbstractGeoServerCommand extends SubCommand {
+	static abstract class AbstractGeoServerCommand extends SubCommand<MarmotRuntime> {
 		abstract protected void run(MarmotRuntime marmot, GeoServer server) throws Exception;
 		
 		@Override

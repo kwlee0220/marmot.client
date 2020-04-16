@@ -2,6 +2,8 @@ package marmot.geo.command;
 
 import static utils.UnitUtils.parseByteSize;
 
+import java.util.Set;
+
 import com.vividsolutions.jts.geom.Envelope;
 
 import marmot.MarmotRuntime;
@@ -28,6 +30,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
 import utils.func.FOption;
+import utils.stream.FStream;
 
 
 /**
@@ -53,13 +56,14 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="create", description="cluster the dataset")
-	static class CreateSpatialCluster extends SubCommand {
-		@Parameters(paramLabel="input-id", index="0", arity="1..1", description={"input dataset id"})
-		private String m_inputDsId;
-		@Parameters(paramLabel="output-id", index="1", arity="1..1", description={"output dataset id"})
-		private String m_outputDsId;
+	static class CreateSpatialCluster extends SubCommand<MarmotRuntime> {
+		@Parameters(paramLabel="dataset_id", index="0", arity="1..1", description={"dataset id"})
+		private String m_dsId;
 		
-		@Option(names="-mapper_count", paramLabel="count", description="mapper count")
+		@Parameters(paramLabel="dataset_id", index="1", arity="0..1", description={"output dataset id"})
+		private String m_outDsId = null;
+
+		@Option(names="-mappers", paramLabel="count", description="mapper count")
 		private void setMapperCount(int count) {
 			m_mapperCount = FOption.of(count);
 		}
@@ -103,44 +107,70 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		@Option(names={"-v", "-verbose"}, description="verbose")
 		private boolean m_verbose = false;
 
+		@Option(names={"-e", "-estimate"}, description="quadkey estimation only")
+		private boolean m_est = false;
+
 		@Override
 		public void run(MarmotRuntime marmot) throws Exception {
 			StopWatch watch = StopWatch.start();
 			
-			DataSet input = marmot.getDataSet(m_inputDsId);
+			DataSet input = marmot.getDataSet(m_dsId);
 			if ( !input.hasGeometryColumn() ) {
-				throw new IllegalArgumentException("target dataset does not have geometry column: id=" + m_inputDsId);
+				throw new IllegalArgumentException("target dataset does not have geometry column: id=" + m_dsId);
 			}
 			
 			FOption<Envelope> validRange = (m_validRangeDsId != null)
 										? getValidRange(marmot, m_validRangeDsId, input.getGeometryColumnInfo().srid())
 										: FOption.empty();
-
-			ClusterSpatiallyOptions clusterOpts = ClusterSpatiallyOptions.DEFAULT()
-																		.force(m_force);
-			clusterOpts = m_mapperCount.transform(clusterOpts, (o,c) -> o.mapperCount(c));
-			clusterOpts = validRange.transform(clusterOpts, ClusterSpatiallyOptions::validRange);
-			if ( m_partitionCount > 0 ) {
-				clusterOpts = clusterOpts.partitionCount(m_partitionCount);
+										
+			if ( m_est ) {
+				EstimateQuadKeysOptions opts = EstimateQuadKeysOptions.DEFAULT()
+																	.mapperCount(m_mapperCount)
+																	.validRange(validRange);
+				if ( m_sampleSize > 0 ) {
+					opts = opts.sampleSize(m_sampleSize);
+				}
+				if ( m_clusterSize > 0 ) {
+					opts = opts.clusterSize(m_clusterSize);
+				}
+				else if ( m_blkSize > 0 ) {
+					opts = opts.clusterSize(m_blkSize);
+				}
+				Set<String> quadKeys = input.estimateQuadKeys(opts);
+				watch.stop();
+				
+				FStream.from(quadKeys).forEach(System.out::println);
+				if ( m_verbose ) {
+					System.out.printf("quadkeys=%d, elapsed: %s%n", quadKeys.size(), watch.getElapsedSecondString());
+				}
 			}
-			if ( m_blkSize > 0 ) {
-				clusterOpts = clusterOpts.blockSize(m_blkSize);
-			}
-
-			if ( m_quadKeyDsId != null ) {
-				clusterOpts = clusterOpts.quadKeyDsId(m_quadKeyDsId);
-			}
-			else if ( m_sampleSize > 0 ) {
-				clusterOpts = clusterOpts.sampleSize(m_sampleSize);
-			}
-			else if ( m_clusterSize > 0 ) {
-				clusterOpts = clusterOpts.clusterSize(m_clusterSize);
-			}
-			input.clusterSpatially(m_outputDsId, clusterOpts);
-			watch.stop();
-			
-			if ( m_verbose ) {
-				System.out.printf("elapsed: %s%n", watch.getElapsedSecondString());
+			else {
+				ClusterSpatiallyOptions clusterOpts = ClusterSpatiallyOptions.DEFAULT
+																			.force(m_force);
+				clusterOpts = m_mapperCount.transform(clusterOpts, (o,c) -> o.mapperCount(c));
+				clusterOpts = validRange.transform(clusterOpts, ClusterSpatiallyOptions::validRange);
+				if ( m_partitionCount > 0 ) {
+					clusterOpts = clusterOpts.partitionCount(m_partitionCount);
+				}
+				if ( m_blkSize > 0 ) {
+					clusterOpts = clusterOpts.blockSize(m_blkSize);
+				}
+	
+				if ( m_quadKeyDsId != null ) {
+					clusterOpts = clusterOpts.quadKeyDsId(m_quadKeyDsId);
+				}
+				else if ( m_sampleSize > 0 ) {
+					clusterOpts = clusterOpts.sampleSize(m_sampleSize);
+				}
+				else if ( m_clusterSize > 0 ) {
+					clusterOpts = clusterOpts.clusterSize(m_clusterSize);
+				}
+				input.cluster(m_outDsId, clusterOpts);
+				watch.stop();
+				
+				if ( m_verbose ) {
+					System.out.printf("elapsed: %s%n", watch.getElapsedSecondString());
+				}
 			}
 		}
 		
@@ -166,7 +196,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="show", description="display spatial cluster information for a dataset")
-	static class ShowSpatialClusterInfos extends SubCommand {
+	static class ShowSpatialClusterInfos extends SubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
@@ -201,7 +231,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="draw", description="create a shapefile for spatial cluster infos of a dataset")
-	static class DrawSpatialClusterInfo extends SubCommand {
+	static class DrawSpatialClusterInfo extends SubCommand<MarmotRuntime> {
 		@Mixin private ShapefileParameters m_shpParams;
 		
 		@Parameters(paramLabel="dataset-id", index="0", arity="1..1",

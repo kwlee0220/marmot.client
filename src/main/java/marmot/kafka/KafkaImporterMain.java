@@ -72,7 +72,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 	}
 	
 	@Command(name="import", description="import DataSets published from Marmot topic")
-	public static class Import extends SubCommand {
+	public static class Import extends SubCommand<MarmotRuntime> {
 		@Option(names= {"-consumer"}, description="consumer id")
 		private String m_consumerId = DEF_CONSUMER_ID;
 		
@@ -101,7 +101,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 		}
 	}
 	
-	static abstract class ZooKeeperCommand extends SubCommand {
+	static abstract class ZooKeeperCommand extends SubCommand<MarmotRuntime> {
 		@Option(names= {"-zkhost"}, description="ZooKeeper host")
 		private List<String> m_zkhost = Lists.newArrayList();
 		

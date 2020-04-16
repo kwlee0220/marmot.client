@@ -31,6 +31,7 @@ import marmot.plan.SpatialJoinOptions;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import utils.CSV;
+import utils.StopWatch;
 import utils.UnitUtils;
 import utils.Utilities;
 import utils.func.FOption;
@@ -64,6 +65,9 @@ public abstract class PlanBasedMarmotCommand {
 	
 	@Option(names={"-print_plan"}, description={"print the plan without executing it"})
 	private boolean m_printPlan = false;
+	
+	@Option(names={"-v"}, description={"verbose"})
+	private boolean m_verbose = false;
 
 	private MarmotRuntime m_marmot;
 	private GeometryColumnInfo m_gcInfo;
@@ -74,6 +78,8 @@ public abstract class PlanBasedMarmotCommand {
 		throws Exception;
 	
 	public void run(String planName, String outputDsId) throws Exception {
+		StopWatch watch = StopWatch.start();
+		
 		m_marmot = m_connector.connect();
 		m_outputDsId = outputDsId;
 		
@@ -85,12 +91,17 @@ public abstract class PlanBasedMarmotCommand {
 		}
 		else {
 			m_marmot.execute(plan);
+			watch.stop();
 			
-			DataSet outDs = m_marmot.getDataSet(outputDsId);
-			String geomStr = outDs.hasGeometryColumn()
-							? ", " + outDs.getGeometryColumnInfo() : "";
-			System.out.printf("created: %s%s, count=%d, schema=[%s]%n", outDs.getId(), geomStr,
-								outDs.getRecordCount(), outDs.getRecordSchema());
+			if ( m_verbose ) {
+				DataSet outDs = m_marmot.getDataSet(outputDsId);
+				String geomStr = outDs.hasGeometryColumn()
+								? ", " + outDs.getGeometryColumnInfo() : "";
+				String elapsedStr = watch.getElapsedMillisString();
+				System.out.printf("created: %s%s, count=%d, schema=[%s], elapsed=%s%n",
+									outDs.getId(), geomStr, outDs.getRecordCount(),
+									outDs.getRecordSchema(), elapsedStr);
+			}
 		}
 	}
 	
@@ -358,7 +369,7 @@ public abstract class PlanBasedMarmotCommand {
 	}
 	
 	private SpatialJoinOptions parseSpatialJoinOptions() {
-		SpatialJoinOptions opts = SpatialJoinOptions.EMPTY;
+		SpatialJoinOptions opts = SpatialJoinOptions.DEFAULT;
 		if ( m_opParams.m_joinOutCols != null ) {
 			opts = opts.outputColumns(m_opParams.m_joinOutCols);
 		}

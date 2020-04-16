@@ -18,7 +18,7 @@ import utils.Utilities;
  * @author Kang-Woo Lee (ETRI)
  */
 @Command(name="excel", description="import Excel file into the dataset")
-public class ImportExcelCmd extends SubCommand {
+public class ImportExcelCmd extends SubCommand<MarmotRuntime> {
 	@Mixin private ExcelParameters m_excelParams;
 	@Mixin private ImportParameters m_params;
 

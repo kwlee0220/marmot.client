@@ -48,7 +48,7 @@ public class RemoteSpatialJoinMain extends PlanBasedMarmotCommand {
 	protected PlanBuilder addLoad(MarmotRuntime marmot, PlanBuilder builder) {
 		setJoinDisabled();
 
-		SpatialJoinOptions opts = SpatialJoinOptions.EMPTY;
+		SpatialJoinOptions opts = SpatialJoinOptions.DEFAULT;
 		
 		String joinExpr = m_opParams.getJoinExpr() != null ? m_opParams.getJoinExpr() : "intersects";
 		opts = opts.joinExpr(joinExpr);

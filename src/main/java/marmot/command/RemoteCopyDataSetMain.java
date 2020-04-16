@@ -96,7 +96,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		}
 		else {
 			LoadOptions loadOpts = m_params.m_mapperCount
-										.map(cnt -> (cnt > 0) ? LoadOptions.MAPPERS(cnt) :LoadOptions.FIXED_MAPPERS())
+										.map(cnt -> (cnt > 0) ? LoadOptions.MAPPERS(cnt) :LoadOptions.FIXED_MAPPERS)
 										.getOrElse(LoadOptions.DEFAULT);
 			return builder.load(m_params.m_inputDsId, loadOpts);
 		}
@@ -114,9 +114,9 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 		
 		@Option(names={"-ex_range"}, paramLabel="range expr", description={"target range area"})
 		String m_exRange;
-		
-		@Option(names="-mappers", paramLabel="count", description="number of mappers")
-		public void setMapperCount(int count) {
+
+		@Option(names="-mappers", paramLabel="count", description="mapper count")
+		private void setMapperCount(int count) {
 			m_mapperCount = FOption.of(count);
 		}
 		private FOption<Integer> m_mapperCount = FOption.empty();
