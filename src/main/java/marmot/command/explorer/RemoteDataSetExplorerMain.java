@@ -30,7 +30,7 @@ public class RemoteDataSetExplorerMain extends MarmotClientCommand {
 	@Override
 	public void run() {
 		try {
-			PBMarmotClient marmot = getMarmotRuntime();
+			PBMarmotClient marmot = getInitialContext();
 
 			EventQueue.invokeLater(new Runnable() {
 				public void run() {

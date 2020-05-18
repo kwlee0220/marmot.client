@@ -6,7 +6,6 @@ import marmot.Record;
 import marmot.RecordSet;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.dataset.DataSet;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
 import marmot.externio.shp.ExportShapefileParameters;
@@ -23,6 +22,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
+import utils.PicocliSubCommand;
 import utils.UnitUtils;
 
 
@@ -50,7 +50,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="create", description="create a spatial index of database")
-	static class CreateSpatialIndex extends SubCommand<MarmotRuntime> {
+	static class CreateSpatialIndex extends PicocliSubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="id", index="0", arity="1..1", description={"dataset id"})
 		private String m_dsId;
 
@@ -73,7 +73,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		private boolean m_verbose = false;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
+		public void run(MarmotRuntime initialContext) throws Exception {
 			CreateSpatialIndexOptions options = CreateSpatialIndexOptions.DEFAULT();
 			if ( m_sampleSize > 0 ) {
 				options = options.sampleSize(m_sampleSize);
@@ -86,7 +86,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 			}
 
 			StopWatch watch = StopWatch.start();
-			DataSet ds = marmot.getDataSet(m_dsId);
+			DataSet ds = initialContext.getDataSet(m_dsId);
 			SpatialIndexInfo idxInfo = ds.createSpatialIndex(options);
 			watch.stop();
 			
@@ -101,32 +101,32 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="delete", description="delete the cluster of the dataset")
-	static class DeleteSpatialIndex extends SubCommand<MarmotRuntime> {
+	static class DeleteSpatialIndex extends PicocliSubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
-			DataSet ds = marmot.getDataSet(m_dsId);
+		public void run(MarmotRuntime initialContext) throws Exception {
+			DataSet ds = initialContext.getDataSet(m_dsId);
 			ds.deleteSpatialIndex();
 		}
 	}
 
 	@Command(name="show", description="display spatial cluster information for a dataset")
-	static class ShowSpatialIndex extends SubCommand<MarmotRuntime> {
+	static class ShowSpatialIndex extends PicocliSubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
+		public void run(MarmotRuntime initialContext) throws Exception {
 			Plan plan;
 			plan = Plan.builder("list_spatial_clusters")
 						.loadSpatialClusterIndexFile(m_dsId)
 						.project("*-{bounds,value_envelope}")
 						.build();
-			try ( RecordSet rset = marmot.executeLocally(plan) ) {
+			try ( RecordSet rset = initialContext.executeLocally(plan) ) {
 				rset.forEach(r -> printIndexEntry(r));
 			}
 		}
@@ -146,7 +146,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 	}
 
 	@Command(name="draw", description="create a shapefile for spatial cluster tiles of a dataset")
-	static class DrawSpatialIndex extends SubCommand<MarmotRuntime> {
+	static class DrawSpatialIndex extends PicocliSubCommand<MarmotRuntime> {
 		@Mixin private ShapefileParameters m_shpParams;
 		
 		@Parameters(paramLabel="dataset-id", index="0", arity="1..1", description={"id of the target dataset"})
@@ -163,7 +163,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 		private boolean m_drawValue;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
+		public void run(MarmotRuntime initialContext) throws Exception {
 			String toGeom = (m_drawValue) ? "ST_GeomFromEnvelope(data_bounds)"
 											: "ST_GeomFromEnvelope(tile_bounds)";
 			
@@ -173,7 +173,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 								.project("the_geom,pack_id,quad_key,count,length")
 								.build();
 			
-			try ( RecordSet rset = marmot.executeLocally(plan) ) {
+			try ( RecordSet rset = initialContext.executeLocally(plan) ) {
 				ExportShapefileParameters params = ExportShapefileParameters.create()
 															.charset(m_shpParams.charset());
 				ExportRecordSetAsShapefile exporter = new ExportRecordSetAsShapefile(rset, "EPSG:4326",

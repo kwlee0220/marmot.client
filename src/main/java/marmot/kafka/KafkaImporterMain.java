@@ -20,7 +20,6 @@ import marmot.MarmotRuntime;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
 import marmot.command.MarmotConnector;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.kafka.KafkaImporterMain.CreateTopic;
 import marmot.kafka.KafkaImporterMain.DeleteTopic;
 import marmot.kafka.KafkaImporterMain.Import;
@@ -28,6 +27,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
 import picocli.CommandLine.Option;
+import utils.PicocliSubCommand;
 import utils.stream.FStream;
 
 
@@ -72,12 +72,12 @@ public class KafkaImporterMain extends MarmotClientCommand {
 	}
 	
 	@Command(name="import", description="import DataSets published from Marmot topic")
-	public static class Import extends SubCommand<MarmotRuntime> {
+	public static class Import extends PicocliSubCommand<MarmotRuntime> {
 		@Option(names= {"-consumer"}, description="consumer id")
 		private String m_consumerId = DEF_CONSUMER_ID;
 		
 		@Override
-		protected void run(MarmotRuntime marmot) throws Exception {
+		protected void run(MarmotRuntime initialContext) throws Exception {
 			KafkaImporterMain parent = (KafkaImporterMain)getParent();
 			
 			Properties props = new Properties();
@@ -92,7 +92,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 			
 			List<String> topics = Arrays.asList(parent.m_topic);
 			ExecutorService exector = Executors.newCachedThreadPool();
-			MarmotKafkaImporter importer = new MarmotKafkaImporter(marmot, topics, props, exector);
+			MarmotKafkaImporter importer = new MarmotKafkaImporter(initialContext, topics, props, exector);
 			importer.start();
 			importer.waitForDone();
 			
@@ -101,7 +101,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 		}
 	}
 	
-	static abstract class ZooKeeperCommand extends SubCommand<MarmotRuntime> {
+	static abstract class ZooKeeperCommand extends PicocliSubCommand<MarmotRuntime> {
 		@Option(names= {"-zkhost"}, description="ZooKeeper host")
 		private List<String> m_zkhost = Lists.newArrayList();
 		
@@ -124,7 +124,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 		private int m_nreps = DEF_REPLICATION_FACTOR;
 		
 		@Override
-		protected void run(MarmotRuntime marmot) throws Exception {
+		protected void run(MarmotRuntime initialContext) throws Exception {
 			int sessionTimeout = 15 * 1000;
 			int connectionTimeout = 10 * 1000;
 			String zkHost = getZkHost();
@@ -148,7 +148,7 @@ public class KafkaImporterMain extends MarmotClientCommand {
 	@Command(name="delete", description="delete a Marmot Kafka topic")
 	public static class DeleteTopic extends ZooKeeperCommand {
 		@Override
-		protected void run(MarmotRuntime marmot) throws Exception {
+		protected void run(MarmotRuntime initialContext) throws Exception {
 			String zkHost = getZkHost();
 			KafkaImporterMain parent = (KafkaImporterMain)getParent();
 			

@@ -9,6 +9,7 @@ import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 import utils.CSV;
+import utils.UsageHelp;
 import utils.func.CheckedConsumer;
 
 /**

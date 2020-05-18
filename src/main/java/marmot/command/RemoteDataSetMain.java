@@ -5,11 +5,11 @@ import marmot.command.DatasetCommands.ImportCsvCmd;
 import marmot.command.DatasetCommands.ImportGeoJsonCmd;
 import marmot.command.DatasetCommands.ImportJdbcCmd;
 import marmot.command.DatasetCommands.ImportShapefileCmd;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.command.RemoteDataSetMain.RemoteImport;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
+import utils.PicocliSubCommand;
 
 
 /**
@@ -52,8 +52,8 @@ public class RemoteDataSetMain extends MarmotClientCommand {
 				ImportJdbcCmd.class,
 			},
 			description="import into the dataset")
-	public static class RemoteImport extends SubCommand<MarmotRuntime> {
+	public static class RemoteImport extends PicocliSubCommand<MarmotRuntime> {
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception { }
+		public void run(MarmotRuntime initialContext) throws Exception { }
 	}
 }

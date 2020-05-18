@@ -3,7 +3,6 @@ package marmot.geo.command;
 import marmot.MarmotRuntime;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.dataset.DataSet;
 import marmot.geo.command.RemoteGeoServerMain.Add;
 import marmot.geo.command.RemoteGeoServerMain.Delete;
@@ -14,6 +13,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import utils.PicocliSubCommand;
 
 
 /**
@@ -44,15 +44,15 @@ public class RemoteGeoServerMain extends MarmotClientCommand {
 		CommandLine.run(cmd, System.out, System.err, Help.Ansi.OFF, args);
 	}
 	
-	static abstract class AbstractGeoServerCommand extends SubCommand<MarmotRuntime> {
+	static abstract class AbstractGeoServerCommand extends PicocliSubCommand<MarmotRuntime> {
 		abstract protected void run(MarmotRuntime marmot, GeoServer server) throws Exception;
 		
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
+		public void run(MarmotRuntime initialContext) throws Exception {
 			RemoteGeoServerMain parent = (RemoteGeoServerMain)getParent();
 			GeoServer geoServer = GeoServer.create(parent.m_host, parent.m_port, "admin", "geoserver");
 			
-			run(marmot, geoServer);
+			run(initialContext, geoServer);
 		}
 	}
 	

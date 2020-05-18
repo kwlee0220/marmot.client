@@ -3,19 +3,20 @@ package marmot.command;
 import java.io.IOException;
 
 import marmot.MarmotRuntime;
-import marmot.command.PicocliCommands.PicocliCommand;
 import marmot.remote.protobuf.PBMarmotClient;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
+import utils.PicocliCommand;
 import utils.Throwables;
+import utils.UsageHelp;
 
 /**
  * 
  * @author Kang-Woo Lee (ETRI)
  */
-public class MarmotClientCommand implements PicocliCommand {
+public class MarmotClientCommand implements PicocliCommand<MarmotRuntime> {
 	@Spec private CommandSpec m_spec;
 	@Mixin private MarmotConnector m_connector;
 	@Mixin private UsageHelp m_help;
@@ -26,7 +27,7 @@ public class MarmotClientCommand implements PicocliCommand {
 	}
 	
 	@Override
-	public PBMarmotClient getMarmotRuntime() {
+	public PBMarmotClient getInitialContext() {
 		try {
 			if ( m_marmot == null ) {
 				m_marmot = m_connector.connect();
@@ -43,7 +44,7 @@ public class MarmotClientCommand implements PicocliCommand {
 	@Override
 	public void run() {
 		try {
-			run(getMarmotRuntime());
+			run(getInitialContext());
 		}
 		catch ( Exception e ) {
 			System.err.printf("failed: %s%n%n", e);

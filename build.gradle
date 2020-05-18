@@ -27,16 +27,12 @@ repositories {
 		url "http://www.datanucleus.org/downloads/maven2/"
 	}
 	maven {
-		url "http://download.osgeo.org/webdav/geotools/"
+		url "http://repo.osgeo.org/repository/release/"
 	}
     mavenCentral()
-	maven {
-		url "http://repo.boundlessgeo.com/main/"
-	}
 }
 
-
-ext.geotools_version = '17.2'
+ext.geotools_version = '19.3'
 ext.kafka_2_11_version = '1.0.0'
 ext.zkclient_version = '0.11'
 

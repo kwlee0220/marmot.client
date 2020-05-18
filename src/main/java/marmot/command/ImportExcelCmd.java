@@ -3,7 +3,6 @@ package marmot.command;
 import java.io.File;
 
 import marmot.MarmotRuntime;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.externio.ImportIntoDataSet;
 import marmot.externio.excel.ExcelParameters;
 import marmot.externio.excel.ImportExcel;
@@ -11,6 +10,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
+import utils.PicocliSubCommand;
 import utils.Utilities;
 
 /**
@@ -18,7 +18,7 @@ import utils.Utilities;
  * @author Kang-Woo Lee (ETRI)
  */
 @Command(name="excel", description="import Excel file into the dataset")
-public class ImportExcelCmd extends SubCommand<MarmotRuntime> {
+public class ImportExcelCmd extends PicocliSubCommand<MarmotRuntime> {
 	@Mixin private ExcelParameters m_excelParams;
 	@Mixin private ImportParameters m_params;
 
@@ -34,7 +34,7 @@ public class ImportExcelCmd extends SubCommand<MarmotRuntime> {
 	}
 
 	@Override
-	public void run(MarmotRuntime marmot) throws Exception {
+	public void run(MarmotRuntime initialContext) throws Exception {
 		StopWatch watch = StopWatch.start();
 		
 		File file = new File(m_path);
@@ -45,7 +45,7 @@ public class ImportExcelCmd extends SubCommand<MarmotRuntime> {
 						System.out.printf("imported: count=%d, elapsed=%s, velo=%.0f/s%n",
 										report, watch.getElapsedMillisString(), velo);
 					});
-		long count = importFile.run(marmot);
+		long count = importFile.run(initialContext);
 		
 		double velo = count / watch.getElapsedInFloatingSeconds();
 		System.out.printf("imported: dataset=%s count=%d elapsed=%s, velo=%.1f/s%n",

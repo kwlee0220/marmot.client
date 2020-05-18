@@ -12,7 +12,6 @@ import marmot.Record;
 import marmot.RecordSet;
 import marmot.command.MarmotClientCommand;
 import marmot.command.MarmotClientCommands;
-import marmot.command.PicocliCommands.SubCommand;
 import marmot.dataset.DataSet;
 import marmot.dataset.DataSetType;
 import marmot.externio.shp.ExportRecordSetAsShapefile;
@@ -29,6 +28,7 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import utils.StopWatch;
+import utils.PicocliSubCommand;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -56,7 +56,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="create", description="cluster the dataset")
-	static class CreateSpatialCluster extends SubCommand<MarmotRuntime> {
+	static class CreateSpatialCluster extends PicocliSubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1", description={"dataset id"})
 		private String m_dsId;
 		
@@ -111,16 +111,16 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		private boolean m_est = false;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
+		public void run(MarmotRuntime initialContext) throws Exception {
 			StopWatch watch = StopWatch.start();
 			
-			DataSet input = marmot.getDataSet(m_dsId);
+			DataSet input = initialContext.getDataSet(m_dsId);
 			if ( !input.hasGeometryColumn() ) {
 				throw new IllegalArgumentException("target dataset does not have geometry column: id=" + m_dsId);
 			}
 			
 			FOption<Envelope> validRange = (m_validRangeDsId != null)
-										? getValidRange(marmot, m_validRangeDsId, input.getGeometryColumnInfo().srid())
+										? getValidRange(initialContext, m_validRangeDsId, input.getGeometryColumnInfo().srid())
 										: FOption.empty();
 										
 			if ( m_est ) {
@@ -196,14 +196,14 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="show", description="display spatial cluster information for a dataset")
-	static class ShowSpatialClusterInfos extends SubCommand<MarmotRuntime> {
+	static class ShowSpatialClusterInfos extends PicocliSubCommand<MarmotRuntime> {
 		@Parameters(paramLabel="dataset_id", index="0", arity="1..1",
 					description={"dataset id to cluster"})
 		private String m_dsId;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
-			DataSet ds = marmot.getDataSet(m_dsId);
+		public void run(MarmotRuntime initialContext) throws Exception {
+			DataSet ds = initialContext.getDataSet(m_dsId);
 			if ( ds.getType() != DataSetType.SPATIAL_CLUSTER ) {
 				throw new IllegalArgumentException("dataset is not spatially clustered: ds=" + m_dsId);
 			}
@@ -214,7 +214,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			plan = Plan.builder("list_spatial_clusters")
 						.loadMarmotFile(infoPath)
 						.build();
-			try ( RecordSet rset = marmot.executeLocally(plan) ) {
+			try ( RecordSet rset = initialContext.executeLocally(plan) ) {
 				rset.forEach(r -> printSpatialClusterInfo(r));
 			}
 		}
@@ -231,7 +231,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 	}
 
 	@Command(name="draw", description="create a shapefile for spatial cluster infos of a dataset")
-	static class DrawSpatialClusterInfo extends SubCommand<MarmotRuntime> {
+	static class DrawSpatialClusterInfo extends PicocliSubCommand<MarmotRuntime> {
 		@Mixin private ShapefileParameters m_shpParams;
 		
 		@Parameters(paramLabel="dataset-id", index="0", arity="1..1",
@@ -246,8 +246,8 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 		private boolean m_force;
 
 		@Override
-		public void run(MarmotRuntime marmot) throws Exception {
-			DataSet ds = marmot.getDataSet(m_dsId);
+		public void run(MarmotRuntime initialContext) throws Exception {
+			DataSet ds = initialContext.getDataSet(m_dsId);
 			String srid = ds.getGeometryColumnInfo().srid();
 			String infoPath = ds.getHdfsPath() + "/cluster.idx";
 			
@@ -258,7 +258,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 							.project("the_geom,quad_key,count")
 							.build();
 			
-			try ( RecordSet rset = marmot.executeLocally(plan) ) {
+			try ( RecordSet rset = initialContext.executeLocally(plan) ) {
 				ExportShapefileParameters params = ExportShapefileParameters.create()
 															.charset(m_shpParams.charset());
 				ExportRecordSetAsShapefile exporter = new ExportRecordSetAsShapefile(rset, srid,
