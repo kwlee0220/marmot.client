@@ -52,4 +52,8 @@ public class MarmotClientCommand implements PicocliCommand<MarmotRuntime> {
 //			m_spec.commandLine().usage(System.out, Ansi.OFF);
 		}
 	}
+
+	@Override
+	public void configureLog4j() throws IOException {
+	}
 }
