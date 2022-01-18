@@ -1,9 +1,7 @@
 package marmot.geo.geoserver;
 
-import java.awt.RenderingHints.Key;
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -68,7 +66,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 	}
 
 	@Override
-	public boolean canProcess(Map<String, Serializable> params) {
+	public boolean canProcess(Map<String, ?> params) {
 		try {
 			String host = (String)GSPDataStoreFactory.MARMOT_HOST.lookUp(params);
 			int port = (int)GSPDataStoreFactory.MARMOT_PORT.lookUp(params);
@@ -89,7 +87,7 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 	}
 
 	@Override
-	public DataStore createDataStore(Map<String, Serializable> params) throws IOException {
+	public DataStore createDataStore(Map<String, ?> params) throws IOException {
 		String host = (String)MARMOT_HOST.lookUp(params);
 		int port = (int)MARMOT_PORT.lookUp(params);
 		
@@ -139,12 +137,12 @@ public class GSPDataStoreFactory implements DataStoreFactorySpi {
 	}
 
 	@Override
-	public DataStore createNewDataStore(Map<String, Serializable> params) throws IOException {
+	public DataStore createNewDataStore(Map<String, ?> params) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public Map<Key, ?> getImplementationHints() {
+	public Map<java.awt.RenderingHints.Key, ?> getImplementationHints() {
 		return Collections.emptyMap();
 	}
 	

@@ -3,8 +3,8 @@ package marmot.command;
 import java.io.IOException;
 import java.util.Map;
 
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.io.ParseException;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.io.ParseException;
 
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;

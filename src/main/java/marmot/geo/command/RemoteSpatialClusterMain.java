@@ -4,7 +4,7 @@ import static utils.UnitUtils.parseByteSize;
 
 import java.util.Set;
 
-import com.vividsolutions.jts.geom.Envelope;
+import org.locationtech.jts.geom.Envelope;
 
 import marmot.MarmotRuntime;
 import marmot.Plan;

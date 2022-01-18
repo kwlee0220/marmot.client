@@ -32,9 +32,10 @@ repositories {
     mavenCentral()
 }
 
-ext.geotools_version = '19.3'
-ext.kafka_2_11_version = '1.0.0'
-ext.zkclient_version = '0.11'
+ext {
+	kafka_2_11_version = '1.0.0'
+	zkclient_version = '0.11'
+}
 
 dependencies {
 	compile project(':utils')

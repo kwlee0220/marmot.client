@@ -3,7 +3,7 @@ package marmot.geo.geoserver.rest;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.google.gson.annotations.SerializedName;
-import com.vividsolutions.jts.geom.Envelope;
+import org.locationtech.jts.geom.Envelope;
 
 import marmot.Column;
 import marmot.RecordSchema;
