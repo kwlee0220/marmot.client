@@ -155,7 +155,12 @@ eclipse {
 				}
 				cp.entries.each { entry ->
 					if ( entry.kind == 'src' && entry.hasProperty('output') ) {
-						entry.output = 'classes'
+						if ( entry.path.startsWith("src/test/") ) {
+							entry.output = 'test_classes'
+						}
+						else {
+							entry.output = 'classes'
+						}
 					}
 				}
 			}
