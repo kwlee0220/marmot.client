@@ -23,37 +23,31 @@ buildscript {
 
 repositories {
     mavenLocal()
-	maven {
-		url "http://www.datanucleus.org/downloads/maven2/"
-	}
-	maven {
-		url "http://repo.osgeo.org/repository/release/"
-	}
+	maven { url "http://www.datanucleus.org/downloads/maven2/" }
+	maven { url "http://repo.osgeo.org/repository/release/" }
     mavenCentral()
 }
 
 ext {
+	log4j_version = '1.2.17'
 	httpclient_version = '4.5.6'
 	rxjava2_version = '2.2.21'
 	
 	kafka_2_11_version = '1.0.0'
 	zkclient_version = '0.11'
+	
+	xlsx_streamer_version = '1.2.1'
 }
 
 dependencies {
-	compile project(':utils')
-	compile project(':marmot.common')
-
-	compile group: 'com.monitorjbl', name: 'xlsx-streamer', version: '1.2.1'
+	implementation project(':utils')
+	implementation project(':marmot.common')
 	
-	// ZooKeeper & Kafka
-//	compile group: 'com.101tec', name: 'zkclient', version: "${zkclient_version}"
-//	compile group: 'org.apache.kafka', name: 'kafka_2.11', version: "${kafka_2_11_version}"
+	implementation "log4j:log4j:${log4j_version}"
+
+	implementation "com.monitorjbl:xlsx-streamer:${xlsx_streamer_version}"
 	
 	implementation "org.apache.httpcomponents:httpclient:${httpclient_version}"
-	implementation "io.reactivex.rxjava2:rxjava:${rxjava2_version}"
-	
-	testCompile "junit:junit:4.12"
 }
 
 shadowJar {
