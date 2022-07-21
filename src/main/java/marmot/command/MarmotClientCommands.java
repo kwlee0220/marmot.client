@@ -3,13 +3,10 @@ package marmot.command;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.PropertyConfigurator;
-
-import marmot.remote.protobuf.PBMarmotClient;
 import utils.CommandLine;
 import utils.func.FOption;
+
+import marmot.remote.protobuf.PBMarmotClient;
 
 
 /**
@@ -87,11 +84,8 @@ public class MarmotClientCommands {
 									.map(parent -> new File(parent, "log4j.properties"))
 									.map(file -> file.toString())
 									.getOrElse("log4j.properties");
-		PropertyConfigurator.configure(configFileName);
-//		LogManager.getRootLogger().setLevel(Level.OFF);
 	}
 	
 	public static void disableLog4j() {
-		LogManager.getRootLogger().setLevel(Level.OFF);
 	}
 }
