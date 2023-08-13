@@ -1,9 +1,9 @@
 package marmot.geo.geoserver.rest;
 
+import org.locationtech.jts.geom.Envelope;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.google.gson.annotations.SerializedName;
-import org.locationtech.jts.geom.Envelope;
 
 import marmot.Column;
 import marmot.RecordSchema;

@@ -1,5 +1,16 @@
 package marmot.geo.command;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
+import utils.PicocliSubCommand;
+import utils.StopWatch;
+import utils.UnitUtils;
+
 import marmot.MarmotRuntime;
 import marmot.Plan;
 import marmot.Record;
@@ -15,15 +26,6 @@ import marmot.geo.command.RemoteSpatialIndexMain.CreateSpatialIndex;
 import marmot.geo.command.RemoteSpatialIndexMain.DeleteSpatialIndex;
 import marmot.geo.command.RemoteSpatialIndexMain.DrawSpatialIndex;
 import marmot.geo.command.RemoteSpatialIndexMain.ShowSpatialIndex;
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Help;
-import picocli.CommandLine.Mixin;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-import utils.StopWatch;
-import utils.PicocliSubCommand;
-import utils.UnitUtils;
 
 
 /**

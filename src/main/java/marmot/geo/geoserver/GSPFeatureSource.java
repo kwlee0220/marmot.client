@@ -7,6 +7,7 @@ import org.geotools.data.Query;
 import org.geotools.data.store.ContentEntry;
 import org.geotools.data.store.ContentFeatureSource;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.locationtech.jts.geom.Envelope;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.Filter;
@@ -15,7 +16,10 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.locationtech.jts.geom.Envelope;
+import utils.Throwables;
+import utils.func.FOption;
+import utils.func.Lazy;
+import utils.func.Tuple;
 
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -29,10 +33,6 @@ import marmot.geo.geotools.MarmotFeatureIterator;
 import marmot.geo.geotools.SimpleFeatures;
 import marmot.geo.query.GeoDataStore;
 import marmot.optor.AggregateFunction;
-import utils.Throwables;
-import utils.func.FOption;
-import utils.func.Lazy;
-import utils.func.Tuple;
 
 
 /**
