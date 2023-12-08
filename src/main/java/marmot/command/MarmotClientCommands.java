@@ -3,7 +3,6 @@ package marmot.command;
 import java.io.File;
 import java.io.IOException;
 
-import utils.CommandLine;
 import utils.func.FOption;
 
 import marmot.remote.protobuf.PBMarmotClient;
@@ -43,39 +42,6 @@ public class MarmotClientCommands {
 		}
 
 		return DEFAULT_MARMOT_PORT;
-	}
-	
-	public static PBMarmotClient connect(CommandLine cl) throws IOException {
-		String host = MarmotClientCommands.getMarmotHost(cl);
-		int port = MarmotClientCommands.getMarmotPort(cl);
-		
-		return PBMarmotClient.connect(host, port);
-	}
-	
-	public static String getMarmotHost(CommandLine cl) {
-		return getMarmotHost(cl, "host");
-	}
-	
-	public static String getMarmotHost(CommandLine cl, String optId) {
-		String host = cl.getOptionString(optId).getOrNull();
-		if ( host != null ) {
-			return host;
-		}
-		
-		return getMarmotHost();
-	}
-	
-	public static int getMarmotPort(CommandLine cl) {
-		return getMarmotPort(cl, "port");
-	}
-	
-	public static int getMarmotPort(CommandLine cl, String optId) {
-		FOption<Integer> port = cl.getOptionInt(optId);
-		if ( port.isPresent() ) {
-			return port.get();
-		}
-		
-		return getMarmotPort();
 	}
 	
 	public static void configureLog4j() {
