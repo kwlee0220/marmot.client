@@ -266,7 +266,7 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 				ExportRecordSetAsShapefile exporter = new ExportRecordSetAsShapefile(rset, srid,
 																					m_output, params);
 				exporter.setForce(m_force);
-				exporter.start().waitForDone();
+				exporter.start().pollInfinite();
 			}
 		}
 	}
