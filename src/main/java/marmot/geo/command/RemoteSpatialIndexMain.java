@@ -181,7 +181,7 @@ public class RemoteSpatialIndexMain extends MarmotClientCommand {
 				ExportRecordSetAsShapefile exporter = new ExportRecordSetAsShapefile(rset, "EPSG:4326",
 																					m_output, params);
 				exporter.setForce(m_force);
-				exporter.start().pollInfinite();
+				exporter.start().waitForFinished();
 			}
 		}
 	}
