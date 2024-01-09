@@ -214,7 +214,7 @@ public class GeoServer {
 	private Tuple<Integer,String> delete(String url, Map<String,String> params)
 		throws ClientProtocolException, IOException, AuthenticationException, URISyntaxException {
 		URI uri = KVFStream.from(params)
-						.foldLeft(new URIBuilder(url), (b,kv) -> b.addParameter(kv.key(), kv.value()))
+						.fold(new URIBuilder(url), (b,kv) -> b.addParameter(kv.key(), kv.value()))
 						.build();
 
 		try ( CloseableHttpClient client = HttpClients.createDefault(); ) {
