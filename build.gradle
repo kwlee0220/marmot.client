@@ -1,7 +1,9 @@
-apply plugin: 'java-library'
-apply plugin: 'maven-publish'
-apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'nebula-aggregate-javadocs'	// gradle aggregateJavadocs
+plugins {
+	id 'java-library'
+	id 'eclipse'
+	id 'com.github.johnrengelman.shadow' version '7.1.2'
+	id 'maven-publish'
+}
  
 group = 'etri'
 version = '20.02.12'
@@ -9,23 +11,17 @@ version = '20.02.12'
 sourceCompatibility = JavaVersion.VERSION_1_8;
 [compileJava,compileTestJava]*.options*.encoding = 'UTF-8'
 
-
-buildscript {
-	repositories {
-		mavenLocal()
-		jcenter()
-	}
-	dependencies {
-		classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.4'
-		classpath 'com.netflix.nebula:gradle-aggregate-javadocs-plugin:2.2.+'
-	}
-}
-
 repositories {
-    mavenLocal()
-	maven { url "http://www.datanucleus.org/downloads/maven2/" }
-	maven { url "http://repo.osgeo.org/repository/release/" }
-    mavenCentral()
+	mavenLocal()
+	maven {
+		url "http://www.datanucleus.org/downloads/maven2/"
+		allowInsecureProtocol = true
+	}
+	maven {
+		url "https://repo.osgeo.org/repository/release/"
+		allowInsecureProtocol = true
+	}
+	mavenCentral()
 }
 
 ext {
@@ -106,53 +102,4 @@ task distributeBinary(type:Copy) {
 		include '.gitignore'
 	}
 	from "${buildDir}/libs/${archivesBaseName}-${version}-javadoc.jar"
-}
-
-apply plugin: 'maven-publish'
-publishing {
-	publications {
-		main(MavenPublication) {
-			artifact jar
-			artifact sourceJar
-			artifact javadocJar
-		}
-	}
-}
-
-apply plugin: 'eclipse'
-eclipse {
-	classpath {
-		file {
-			withXml {
-				def node = it.asNode()
-				node.appendNode('classpathentry', [kind: 'output', path: 'classes'])
-			}
-			
-			whenMerged { cp ->
-				Map entryByPath = cp.entries.groupBy { entry -> entry.path }
-				entryByPath.each { key, values ->
-					if ( values.size() > 1 ) {
-            			def entry = values.first()
-            			if ( entry.kind == 'src' ) {
-            				entry.includes = []
-            				entry.excludes = []
-            			}
-            			int index = cp.entries.indexOf entry
-            			cp.entries.removeAll values
-            			cp.entries.add index, entry
-					}
-				}
-				cp.entries.each { entry ->
-					if ( entry.kind == 'src' && entry.hasProperty('output') ) {
-						if ( entry.path.startsWith("src/test/") ) {
-							entry.output = 'test_classes'
-						}
-						else {
-							entry.output = 'classes'
-						}
-					}
-				}
-			}
-		}
-	}
 }
