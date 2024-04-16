@@ -37,6 +37,7 @@ ext {
 
 dependencies {
 	implementation project(':utils')
+	implementation project(':utilsx')
 	implementation project(':marmot.common')
 
 	// Logback with SLF4j
