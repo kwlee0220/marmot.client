@@ -86,7 +86,7 @@ public abstract class PlanBasedMarmotCommand {
 		m_marmot = m_connector.connect();
 		m_outputDsId = outputDsId;
 		
-		planName = Funcs.asNonNull(m_opParams.m_planName, planName);
+		planName = Funcs.toNonNull(m_opParams.m_planName, planName);
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( m_printPlan ) {
