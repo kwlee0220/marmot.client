@@ -15,16 +15,12 @@ import java.util.List;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import picocli.CommandLine.Mixin;
-import picocli.CommandLine.Option;
-
 import utils.CSV;
 import utils.StopWatch;
 import utils.UnitUtils;
 import utils.UsageHelp;
 import utils.Utilities;
 import utils.func.FOption;
-import utils.func.Funcs;
 import utils.func.KeyValue;
 
 import marmot.MarmotRuntime;
@@ -40,6 +36,9 @@ import marmot.optor.geo.SpatialRelation;
 import marmot.optor.geo.SquareGrid;
 import marmot.plan.Group;
 import marmot.plan.SpatialJoinOptions;
+
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Option;
 
 
 /**
@@ -86,7 +85,7 @@ public abstract class PlanBasedMarmotCommand {
 		m_marmot = m_connector.connect();
 		m_outputDsId = outputDsId;
 		
-		planName = Funcs.toNonNull(m_opParams.m_planName, planName);
+		planName = FOption.getOrElse(m_opParams.m_planName, planName);
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( m_printPlan ) {
