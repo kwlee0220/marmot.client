@@ -31,13 +31,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import utils.CSV;
+import utils.Tuple;
+import utils.Tuple3;
+import utils.stream.FStream;
+import utils.stream.KeyValueFStream;
+
 import marmot.dataset.DataSet;
 import marmot.geo.geoserver.GSPUtils;
-import utils.CSV;
-import utils.func.Tuple;
-import utils.func.Tuple3;
-import utils.stream.FStream;
-import utils.stream.KVFStream;
 
 /**
  * 
@@ -213,9 +214,9 @@ public class GeoServer {
 	
 	private Tuple<Integer,String> delete(String url, Map<String,String> params)
 		throws ClientProtocolException, IOException, AuthenticationException, URISyntaxException {
-		URI uri = KVFStream.from(params)
-						.fold(new URIBuilder(url), (b,kv) -> b.addParameter(kv.key(), kv.value()))
-						.build();
+		URI uri = KeyValueFStream.from(params)
+								.fold(new URIBuilder(url), (b,kv) -> b.addParameter(kv.key(), kv.value()))
+								.build();
 
 		try ( CloseableHttpClient client = HttpClients.createDefault(); ) {
 			HttpDelete httpDelete = new HttpDelete(uri);

@@ -4,9 +4,9 @@ import java.util.List;
 
 import picocli.CommandLine.Option;
 import utils.CSV;
+import utils.Tuple;
 import utils.Utilities;
 import utils.func.FOption;
-import utils.func.Tuple;
 
 /**
  * 
