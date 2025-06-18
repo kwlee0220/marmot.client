@@ -44,7 +44,7 @@ dependencies {
 	implementation project(':utilsx')
 	implementation project(':marmot.common')
 
-	// Logback with SLF4j
+	// Logback
 	implementation "ch.qos.logback:logback-classic:${logback_version}"
 	
 	// GSon
