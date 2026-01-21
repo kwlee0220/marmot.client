@@ -3,6 +3,10 @@ package marmot.externio.excel;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
+
+import utils.Throwables;
+import utils.Tuple;
 
 import marmot.MarmotRuntime;
 import marmot.Plan;
@@ -13,9 +17,6 @@ import marmot.command.ImportParameters;
 import marmot.dataset.GeometryColumnInfo;
 import marmot.externio.ImportIntoDataSet;
 import marmot.support.MetaPlanLoader;
-import utils.Throwables;
-import utils.Tuple;
-import utils.func.FOption;
 
 
 /**
@@ -25,7 +26,7 @@ import utils.func.FOption;
 public abstract class ImportExcel extends ImportIntoDataSet {
 	protected final ExcelParameters m_excelParams;
 	
-	protected abstract FOption<Plan> loadMetaPlan();
+	protected abstract Optional<Plan> loadMetaPlan();
 	
 	public static ImportExcel from(File file, ExcelParameters excelParams,
 									ImportParameters importParams) {
@@ -34,13 +35,13 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	
 	public static ImportExcel from(InputStream is, ExcelParameters csvParams,
 									ImportParameters importParams) {
-		return new ImportExcelStreamIntoDataSet(is, FOption.empty(), csvParams, importParams);
+		return new ImportExcelStreamIntoDataSet(is, Optional.empty(), csvParams, importParams);
 	}
 	
 	public static ImportExcel from(InputStream is, Plan plan,
 											ExcelParameters excelParams,
 											ImportParameters importParams) {
-		return new ImportExcelStreamIntoDataSet(is, FOption.of(plan), excelParams,
+		return new ImportExcelStreamIntoDataSet(is, Optional.of(plan), excelParams,
 												importParams);
 	}
 
@@ -51,32 +52,32 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	}
 
 	@Override
-	protected FOption<Plan> loadImportPlan(MarmotRuntime marmot) {
+	protected Optional<Plan> loadImportPlan(MarmotRuntime marmot) {
 		try {
-			FOption<Plan> importPlan = loadMetaPlan();
-			FOption<Plan> toPointPlan = getToPointPlan();
+			Optional<Plan> importPlan = loadMetaPlan();
+			Optional<Plan> toPointPlan = getToPointPlan();
 			
-			if ( importPlan.isAbsent() && toPointPlan.isAbsent() ) {
-				return FOption.empty();
+			if ( importPlan.isEmpty() && toPointPlan.isEmpty() ) {
+				return Optional.empty();
 			}
-			if ( importPlan.isAbsent() ) {
+			if ( importPlan.isEmpty() ) {
 				return toPointPlan;
 			}
-			if ( toPointPlan.isAbsent() ) {
+			if ( toPointPlan.isEmpty() ) {
 				return importPlan;
 			}
 			
-			return FOption.of(Plan.concat(toPointPlan.get(), importPlan.get()));
+			return Optional.of(Plan.concat(toPointPlan.get(), importPlan.get()));
 		}
 		catch ( Exception e ) {
 			throw Throwables.toRuntimeException(e);
 		}
 	}
 
-	private FOption<Plan> getToPointPlan() {
+	private Optional<Plan> getToPointPlan() {
 		if ( !m_excelParams.pointColumns().isPresent()
 			|| !m_params.getGeometryColumnInfo().isPresent() ) {
-			return FOption.empty();
+			return Optional.empty();
 		}
 		
 		PlanBuilder builder = new PlanBuilder("import_csv");
@@ -96,7 +97,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 			}
 		}
 		
-		return FOption.of(builder.build());
+		return Optional.of(builder.build());
 	}
 	
 	private static class ImportExcelFileIntoDataSet extends ImportExcel {
@@ -115,7 +116,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		}
 
 		@Override
-		protected FOption<Plan> loadMetaPlan() {
+		protected Optional<Plan> loadMetaPlan() {
 			try {
 				return MetaPlanLoader.load(m_start);
 			}
@@ -127,9 +128,9 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 	
 	private static class ImportExcelStreamIntoDataSet extends ImportExcel {
 		private final InputStream m_is;
-		private final FOption<Plan> m_plan;
+		private final Optional<Plan> m_plan;
 		
-		ImportExcelStreamIntoDataSet(InputStream is, FOption<Plan> plan,
+		ImportExcelStreamIntoDataSet(InputStream is, Optional<Plan> plan,
 									ExcelParameters csvParams, ImportParameters importParams) {
 			super(csvParams, importParams);
 			
@@ -148,7 +149,7 @@ public abstract class ImportExcel extends ImportIntoDataSet {
 		}
 
 		@Override
-		protected FOption<Plan> loadMetaPlan() {
+		protected Optional<Plan> loadMetaPlan() {
 			return m_plan;
 		}
 	}
