@@ -1,15 +1,17 @@
 package marmot.command;
 
+import utils.Split;
+
 import marmot.MarmotRuntime;
 import marmot.PlanBuilder;
 import marmot.optor.JoinOptions;
 import marmot.optor.JoinType;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Parameters;
-import utils.LazySplitter;
 
 
 /**
@@ -78,16 +80,15 @@ public class RemoteHashJoinMain extends PlanBasedMarmotCommand {
 			throw new IllegalArgumentException("'join_output_col' is not present");
 		}
 		
-		LazySplitter splitter = LazySplitter.on(m_params.m_leftDsSpec);
-		String leftDsId = splitter.cutNext(':')
-								.getOrThrow(() -> new IllegalArgumentException("left dataset spec: " + m_params.m_leftDsSpec));
-		String leftCols = splitter.remains()
-								.getOrThrow(() -> new IllegalArgumentException("left dataset spec: " + m_params.m_leftDsSpec));
-		splitter = LazySplitter.on(m_params.m_rightDsSpec);
-		String rightDsId = splitter.cutNext(':')
-								.getOrThrow(() -> new IllegalArgumentException("right dataset spec: " + m_params.m_rightDsSpec));
-		String rightCols = splitter.remains()
-								.getOrThrow(() -> new IllegalArgumentException("right dataset spec: " + m_params.m_rightDsSpec));
+		Split split = Split.split(m_params.m_leftDsSpec, ":");
+		String leftCols = split.tail()
+								.orElseThrow(() -> new IllegalArgumentException("left dataset spec: " + m_params.m_leftDsSpec));
+		String leftDsId = split.head();
+		
+		split = Split.split(m_params.m_rightDsSpec, ":");
+		String rightCols = split.tail()
+				.orElseThrow(() -> new IllegalArgumentException("right dataset spec: " + m_params.m_rightDsSpec));
+		String rightDsId = split.head();
 		
 		return builder.loadHashJoin(leftDsId, leftCols, rightDsId, rightCols,
 									m_opParams.m_joinOutCols, opts);

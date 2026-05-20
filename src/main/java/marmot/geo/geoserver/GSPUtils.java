@@ -11,8 +11,8 @@ import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.spatial.BBOX;
 import org.opengis.geometry.BoundingBox;
 
+import utils.Preconditions;
 import utils.Tuple;
-import utils.Utilities;
 import utils.func.FOption;
 import utils.stream.FStream;
 
@@ -57,7 +57,7 @@ public class GSPUtils {
 	private static final FilterFactory2 FILTER_FACT
 					= CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 	private static Tuple<FOption<BoundingBox>,FOption<Filter>> parseCql(Filter filter) {
-		Utilities.checkNotNullArgument(filter, "filter is null");
+		Preconditions.checkNotNullArgument(filter, "filter is null");
 
 		if ( filter instanceof BBOX ) {
 			BoundingBox bbox = ((BBOX)filter).getBounds();

@@ -7,12 +7,13 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import utils.Preconditions;
+import utils.io.FileUtils;
+import utils.stream.FStream;
+
 import marmot.RecordSchema;
 import marmot.RecordSetException;
 import marmot.rset.ConcatedRecordSet;
-import utils.Utilities;
-import utils.io.FileUtils;
-import utils.stream.FStream;
 
 
 /**
@@ -29,7 +30,7 @@ public class MultiFileExcelRecordSet extends ConcatedRecordSet {
 	private final RecordSchema m_schema;
 	
 	public MultiFileExcelRecordSet(File start, ExcelParameters params) {
-		Utilities.checkNotNullArgument(params, "params is null");
+		Preconditions.checkNotNullArgument(params, "params is null");
 		
 		m_start = start;
 		setLogger(s_logger);

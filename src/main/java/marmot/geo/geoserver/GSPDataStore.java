@@ -13,10 +13,11 @@ import org.opengis.feature.type.Name;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import utils.Preconditions;
+import utils.stream.FStream;
+
 import marmot.dataset.DataSet;
 import marmot.geo.query.GeoDataStore;
-import utils.Utilities;
-import utils.stream.FStream;
 
 
 /**
@@ -31,7 +32,7 @@ public class GSPDataStore extends ContentDataStore {
 	private String[] m_prefixes = new String[0];
 	
 	public GSPDataStore(GeoDataStore geoStore) throws IOException {
-		Utilities.checkNotNullArgument(geoStore, "GeoDataStore is null");
+		Preconditions.checkNotNullArgument(geoStore, "GeoDataStore is null");
 
 		m_store = geoStore;
 		setNamespaceURI(WORKSPACE_URI);

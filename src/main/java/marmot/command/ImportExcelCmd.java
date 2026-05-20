@@ -2,18 +2,18 @@ package marmot.command;
 
 import java.io.File;
 
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Mixin;
-import picocli.CommandLine.Parameters;
-
 import utils.PicocliSubCommand;
+import utils.Preconditions;
 import utils.StopWatch;
-import utils.Utilities;
 
 import marmot.MarmotRuntime;
 import marmot.externio.ImportIntoDataSet;
 import marmot.externio.excel.ExcelParameters;
 import marmot.externio.excel.ImportExcel;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
+import picocli.CommandLine.Parameters;
 
 /**
  * 
@@ -31,7 +31,7 @@ public class ImportExcelCmd extends PicocliSubCommand<MarmotRuntime> {
 	@Parameters(paramLabel="dataset_id", index="1", arity="1..1",
 			description={"dataset id to import onto"})
 	public void setDataSetId(String id) {
-		Utilities.checkNotNullArgument(id, "dataset id is null");
+		Preconditions.checkNotNullArgument(id, "dataset id is null");
 		m_params.setDataSetId(id);
 	}
 
