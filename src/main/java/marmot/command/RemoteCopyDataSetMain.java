@@ -18,7 +18,7 @@ import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import utils.Utilities;
+import utils.KeyValue;
 import utils.func.FOption;
 
 
@@ -82,7 +82,7 @@ public class RemoteCopyDataSetMain extends PlanBasedMarmotCommand {
 			opts = opts.negated(true);
 		}
 		if ( rangeExpr != null ) {
-			Map<String,String> kvMap = Utilities.parseKeyValueMap(rangeExpr, ';');
+			Map<String,String> kvMap = KeyValue.parseMap(rangeExpr, ';');
 			if ( kvMap.get("dataset") == null ) {
 				return builder.query(m_params.m_inputDsId, kvMap.get("dataset"), opts);
 			}
