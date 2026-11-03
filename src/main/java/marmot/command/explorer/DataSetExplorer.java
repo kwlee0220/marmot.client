@@ -70,13 +70,13 @@ public class DataSetExplorer extends JFrame {
 		channel.subscribe(sel -> {
 			try {
 				if ( sel.isDataSetSelection() ) {
-					DataSet ds = sel.m_dataset.getUnchecked();
+					DataSet ds = sel.m_dataset.getOrNull();
 					
 					m_dsInfoPanel.update(ds);
 					m_dsTable.update(ds);
 				}
 				else {
-					m_dsInfoPanel.update(sel.m_dir.getUnchecked());
+					m_dsInfoPanel.update(sel.m_dir.getOrNull());
 					m_dsTable.clear();
 				}
 			}

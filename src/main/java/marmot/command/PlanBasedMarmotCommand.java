@@ -20,6 +20,7 @@ import utils.StopWatch;
 import utils.UnitUtils;
 import utils.UsageHelp;
 import utils.func.FOption;
+import utils.func.Nullables;
 import utils.KeyValue;
 
 import marmot.MarmotRuntime;
@@ -84,7 +85,7 @@ public abstract class PlanBasedMarmotCommand {
 		m_marmot = m_connector.connect();
 		m_outputDsId = outputDsId;
 		
-		planName = FOption.getOrElse(m_opParams.m_planName, planName);
+		planName = Nullables.orElse(m_opParams.m_planName, planName);
 		
 		Plan plan = buildPlan(m_marmot, planName);
 		if ( m_printPlan ) {

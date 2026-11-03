@@ -149,8 +149,8 @@ public class RemoteSpatialClusterMain extends MarmotClientCommand {
 			else {
 				ClusterSpatiallyOptions clusterOpts = ClusterSpatiallyOptions.DEFAULT
 																			.force(m_force);
-				clusterOpts = m_mapperCount.transform(clusterOpts, (o,c) -> o.mapperCount(c));
-				clusterOpts = validRange.transform(clusterOpts, ClusterSpatiallyOptions::validRange);
+				clusterOpts = m_mapperCount.fold(clusterOpts, (o,c) -> o.mapperCount(c));
+				clusterOpts = validRange.fold(clusterOpts, ClusterSpatiallyOptions::validRange);
 				if ( m_partitionCount > 0 ) {
 					clusterOpts = clusterOpts.partitionCount(m_partitionCount);
 				}
